@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Compass outer ring -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 C39.09,28 27,39.09 27,54 C27,68.91 39.09,80 54,80 C68.91,80 80,68.91 80,54 C80,39.09 68.91,28 54,28z M54,76 C41.3,76 31,65.7 31,53 C31,40.3 41.3,30 54,30 C66.7,30 77,40.3 77,53 C77,65.7 66.7,76 54,76z"/>
+
+    <!-- Compass diamond / needle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,36 L60,54 L54,72 L48,54 Z"/>
+
+    <!-- Compass center dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,51 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"/>
+</vector>
