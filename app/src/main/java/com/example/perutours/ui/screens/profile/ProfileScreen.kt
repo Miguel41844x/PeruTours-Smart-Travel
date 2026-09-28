@@ -1,31 +1,46 @@
 package com.example.perutours.ui.screens.profile
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
 import com.example.perutours.ui.theme.BackgroundLight
 import com.example.perutours.ui.theme.PeruGold40
 import com.example.perutours.ui.theme.SurfaceLight
@@ -33,6 +48,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -60,6 +76,7 @@ fun ProfileScreen(
     val currentUser = auth.currentUser
     val uid = currentUser?.uid ?: ""
     val firestore = remember { FirebaseFirestore.getInstance() }
+    val storage = remember { FirebaseStorage.getInstance() }
 
     // Parseo inicial compatible con HU01 ("Nombre | rol | telefono")
     val rawDisplay = currentUser?.displayName ?: ""
@@ -74,10 +91,15 @@ fun ProfileScreen(
     var dniOrPassport by remember { mutableStateOf("") }
     var city by remember { mutableStateOf("Lima, Perú") }
     var role by remember { mutableStateOf(initialRole) }
+    var photoUrl by remember { mutableStateOf(currentUser?.photoUrl?.toString() ?: "") }
+    var localPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Estados de carga
+    // Estados de carga, subida y modal de selección de cámara/galería
     var isLoadingInitialData by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
+    var isUploadingPhoto by remember { mutableStateOf(false) }
+    var showPhotoSourceSheet by remember { mutableStateOf(false) }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     // 1. Cargar datos persistidos en Firestore al abrir la pantalla
     LaunchedEffect(uid) {
@@ -90,6 +112,7 @@ fun ProfileScreen(
                         doc.getString("dni")?.let { dniOrPassport = it }
                         doc.getString("city")?.takeIf { it.isNotBlank() }?.let { city = it }
                         doc.getString("role")?.takeIf { it.isNotBlank() }?.let { role = it }
+                        doc.getString("photoUrl")?.takeIf { it.isNotBlank() }?.let { photoUrl = it }
                     }
                     isLoadingInitialData = false
                 }
@@ -98,6 +121,179 @@ fun ProfileScreen(
                 }
         } else {
             isLoadingInitialData = false
+        }
+    }
+
+    // Función que sube la foto a Firebase Storage y guarda el link en Firestore
+    fun uploadProfilePhotoToFirebase(uri: Uri) {
+        if (uid.isEmpty()) return
+        localPhotoUri = uri
+        isUploadingPhoto = true
+
+        val photoRef = storage.reference.child("profile_pictures/$uid.jpg")
+        photoRef.putFile(uri)
+            .continueWithTask { task ->
+                if (!task.isSuccessful) {
+                    task.exception?.let { throw it }
+                }
+                photoRef.downloadUrl
+            }
+            .addOnSuccessListener { downloadUri ->
+                val remoteUrl = downloadUri.toString()
+                photoUrl = remoteUrl
+
+                // Actualizar foto en FirebaseAuth
+                val profileUpdates = userProfileChangeRequest {
+                    this.photoUri = downloadUri
+                }
+                currentUser?.updateProfile(profileUpdates)
+
+                // Guardar URL inmediatamente en Firestore
+                firestore.collection("users").document(uid)
+                    .set(mapOf("photoUrl" to remoteUrl), SetOptions.merge())
+                    .addOnCompleteListener {
+                        isUploadingPhoto = false
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Foto de perfil guardada en Firebase Storage")
+                        }
+                    }
+            }
+            .addOnFailureListener { e ->
+                isUploadingPhoto = false
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Error al subir la foto: ${e.localizedMessage}")
+                }
+            }
+    }
+
+    // 2. Launcher para elegir foto de la Galería (Photo Picker oficial de Android)
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            uploadProfilePhotoToFirebase(uri)
+        }
+    }
+
+    // 3. Launcher para tomar foto con la Cámara
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        val capturedUri = pendingCameraUri
+        if (success && capturedUri != null) {
+            uploadProfilePhotoToFirebase(capturedUri)
+        }
+    }
+
+    // 4. Launcher para pedir permiso de Cámara en tiempo de ejecución
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            val newUri = createTempImageUri(context)
+            pendingCameraUri = newUri
+            cameraLauncher.launch(newUri)
+        } else {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Permiso de cámara denegado. Habilítalo para tomar tu foto.")
+            }
+        }
+    }
+
+    // BottomSheet para elegir entre Cámara o Galería
+    if (showPhotoSourceSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showPhotoSourceSheet = false },
+            containerColor = SurfaceLight
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+            ) {
+                Text(
+                    text = "Actualizar foto de perfil",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Selecciona cómo deseas subir tu fotografía a PeruTours",
+                    fontSize = 13.sp,
+                    color = Color(0xFF78716C),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+
+                // Opción 1: Tomar foto con la Cámara
+                OutlinedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showPhotoSourceSheet = false
+                            val hasPermission = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                            if (hasPermission) {
+                                val newUri = createTempImageUri(context)
+                                pendingCameraUri = newUri
+                                cameraLauncher.launch(newUri)
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoCamera,
+                            contentDescription = null,
+                            tint = PeruGold40
+                        )
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text("Tomar foto con la Cámara", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Captura una nueva foto en este momento", fontSize = 12.sp, color = Color(0xFF78716C))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Opción 2: Seleccionar desde la Galería
+                OutlinedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showPhotoSourceSheet = false
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = null,
+                            tint = PeruGold40
+                        )
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text("Seleccionar desde Galería", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Elige una imagen guardada en tu teléfono", fontSize = 12.sp, color = Color(0xFF78716C))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 
@@ -145,9 +341,80 @@ fun ProfileScreen(
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // SECCIÓN 1: FOTO DE PERFIL CON CÁMARA / GALERÍA
+                Box(
+                    contentAlignment = Alignment.BottomEnd,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                ) {
+                    val imageModel: Any? = localPhotoUri ?: photoUrl.takeIf { it.isNotBlank() }
+
+                    if (imageModel != null) {
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = "Foto de perfil",
+                            modifier = Modifier
+                                .size(112.dp)
+                                .clip(CircleShape)
+                                .border(3.dp, PeruGold40, CircleShape)
+                                .clickable { showPhotoSourceSheet = true },
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier
+                                .size(112.dp)
+                                .clip(CircleShape)
+                                .border(3.dp, PeruGold40, CircleShape)
+                                .clickable { showPhotoSourceSheet = true },
+                            color = PeruGold40.copy(alpha = 0.15f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = name.firstOrNull()?.uppercase() ?: "P",
+                                    fontSize = 40.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = PeruGold40
+                                )
+                            }
+                        }
+                    }
+
+                    // Botón flotante de cámara sobre el avatar
+                    SmallFloatingActionButton(
+                        onClick = { showPhotoSourceSheet = true },
+                        containerColor = PeruGold40,
+                        contentColor = Color.White,
+                        shape = CircleShape,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        if (isUploadingPhoto) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Cambiar foto",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                TextButton(onClick = { showPhotoSourceSheet = true }) {
+                    Text(
+                        text = if (isUploadingPhoto) "Subiendo foto a Firebase Storage..." else "Cambiar foto (Cámara o Galería)",
+                        color = PeruGold40,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // SECCIÓN 1: DATOS PERSONALES
+                // SECCIÓN 2: DATOS PERSONALES
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
@@ -241,6 +508,8 @@ fun ProfileScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(18.dp))
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // BOTÓN GUARDAR
@@ -255,6 +524,7 @@ fun ProfileScreen(
                             "dni" to dniOrPassport.trim(),
                             "city" to city.trim(),
                             "role" to role,
+                            "photoUrl" to photoUrl,
                             "updatedAt" to System.currentTimeMillis()
                         )
 
@@ -281,7 +551,7 @@ fun ProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
-                    enabled = !isSaving,
+                    enabled = !isSaving && !isUploadingPhoto,
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
                 ) {
