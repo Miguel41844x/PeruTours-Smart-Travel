@@ -1,8 +1,6 @@
 package com.example.perutours.ui.screens.signup
 
 import android.util.Patterns
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,14 +28,6 @@ import com.example.perutours.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
 
-data class RoleOption(
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val emoji: String,
-    val color: Color
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
@@ -51,18 +41,9 @@ fun SignUpScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    var selectedRoleId by remember { mutableStateOf("cliente") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var showVerificationDialog by remember { mutableStateOf(false) }
-
-    val roles = listOf(
-        RoleOption("cliente", "Cliente / Turista", "Explora, cotiza y reserva viajes", "🧭", RoleTouristAccent),
-        RoleOption("atencion", "Atención Turística", "Revisa solicitudes y asesora clientes", "🎧", RoleSupportAccent),
-        RoleOption("agente", "Agente Turístico", "Elabora cotizaciones y reservas", "📋", RoleAgentAccent),
-        RoleOption("admin", "Administrador", "Proveedores y validación de pagos", "🛡️", RoleAdminAccent),
-        RoleOption("gerente", "Gerente Comercial", "Métricas y analítica gerencial", "📊", RoleManagerAccent)
-    )
 
     // Diálogo informativo Criterio 2
     if (showVerificationDialog) {
@@ -199,62 +180,19 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Selector de Roles
+            // Las cuentas públicas siempre se registran como clientes.
             Text(
-                text = "Selecciona tu rol en PeruTours:",
+                text = "Tipo de cuenta",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            roles.forEach { role ->
-                val isSelected = selectedRoleId == role.id
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clickable { selectedRoleId = role.id },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) role.color.copy(alpha = 0.12f) else SurfaceLight
-                    ),
-                    border = BorderStroke(
-                        width = if (isSelected) 2.dp else 1.dp,
-                        color = if (isSelected) role.color else Color(0xFFE7E5E4)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = role.color.copy(alpha = 0.20f),
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(role.emoji, fontSize = 18.sp)
-                            }
-                        }
-
-                        Spacer(Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(role.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(role.subtitle, fontSize = 11.sp, color = Color(0xFF78716C))
-                        }
-
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { selectedRoleId = role.id },
-                            colors = RadioButtonDefaults.colors(selectedColor = role.color)
-                        )
-                    }
-                }
-            }
+            Text(
+                text = "Cliente / Turista",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
 
             if (errorMessage != null) {
                 Text(
@@ -298,16 +236,32 @@ fun SignUpScreen(
                                 .addOnCompleteListener { task ->
                                     if (task.isSuccessful) {
                                         val user = auth.currentUser
-                                        val profileUpdates = userProfileChangeRequest {
-                                            displayName = "$cleanName | $selectedRoleId | $phone"
+                                        if (user == null) {
+                                            isLoading = false
+                                            errorMessage = "No se pudo completar el registro. Inténtalo nuevamente."
+                                            return@addOnCompleteListener
                                         }
 
-                                        // Guarda el nombre y luego envía el correo de verificación
-                                        user?.updateProfile(profileUpdates)?.addOnCompleteListener {
-                                            user.sendEmailVerification().addOnCompleteListener {
+                                        val profileUpdates = userProfileChangeRequest {
+                                            displayName = "$cleanName | cliente | $phone"
+                                        }
+
+                                        user.updateProfile(profileUpdates).addOnCompleteListener { profileTask ->
+                                            if (!profileTask.isSuccessful) {
+                                                isLoading = false
+                                                errorMessage = "La cuenta fue creada, pero no se pudo guardar el perfil: ${profileTask.exception?.localizedMessage.orEmpty()}"
+                                                return@addOnCompleteListener
+                                            }
+
+                                            user.sendEmailVerification().addOnCompleteListener { verificationTask ->
                                                 isLoading = false
                                                 auth.signOut()
-                                                showVerificationDialog = true
+
+                                                if (verificationTask.isSuccessful) {
+                                                    showVerificationDialog = true
+                                                } else {
+                                                    errorMessage = "La cuenta fue creada, pero no se pudo enviar el correo de verificación. Inicia sesión para reenviarlo."
+                                                }
                                             }
                                         }
                                     } else {

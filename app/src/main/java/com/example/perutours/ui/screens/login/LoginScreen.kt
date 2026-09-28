@@ -184,19 +184,32 @@ fun LoginScreen(
                             isSuccessMessage = false
                             auth.signInWithEmailAndPassword(cleanEmail, cleanPass)
                                 .addOnCompleteListener { task ->
-                                    isLoading = false
                                     if (task.isSuccessful) {
                                         val user = auth.currentUser
 
                                         // CRITERIO 2: Bloquear si no está verificado
                                         if (user != null && user.isEmailVerified) {
+                                            isLoading = false
                                             navigateToHome()
+                                        } else if (user != null) {
+                                            user.sendEmailVerification()
+                                                .addOnCompleteListener { verificationTask ->
+                                                    isLoading = false
+                                                    auth.signOut()
+                                                    isSuccessMessage = verificationTask.isSuccessful
+                                                    infoMessage = if (verificationTask.isSuccessful) {
+                                                        "Tu correo aún no está verificado. Te enviamos un nuevo enlace de verificación."
+                                                    } else {
+                                                        "Tu correo aún no está verificado y no pudimos reenviar el enlace: ${verificationTask.exception?.localizedMessage.orEmpty()}"
+                                                    }
+                                                }
                                         } else {
-                                            auth.signOut()
+                                            isLoading = false
                                             isSuccessMessage = false
-                                            infoMessage = "Debes verificar tu correo antes de ingresar. Revisa tu bandeja de entrada o spam."
+                                            infoMessage = "No se pudo recuperar la sesión. Inténtalo nuevamente."
                                         }
                                     } else {
+                                        isLoading = false
                                         val errorMsg = task.exception?.localizedMessage ?: ""
                                         isSuccessMessage = false
                                         infoMessage = when {
