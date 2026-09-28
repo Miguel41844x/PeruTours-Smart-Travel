@@ -8,6 +8,7 @@ import com.example.perutours.ui.screens.home.HomeScreen
 import com.example.perutours.ui.screens.initial.InitialScreen
 import com.example.perutours.ui.screens.login.LoginScreen
 import com.example.perutours.ui.screens.profile.ProfileScreen
+import com.example.perutours.ui.screens.request.TravelRequestScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
 import com.google.firebase.auth.FirebaseAuth
 
@@ -64,6 +65,9 @@ fun NavigationWrapper(
         composable(route = "home") {
             HomeScreen(
                 auth = auth,
+                navigateToTravelRequest = {
+                    navHostController.navigate(route = "travelRequest")
+                },
                 navigateToProfile = {
                     navHostController.navigate(route = "profile")
                 },
@@ -80,6 +84,18 @@ fun NavigationWrapper(
             ProfileScreen(
                 onBack = {
                     navHostController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = "travelRequest") {
+            TravelRequestScreen(
+                onBack = { navHostController.popBackStack() },
+                onSaved = {
+                    navHostController.navigate(route = "home") {
+                        popUpTo("travelRequest") { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
         }

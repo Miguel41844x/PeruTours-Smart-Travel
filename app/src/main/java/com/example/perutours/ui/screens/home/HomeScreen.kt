@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -46,6 +47,7 @@ data class TourPackage(
 @Composable
 fun HomeScreen(
     auth: FirebaseAuth,
+    navigateToTravelRequest: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
     navigateToInitial: () -> Unit
 ) {
@@ -206,6 +208,27 @@ fun HomeScreen(
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = navigateToTravelRequest,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AddLocationAlt,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Solicitar un viaje",
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
