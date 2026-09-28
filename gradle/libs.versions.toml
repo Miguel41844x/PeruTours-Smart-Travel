@@ -42,6 +42,7 @@ firebaseBom = "33.7.0"
 googleGmsGoogleServices = "4.4.2"
 navigationCompose = "2.8.4"
 coilCompose = "2.7.0"
+playServicesLocation = "21.4.0"
 
 
 [libraries]
@@ -69,7 +70,11 @@ firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
 
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
+<<<<<<< HEAD
 >>>>>>> codex/correcciones-hu02
+=======
+google-play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+>>>>>>> codex/hu03
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

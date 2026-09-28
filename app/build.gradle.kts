@@ -125,6 +125,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.coil.compose)
+    implementation(libs.google.play.services.location)
 
 }
+<<<<<<< HEAD
 >>>>>>> codex/correcciones-hu02
+=======
+>>>>>>> codex/hu03
