@@ -36,6 +36,7 @@ class TravelRequestViewModel(
             originCity = value,
             originLatitude = null,
             originLongitude = null,
+            isOriginVerified = false,
             originCityError = null
         )
     }
@@ -87,6 +88,7 @@ class TravelRequestViewModel(
                     originCity = location.city,
                     originLatitude = location.latitude,
                     originLongitude = location.longitude,
+                    isOriginVerified = location.city.isNotBlank(),
                     originCityError = null,
                     isLocating = false,
                     message = if (location.city.isBlank()) {
@@ -139,16 +141,51 @@ class TravelRequestViewModel(
         if (!validate()) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true, message = null)
+            _uiState.value = _uiState.value.copy(
+                isSaving = true,
+                isValidatingOrigin = !_uiState.value.isOriginVerified,
+                message = null
+            )
 
             try {
                 val state = _uiState.value
+                val needsOriginVerification = !state.isOriginVerified ||
+                    state.originLatitude == null ||
+                    state.originLongitude == null
+                val resolvedOrigin = if (needsOriginVerification) {
+                    locationRepository.findCity(state.originCity)
+                } else {
+                    null
+                }
+
+                if (needsOriginVerification && resolvedOrigin == null) {
+                    _uiState.value = state.copy(
+                        isSaving = false,
+                        isValidatingOrigin = false,
+                        originCityError = "No encontramos esa ciudad. Revisa el nombre o usa tu ubicación."
+                    )
+                    return@launch
+                }
+
+                val verifiedOriginCity = resolvedOrigin?.displayName ?: state.originCity.trim()
+                val verifiedLatitude = resolvedOrigin?.latitude ?: state.originLatitude
+                val verifiedLongitude = resolvedOrigin?.longitude ?: state.originLongitude
+
+                _uiState.value = state.copy(
+                    originCity = verifiedOriginCity,
+                    originLatitude = verifiedLatitude,
+                    originLongitude = verifiedLongitude,
+                    originCityError = null,
+                    isOriginVerified = true,
+                    isValidatingOrigin = false
+                )
+
                 val savedRequest = requestRepository.save(
                     TravelRequest(
                         destination = state.destination.trim(),
-                        originCity = state.originCity.trim(),
-                        originLatitude = state.originLatitude,
-                        originLongitude = state.originLongitude,
+                        originCity = verifiedOriginCity,
+                        originLatitude = verifiedLatitude,
+                        originLongitude = verifiedLongitude,
                         departureAtMillis = state.departureAtMillis,
                         returnAtMillis = state.returnAtMillis,
                         travelerCount = state.travelerCount,
@@ -158,12 +195,24 @@ class TravelRequestViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
+                    isValidatingOrigin = false,
                     savedRequestId = savedRequest.id
                 )
             } catch (e: Exception) {
+                val originWasVerified = _uiState.value.isOriginVerified
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
-                    message = "No se pudo guardar la solicitud: ${e.localizedMessage.orEmpty()}"
+                    isValidatingOrigin = false,
+                    originCityError = if (originWasVerified) {
+                        _uiState.value.originCityError
+                    } else {
+                        "No se pudo verificar la ciudad en este momento."
+                    },
+                    message = if (originWasVerified) {
+                        "No se pudo guardar la solicitud: ${e.localizedMessage.orEmpty()}"
+                    } else {
+                        e.localizedMessage ?: "No se pudo verificar la ciudad en este momento."
+                    }
                 )
             }
         }

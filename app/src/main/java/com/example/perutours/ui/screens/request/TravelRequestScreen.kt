@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
@@ -261,7 +262,7 @@ fun TravelRequestScreen(
                     Icon(Icons.Default.LocationOn, contentDescription = null)
                 },
                 trailingIcon = {
-                    if (uiState.isLocating) {
+                    if (uiState.isLocating || uiState.isValidatingOrigin) {
                         CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     } else {
                         IconButton(onClick = ::requestLocation) {
@@ -275,9 +276,24 @@ fun TravelRequestScreen(
                 isError = uiState.originCityError != null,
                 supportingText = {
                     val error = uiState.originCityError
-                    when {
-                        error != null -> Text(error)
-                        uiState.originLatitude != null -> Text("Detectada por GPS; puedes editarla.")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        when {
+                            error != null -> Text(error)
+                            uiState.isValidatingOrigin -> Text("Verificando ciudad...")
+                            uiState.isOriginVerified -> {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text("Ciudad verificada; puedes editarla.")
+                            }
+                            else -> Text("La ciudad se verificará antes de enviar.")
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -401,6 +417,15 @@ fun TravelRequestScreen(
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Text(
+                        text = if (uiState.isValidatingOrigin) {
+                            "Verificando ciudad..."
+                        } else {
+                            "Enviando solicitud..."
+                        },
+                        modifier = Modifier.padding(start = 8.dp),
+                        fontWeight = FontWeight.Bold
                     )
                 } else {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)

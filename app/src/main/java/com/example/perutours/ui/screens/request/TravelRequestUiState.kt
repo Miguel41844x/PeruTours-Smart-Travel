@@ -15,6 +15,8 @@ data class TravelRequestUiState(
     val returnError: String? = null,
     val travelerCountError: String? = null,
     val isLocating: Boolean = false,
+    val isValidatingOrigin: Boolean = false,
+    val isOriginVerified: Boolean = false,
     val isSaving: Boolean = false,
     val savedRequestId: String? = null,
     val message: String? = null
