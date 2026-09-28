@@ -708,7 +708,7 @@ fun ProfileScreen(
                                 currentUser?.updateProfile(profileUpdates)?.addOnCompleteListener {
                                     isSaving = false
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("¡Perfil y preferencias guardados en Firestore con éxito!")
+                                        snackbarHostState.showSnackbar("¡Perfil y preferencias guardados con éxito!")
                                     }
                                 }
                             }
