@@ -109,6 +109,12 @@ fun ProfileScreen(
         mutableStateOf(setOf("Historia y Cultura", "Gastronomía Peruana"))
     }
 
+    // Estados de validación Material Design (TextField isError + supportingText)
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var phoneError by remember { mutableStateOf<String?>(null) }
+    var cityError by remember { mutableStateOf<String?>(null) }
+    var preferencesError by remember { mutableStateOf<String?>(null) }
+
     // Estados de carga, subida y modal de selección de cámara/galería
     var isLoadingInitialData by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
@@ -434,7 +440,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // SECCIÓN 2: DATOS PERSONALES
+                // SECCIÓN 2: DATOS PERSONALES CON VALIDACIÓN MATERIAL 3
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
@@ -455,12 +461,22 @@ fun ProfileScreen(
                             modifier = Modifier.padding(top = 2.dp, bottom = 14.dp)
                         )
 
+                        // Campo obligatorio 1: Nombre completo
                         OutlinedTextField(
                             value = name,
-                            onValueChange = { name = it },
+                            onValueChange = {
+                                name = it
+                                nameError = null
+                            },
                             label = { Text("Nombre completo *") },
                             leadingIcon = {
                                 Icon(Icons.Default.Person, contentDescription = null, tint = PeruGold40)
+                            },
+                            isError = nameError != null,
+                            supportingText = {
+                                if (nameError != null) {
+                                    Text(text = nameError!!, color = MaterialTheme.colorScheme.error)
+                                }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
@@ -469,14 +485,26 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Campo obligatorio 2: Teléfono celular (9 dígitos)
                         OutlinedTextField(
                             value = phone,
-                            onValueChange = { phone = it },
+                            onValueChange = { input ->
+                                if (input.length <= 9 && input.all { it.isDigit() }) {
+                                    phone = input
+                                    phoneError = null
+                                }
+                            },
                             label = { Text("Teléfono celular (9 dígitos) *") },
                             leadingIcon = {
                                 Icon(Icons.Default.Phone, contentDescription = null, tint = PeruGold40)
                             },
                             prefix = { Text("+51 ") },
+                            isError = phoneError != null,
+                            supportingText = {
+                                if (phoneError != null) {
+                                    Text(text = phoneError!!, color = MaterialTheme.colorScheme.error)
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
                             singleLine = true,
@@ -485,12 +513,22 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Campo obligatorio 3: Ciudad de origen
                         OutlinedTextField(
                             value = city,
-                            onValueChange = { city = it },
+                            onValueChange = {
+                                city = it
+                                cityError = null
+                            },
                             label = { Text("Ciudad / País de origen *") },
                             leadingIcon = {
                                 Icon(Icons.Default.LocationCity, contentDescription = null, tint = PeruGold40)
+                            },
+                            isError = cityError != null,
+                            supportingText = {
+                                if (cityError != null) {
+                                    Text(text = cityError!!, color = MaterialTheme.colorScheme.error)
+                                }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
@@ -499,6 +537,7 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Campo opcional: DNI o Pasaporte
                         OutlinedTextField(
                             value = dniOrPassport,
                             onValueChange = { dniOrPassport = it },
@@ -513,6 +552,7 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        // Correo electrónico (Solo lectura - autenticado en Firebase)
                         OutlinedTextField(
                             value = currentUser?.email ?: "",
                             onValueChange = { },
@@ -535,7 +575,10 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = SurfaceLight),
-                    border = BorderStroke(1.dp, Color(0xFFE7E5E4))
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (preferencesError != null) MaterialTheme.colorScheme.error else Color(0xFFE7E5E4)
+                    )
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Text(
@@ -561,6 +604,7 @@ fun ProfileScreen(
                                 FilterChip(
                                     selected = isSelected,
                                     onClick = {
+                                        preferencesError = null
                                         selectedPreferences = if (isSelected) {
                                             selectedPreferences - preference
                                         } else {
@@ -591,22 +635,62 @@ fun ProfileScreen(
                                 )
                             }
                         }
+
+                        if (preferencesError != null) {
+                            Text(
+                                text = preferencesError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // BOTÓN GUARDAR
+                // BOTÓN GUARDAR CON VALIDACIÓN Y PERSISTENCIA EN FIRESTORE
                 Button(
                     onClick = {
+                        val cleanName = name.trim()
+                        val cleanPhone = phone.trim()
+                        val cleanCity = city.trim()
+
+                        var hasValidationError = false
+
+                        if (cleanName.length < 3) {
+                            nameError = "Ingresa tu nombre completo (mínimo 3 caracteres)."
+                            hasValidationError = true
+                        }
+                        if (cleanPhone.length != 9 || !cleanPhone.startsWith("9")) {
+                            phoneError = "Ingresa un celular válido de 9 dígitos que empiece con 9."
+                            hasValidationError = true
+                        }
+                        if (cleanCity.isBlank()) {
+                            cityError = "La ciudad o país de origen es obligatorio."
+                            hasValidationError = true
+                        }
+                        if (selectedPreferences.isEmpty()) {
+                            preferencesError = "Selecciona al menos una preferencia de viaje."
+                            hasValidationError = true
+                        }
+
+                        if (hasValidationError) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Por favor corrige los campos obligatorios marcados en rojo.")
+                            }
+                            return@Button
+                        }
+
+                        // Si todo es válido, guardar en Cloud Firestore y sincronizar con FirebaseAuth
                         isSaving = true
                         val userProfileData = hashMapOf(
                             "uid" to uid,
-                            "name" to name.trim(),
+                            "name" to cleanName,
                             "email" to (currentUser?.email ?: ""),
-                            "phone" to phone.trim(),
+                            "phone" to cleanPhone,
                             "dni" to dniOrPassport.trim(),
-                            "city" to city.trim(),
+                            "city" to cleanCity,
                             "role" to role,
                             "photoUrl" to photoUrl,
                             "preferences" to selectedPreferences.toList(),
@@ -616,8 +700,9 @@ fun ProfileScreen(
                         firestore.collection("users").document(uid)
                             .set(userProfileData, SetOptions.merge())
                             .addOnSuccessListener {
+                                // También sincronizamos displayName en FirebaseAuth para mantener compatibilidad con HomeScreen
                                 val profileUpdates = userProfileChangeRequest {
-                                    displayName = "${name.trim()} | $role | ${phone.trim()}"
+                                    displayName = "$cleanName | $role | $cleanPhone"
                                 }
                                 currentUser?.updateProfile(profileUpdates)?.addOnCompleteListener {
                                     isSaving = false
