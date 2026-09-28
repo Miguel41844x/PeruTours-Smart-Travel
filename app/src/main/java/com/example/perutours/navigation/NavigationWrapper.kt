@@ -15,10 +15,20 @@ fun NavigationWrapper(
     navHostController: NavHostController,
     auth: FirebaseAuth
 ) {
-    // Si ya hay usuario conectado, entra directo al home
-    val startDestination = if (auth.currentUser != null) "home" else "initial"
+    val currentUser = auth.currentUser
 
-    NavHost(navController = navHostController, startDestination = startDestination) {
+    // CRITERIO 3: Inicio de sesión persistente
+    // Si ya existe usuario y además tiene el correo verificado, ingresa directamente a Home.
+    val startDestination = if (currentUser != null && currentUser.isEmailVerified) {
+        "home"
+    } else {
+        "initial"
+    }
+
+    NavHost(
+        navController = navHostController,
+        startDestination = startDestination
+    ) {
 
         composable(route = "initial") {
             InitialScreen(
@@ -33,6 +43,7 @@ fun NavigationWrapper(
                 navigateToSignUp = { navHostController.navigate(route = "signUp") },
                 navigateToHome = {
                     navHostController.navigate(route = "home") {
+                        // Limpia el backstack para evitar volver atrás al login
                         popUpTo("initial") { inclusive = true }
                     }
                 }
@@ -53,9 +64,11 @@ fun NavigationWrapper(
         composable(route = "home") {
             HomeScreen(
                 auth = auth,
+                // CRITERIO 3: Cierre de sesión (Logout completo)
                 navigateToInitial = {
                     navHostController.navigate(route = "initial") {
-                        popUpTo(0)
+                        // Limpia todo el historial de la aplicación
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

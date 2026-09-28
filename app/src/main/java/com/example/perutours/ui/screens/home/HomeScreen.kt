@@ -1,33 +1,41 @@
 package com.example.perutours.ui.screens.home
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.perutours.ui.theme.*
+import com.example.perutours.R
+import com.example.perutours.ui.theme.BackgroundLight
+import com.example.perutours.ui.theme.PeruGold40
+import com.example.perutours.ui.theme.SurfaceLight
 import com.google.firebase.auth.FirebaseAuth
 
-data class DestinationMock(
+data class TourPackage(
     val title: String,
     val location: String,
+    val duration: String,
     val price: String,
     val rating: String,
-    val days: String
+    val imageRes: Int
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,186 +44,203 @@ fun HomeScreen(
     auth: FirebaseAuth,
     navigateToInitial: () -> Unit
 ) {
-    var selectedNavIndex by remember { mutableIntStateOf(0) }
-    val userEmail = auth.currentUser?.email ?: "Viajero"
-    val userName = auth.currentUser?.displayName ?: userEmail.substringBefore("@")
+    val currentUser = auth.currentUser
+    val userName = currentUser?.displayName?.ifBlank { "Turista" } ?: "Turista"
+    val userEmail = currentUser?.email ?: ""
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
-    val mockDestinations = listOf(
-        DestinationMock("Machu Picchu Mágico", "Cusco", "S/ 1,250", "4.9", "4D / 3N"),
-        DestinationMock("Huacachina & Paracas", "Ica", "S/ 480", "4.8", "2D / 1N"),
-        DestinationMock("Cañón del Colca", "Arequipa", "S/ 720", "4.7", "3D / 2N"),
-        DestinationMock("Reserva Pacaya Samiria", "Iquitos", "S/ 1,890", "4.9", "5D / 4N")
+    val featuredPackages = listOf(
+        TourPackage("Machu Picchu Mágico", "Cusco, Perú", "4 días / 3 noches", "S/ 1,299", "4.9", R.drawable.machu_picchu),
+        TourPackage("Líneas de Nazca y Huacachina", "Ica, Perú", "2 días / 1 noche", "S/ 480", "4.8", R.drawable.machu_picchu),
+        TourPackage("Cañón del Colca y Arequipa", "Arequipa, Perú", "3 días / 2 noches", "S/ 650", "4.7", R.drawable.machu_picchu)
     )
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = SurfaceLight,
-                tonalElevation = 8.dp
-            ) {
-                val navItems = listOf(
-                    Triple("Inicio", Icons.Default.Home, 0),
-                    Triple("Explorar", Icons.Default.Search, 1),
-                    Triple("Cotizaciones", Icons.Default.ReceiptLong, 2),
-                    Triple("Reservas", Icons.Default.Event, 3),
-                    Triple("Perfil", Icons.Default.Person, 4)
-                )
-
-                navItems.forEach { (label, icon, index) ->
-                    NavigationBarItem(
-                        selected = selectedNavIndex == index,
-                        onClick = { selectedNavIndex = index },
-                        icon = { Icon(icon, contentDescription = label) },
-                        label = {
-                            Text(
-                                label,
-                                fontSize = 11.sp,
-                                fontWeight = if (selectedNavIndex == index) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = PeruGold40,
-                            selectedTextColor = PeruGold40,
-                            indicatorColor = PeruGoldContainerLight
-                        )
-                    )
+    // Diálogo de confirmación para Cerrar Sesión
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Cerrar Sesión", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas cerrar tu sesión en PeruTours?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        auth.signOut() // CRITERIO 3: Cierra la sesión en Firebase
+                        navigateToInitial() // Regresa a la pantalla inicial y borra backstack
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Cerrar Sesión", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancelar")
                 }
             }
-        }
-    ) { innerPadding ->
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "Hola, $userName 👋",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = userEmail,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* Notificaciones */ }) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notificaciones")
+                    }
+                    // CRITERIO 3: Botón de Logout
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Cerrar sesión",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = SurfaceLight
+                )
+            )
+        },
+        containerColor = BackgroundLight
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundLight)
-                .padding(innerPadding)
+                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
+                .padding(20.dp)
         ) {
-            // Header con Saludo y Logout
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(PeruGoldContainerLight),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("🇵🇪", fontSize = 22.sp)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("¡Allianllachu, $userName!", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                        Text("¿Cuál será tu próxima aventura?", fontSize = 12.sp, color = Color(0xFF78716C))
-                    }
-                }
-
-                IconButton(
-                    onClick = {
-                        auth.signOut()
-                        navigateToInitial()
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Logout,
-                        contentDescription = "Cerrar sesión",
-                        tint = Color(0xFF78716C)
-                    )
-                }
-            }
-
-            // Barra de Búsqueda
+            // Banner de bienvenida
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceLight),
-                elevation = CardDefaults.cardElevation(2.dp)
+                colors = CardDefaults.cardColors(containerColor = PeruGold40)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = PeruGold40)
-                    Spacer(Modifier.width(12.dp))
-                    Text("Cusco, Máncora, Tarapoto...", color = Color(0xFFA8A29E), fontSize = 14.sp)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Chips de acceso rápido
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                listOf("Nueva Solicitud", "Mis Viajes", "Favoritos").forEach { tag ->
-                    AssistChip(
-                        onClick = { },
-                        label = { Text(tag, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = PeruGoldContainerLight,
-                            labelColor = OnPeruGoldContainerLight
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        text = "Descubre el Perú con nosotros",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "Accede a tarifas exclusivas en tours, pasajes y hospedajes certificados.",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 6.dp)
                     )
                 }
             }
 
-            // Destinos Destacados
             Spacer(modifier = Modifier.height(24.dp))
+
             Text(
-                "Destinos Destacados",
-                fontSize = 20.sp,
+                text = "Paquetes Turísticos Destacados",
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(mockDestinations) { item ->
-                    Card(
-                        modifier = Modifier
-                            .width(220.dp)
-                            .wrapContentHeight(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceLight),
-                        elevation = CardDefaults.cardElevation(3.dp)
-                    ) {
-                        Column {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(120.dp)
-                                    .background(Color(0xFFE7E5E4)),
-                                contentAlignment = Alignment.Center
+            Spacer(modifier = Modifier.height(12.dp))
+
+            featuredPackages.forEach { item ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceLight),
+                    border = BorderStroke(1.dp, Color(0xFFE7E5E4))
+                ) {
+                    Column {
+                        Image(
+                            painter = painterResource(id = item.imageRes),
+                            contentDescription = item.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(140.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Landscape, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(40.dp))
+                                Text(
+                                    text = item.title,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = PeruGold40,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = item.rating,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
 
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text(item.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                Text("${item.location} • ${item.days}", fontSize = 12.sp, color = Color(0xFF78716C))
-                                Spacer(Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                            Row(
+                                modifier = Modifier.padding(top = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = Color(0xFF78716C),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "${item.location} • ${item.duration}",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF78716C)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = item.price,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = PeruGold40
+                                )
+                                Button(
+                                    onClick = { /* Ver detalle */ },
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
                                 ) {
-                                    Text("Desde ${item.price}", fontWeight = FontWeight.ExtraBold, color = PeruGold40, fontSize = 14.sp)
-                                    Text("★ ${item.rating}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Ver detalle", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
