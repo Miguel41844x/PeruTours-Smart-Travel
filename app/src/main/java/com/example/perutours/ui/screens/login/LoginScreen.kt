@@ -39,7 +39,8 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var infoMessage by remember { mutableStateOf<String?>(null) }
+    var isSuccessMessage by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
     Surface(
@@ -74,7 +75,7 @@ fun LoginScreen(
                     value = email,
                     onValueChange = {
                         email = it
-                        errorMessage = null
+                        infoMessage = null
                     },
                     label = { Text("Correo electrónico") },
                     leadingIcon = {
@@ -97,7 +98,7 @@ fun LoginScreen(
                     value = password,
                     onValueChange = {
                         password = it
-                        errorMessage = null
+                        infoMessage = null
                     },
                     label = { Text("Contraseña") },
                     leadingIcon = {
@@ -111,7 +112,7 @@ fun LoginScreen(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = if (passwordVisible) "Ocultar" else "Mostrar"
+                                contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
                             )
                         }
                     },
@@ -122,17 +123,35 @@ fun LoginScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
 
-                if (errorMessage != null) {
+                // Mensajes de error o éxito
+                if (infoMessage != null) {
                     Text(
-                        text = errorMessage ?: "",
-                        color = MaterialTheme.colorScheme.error,
+                        text = infoMessage ?: "",
+                        color = if (isSuccessMessage) Color(0xFF15803D) else MaterialTheme.colorScheme.error,
                         fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
 
+                // CRITERIO 4: Recuperación de contraseña por correo
                 TextButton(
-                    onClick = { /* Acción para recuperar contraseña */ },
+                    onClick = {
+                        if (email.isBlank()) {
+                            isSuccessMessage = false
+                            infoMessage = "Por favor ingresa tu correo arriba para enviarte el enlace de recuperación."
+                        } else {
+                            auth.sendPasswordResetEmail(email.trim())
+                                .addOnSuccessListener {
+                                    isSuccessMessage = true
+                                    infoMessage = "Te hemos enviado un enlace a $email para restablecer tu contraseña."
+                                }
+                                .addOnFailureListener { e ->
+                                    isSuccessMessage = false
+                                    infoMessage = "Error al solicitar recuperación: ${e.localizedMessage}"
+                                }
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(top = 4.dp)
@@ -147,23 +166,35 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Botón Iniciar Sesión con Firebase
+                // Botón Iniciar Sesión con VALIDACIÓN DE CORREO (Criterio 2)
                 Button(
                     onClick = {
                         if (email.isBlank() || password.isBlank()) {
-                            errorMessage = "Por favor ingresa tu correo y contraseña"
+                            isSuccessMessage = false
+                            infoMessage = "Por favor ingresa tu correo y contraseña"
                         } else {
                             isLoading = true
+                            isSuccessMessage = false
                             auth.signInWithEmailAndPassword(email.trim(), password.trim())
                                 .addOnCompleteListener { task ->
                                     isLoading = false
                                     if (task.isSuccessful) {
-                                        navigateToHome()
+                                        val user = auth.currentUser
+
+                                        // 👉 CRITERIO 2: Bloquear si no está verificado
+                                        if (user != null && user.isEmailVerified) {
+                                            navigateToHome()
+                                        } else {
+                                            auth.signOut() // Cierra sesión inmediatamente
+                                            isSuccessMessage = false
+                                            infoMessage = "Debes verificar tu correo antes de ingresar. Revisa tu bandeja de entrada o spam."
+                                        }
                                     } else {
                                         val errorMsg = task.exception?.localizedMessage ?: ""
-                                        errorMessage = when {
-                                            errorMsg.contains("badly formatted", true) -> "El formato de correo no es válido"
-                                            errorMsg.contains("invalid-credential", true) -> "Correo o contraseña incorrectos"
+                                        isSuccessMessage = false
+                                        infoMessage = when {
+                                            errorMsg.contains("badly formatted", true) -> "El formato de correo no es válido."
+                                            errorMsg.contains("invalid-credential", true) -> "Correo o contraseña incorrectos."
                                             else -> "Error al iniciar sesión. Revisa tus datos."
                                         }
                                     }
@@ -189,7 +220,7 @@ fun LoginScreen(
                     }
                 }
 
-                // Divisor "o continúa con"
+                // Divisor
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -214,7 +245,7 @@ fun LoginScreen(
                     )
                 }
 
-                // Botón Continuar con Google
+                // Botón Google
                 OutlinedButton(
                     onClick = { navigateToHome() },
                     modifier = Modifier

@@ -55,6 +55,9 @@ fun SignUpScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
+    // Diálogo informativo para cuando se envía el correo de verificación
+    var showVerificationDialog by remember { mutableStateOf(false) }
+
     val roles = listOf(
         RoleOption("cliente", "Cliente / Turista", "Explora, cotiza y reserva viajes", "🧭", RoleTouristAccent),
         RoleOption("atencion", "Atención Turística", "Revisa solicitudes y asesora clientes", "🎧", RoleSupportAccent),
@@ -62,6 +65,28 @@ fun SignUpScreen(
         RoleOption("admin", "Administrador", "Proveedores y validación de pagos", "🛡️", RoleAdminAccent),
         RoleOption("gerente", "Gerente Comercial", "Métricas y analítica gerencial", "📊", RoleManagerAccent)
     )
+
+    // Diálogo del Criterio 2
+    if (showVerificationDialog) {
+        AlertDialog(
+            onDismissRequest = { /* Debe pulsar el botón */ },
+            title = { Text("¡Verifica tu correo!", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("Hemos enviado un correo de verificación a $email. Por favor revisa tu bandeja de entrada o carpeta de spam y valida tu cuenta antes de iniciar sesión.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showVerificationDialog = false
+                        navigateToLogin()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+                ) {
+                    Text("Ir a Iniciar Sesión", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -152,7 +177,7 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Selector de Roles (Tarjetas seleccionables)
+            // Selector de Roles
             Text(
                 text = "Selecciona tu rol en la agencia:",
                 fontSize = 15.sp,
@@ -220,7 +245,7 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Botón de Registro
+            // Botón de Registro con Envío de Correo de Verificación (Criterio 1 y 2)
             Button(
                 onClick = {
                     if (name.isBlank() || email.isBlank() || password.isBlank()) {
@@ -231,17 +256,28 @@ fun SignUpScreen(
                         isLoading = true
                         auth.createUserWithEmailAndPassword(email.trim(), password.trim())
                             .addOnCompleteListener { task ->
-                                isLoading = false
                                 if (task.isSuccessful) {
                                     val user = auth.currentUser
-                                    // Guarda el nombre del usuario
                                     val profileUpdates = userProfileChangeRequest {
                                         displayName = name.trim()
                                     }
                                     user?.updateProfile(profileUpdates)
-                                    navigateToLogin()
+
+                                    // 👉 CRITERIO 2: Enviar correo de verificación
+                                    user?.sendEmailVerification()
+                                        ?.addOnCompleteListener {
+                                            isLoading = false
+                                            auth.signOut() // Lo desconectamos hasta que valide
+                                            showVerificationDialog = true // Muestra aviso al usuario
+                                        }
                                 } else {
-                                    errorMessage = task.exception?.localizedMessage ?: "Error al registrarse"
+                                    isLoading = false
+                                    val errorMsg = task.exception?.localizedMessage ?: ""
+                                    errorMessage = when {
+                                        errorMsg.contains("already in use", true) -> "Este correo electrónico ya está registrado."
+                                        errorMsg.contains("badly formatted", true) -> "El formato del correo electrónico no es válido."
+                                        else -> "Error al registrarse: $errorMsg"
+                                    }
                                 }
                             }
                     }

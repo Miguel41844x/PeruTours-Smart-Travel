@@ -12,7 +12,20 @@
           "package_name": "com.example.perutours"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "110426677713-jetuuh0hmq0hat8vactj6982oen6lfa3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.perutours",
+            "certificate_hash": "39920c38e9d5f2e560a949cb4daf51ed02c1fb78"
+          }
+        },
+        {
+          "client_id": "110426677713-gpnd0s3t5h6j06dh4130m05qh309b970.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCEoWYwWE9bB6UJ58V1u_zjeSlG8c_eLsE"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "110426677713-gpnd0s3t5h6j06dh4130m05qh309b970.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
