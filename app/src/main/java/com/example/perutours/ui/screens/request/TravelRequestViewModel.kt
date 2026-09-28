@@ -4,12 +4,22 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.location.LocationRepository
+import com.example.perutours.data.model.TravelRequest
+import com.example.perutours.data.repository.TravelRequestRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class TravelRequestViewModel(application: Application) : AndroidViewModel(application) {
+class TravelRequestViewModel(
+    application: Application,
+    private val requestRepository: TravelRequestRepository
+) : AndroidViewModel(application) {
+    constructor(application: Application) : this(
+        application = application,
+        requestRepository = TravelRequestRepository()
+    )
+
     private val locationRepository = LocationRepository(application)
     private val _uiState = MutableStateFlow(TravelRequestUiState())
     val uiState: StateFlow<TravelRequestUiState> = _uiState.asStateFlow()
@@ -123,6 +133,44 @@ class TravelRequestViewModel(application: Application) : AndroidViewModel(applic
             }
         )
         return validation.isValid
+    }
+
+    fun submitRequest() {
+        if (!validate()) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true, message = null)
+
+            try {
+                val state = _uiState.value
+                val savedRequest = requestRepository.save(
+                    TravelRequest(
+                        destination = state.destination.trim(),
+                        originCity = state.originCity.trim(),
+                        originLatitude = state.originLatitude,
+                        originLongitude = state.originLongitude,
+                        departureAtMillis = state.departureAtMillis,
+                        returnAtMillis = state.returnAtMillis,
+                        travelerCount = state.travelerCount,
+                        notes = state.notes.trim()
+                    )
+                )
+
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    savedRequestId = savedRequest.id
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    message = "No se pudo guardar la solicitud: ${e.localizedMessage.orEmpty()}"
+                )
+            }
+        }
+    }
+
+    fun clearSavedRequest() {
+        _uiState.value = _uiState.value.copy(savedRequestId = null)
     }
 
     fun clearMessage() {

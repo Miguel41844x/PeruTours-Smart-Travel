@@ -142,6 +142,28 @@ fun TravelRequestScreen(
         }
     }
 
+    if (uiState.savedRequestId != null) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Solicitud registrada") },
+            text = {
+                Text(
+                    "Tu solicitud quedó pendiente de cotización. Te avisaremos cuando exista una propuesta."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearSavedRequest()
+                        onSaved()
+                    }
+                ) {
+                    Text("Volver al inicio")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -299,7 +321,7 @@ fun TravelRequestScreen(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { viewModel.validate() },
+                onClick = viewModel::submitRequest,
                 enabled = !uiState.isSaving,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -315,7 +337,7 @@ fun TravelRequestScreen(
                 } else {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                     Text(
-                        text = "Revisar solicitud",
+                        text = "Enviar solicitud",
                         modifier = Modifier.padding(start = 8.dp),
                         fontWeight = FontWeight.Bold
                     )
