@@ -138,7 +138,7 @@ fun SignUpScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it; errorMessage = null },
-                label = { Text("Contraseña (mínimo 6 caracteres)") },
+                label = { Text("Contraseña (mín. 6, mayúscula, número y símbolo)") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PeruGold40) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -226,6 +226,15 @@ fun SignUpScreen(
                         }
                         cleanPass.length < 6 -> {
                             errorMessage = "La contraseña debe tener al menos 6 caracteres."
+                        }
+                        !cleanPass.any { it.isUpperCase() } -> {
+                            errorMessage = "La contraseña debe contener al menos una letra mayúscula."
+                        }
+                        !cleanPass.any { it.isDigit() } -> {
+                            errorMessage = "La contraseña debe contener al menos un número."
+                        }
+                        !cleanPass.any { !it.isLetterOrDigit() } -> {
+                            errorMessage = "La contraseña debe contener al menos un símbolo (ej. @ # $ % & *)."
                         }
                         cleanPass != cleanConfirm -> {
                             errorMessage = "Las contraseñas no coinciden."
