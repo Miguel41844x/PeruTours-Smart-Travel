@@ -1,5 +1,7 @@
 package com.example.perutours.ui.screens.profile
 
+import android.net.Uri
+
 data class ProfileUiState(
     val name: String = "",
     val phone: String = "",
@@ -21,6 +23,7 @@ data class ProfileUiState(
     val isLoadingInitialData: Boolean = true,
     val isSaving: Boolean = false,
     val isUploadingPhoto: Boolean = false,
+    val pendingPhotoUri: Uri? = null,
 
     // Mensaje para Snackbar
     val message: String? = null

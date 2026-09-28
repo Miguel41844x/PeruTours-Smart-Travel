@@ -9,35 +9,31 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 
-class ProfileRepository {
+class ProfileRepository(
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val storage: FirebaseStorage = FirebaseStorage.getInstance()
+) {
 
-    private val auth = FirebaseAuth.getInstance()
-    private val firestore = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance()
-
-    suspend fun getProfile(uid: String): UserProfile {
-
+    fun getAuthProfile(uid: String): UserProfile {
         val currentUser = auth.currentUser
-
-        // Datos iniciales desde FirebaseAuth
-        val rawDisplay = currentUser?.displayName ?: ""
-
-        val parts = rawDisplay
+        val parts = currentUser?.displayName
+            .orEmpty()
             .split("|")
             .map { it.trim() }
 
-        val initialName = parts.getOrNull(0) ?: ""
-        val initialRole = parts.getOrNull(1) ?: "cliente"
-        val initialPhone = parts.getOrNull(2) ?: ""
-
-        var profile = UserProfile(
+        return UserProfile(
             uid = uid,
-            name = initialName,
-            email = currentUser?.email ?: "",
-            phone = initialPhone,
-            role = initialRole,
-            photoUrl = currentUser?.photoUrl?.toString() ?: ""
+            name = parts.getOrNull(0).orEmpty(),
+            email = currentUser?.email.orEmpty(),
+            phone = parts.getOrNull(2).orEmpty(),
+            role = parts.getOrNull(1)?.takeIf { it.isNotBlank() } ?: "cliente",
+            photoUrl = currentUser?.photoUrl?.toString().orEmpty()
         )
+    }
+
+    suspend fun getProfile(uid: String): UserProfile {
+        var profile = getAuthProfile(uid)
 
         // Intentamos recuperar los datos guardados en Firestore
         val document = firestore

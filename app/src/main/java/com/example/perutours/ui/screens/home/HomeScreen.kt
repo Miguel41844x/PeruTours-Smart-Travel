@@ -65,9 +65,9 @@ fun HomeScreen(
     val userEmail = currentUser?.email ?: ""
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // Cargar datos actualizados desde Firestore cada vez que se muestra HomeScreen
-    LaunchedEffect(uid) {
-        if (uid.isNotEmpty()) {
+    // Mantener Home sincronizado y liberar el listener al salir de la pantalla.
+    DisposableEffect(uid) {
+        val registration = if (uid.isNotEmpty()) {
             FirebaseFirestore.getInstance().collection("users").document(uid)
                 .addSnapshotListener { snapshot, _ ->
                     if (snapshot != null && snapshot.exists()) {
@@ -79,7 +79,11 @@ fun HomeScreen(
                         }
                     }
                 }
+        } else {
+            null
         }
+
+        onDispose { registration?.remove() }
     }
 
     val featuredPackages = listOf(

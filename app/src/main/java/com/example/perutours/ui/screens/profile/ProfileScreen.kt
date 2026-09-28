@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,12 +100,8 @@ fun ProfileScreen(
         mutableStateOf(false)
     }
 
-    var pendingCameraUri by remember {
-        mutableStateOf<Uri?>(null)
-    }
-
-    var localPhotoUri by remember {
-        mutableStateOf<Uri?>(null)
+    var pendingCameraUri by rememberSaveable {
+        mutableStateOf<String?>(null)
     }
 
     // ============================================================
@@ -118,9 +115,6 @@ fun ProfileScreen(
         ) { uri: Uri? ->
 
             if (uri != null) {
-
-                localPhotoUri = uri
-
                 viewModel.uploadPhoto(uri)
             }
         }
@@ -136,15 +130,14 @@ fun ProfileScreen(
         ) { success: Boolean ->
 
             val capturedUri =
-                pendingCameraUri
+                pendingCameraUri?.let(Uri::parse)
+
+            pendingCameraUri = null
 
             if (
                 success &&
                 capturedUri != null
             ) {
-
-                localPhotoUri =
-                    capturedUri
 
                 viewModel.uploadPhoto(
                     capturedUri
@@ -170,7 +163,7 @@ fun ProfileScreen(
                     )
 
                 pendingCameraUri =
-                    newUri
+                    newUri.toString()
 
                 cameraLauncher.launch(
                     newUri
@@ -276,7 +269,7 @@ fun ProfileScreen(
                                         )
 
                                     pendingCameraUri =
-                                        newUri
+                                        newUri.toString()
 
                                     cameraLauncher.launch(
                                         newUri
@@ -522,7 +515,7 @@ fun ProfileScreen(
                 ) {
 
                     val imageModel: Any? =
-                        localPhotoUri
+                        uiState.pendingPhotoUri
                             ?: uiState.photoUrl
                                 .takeIf {
                                     it.isNotBlank()

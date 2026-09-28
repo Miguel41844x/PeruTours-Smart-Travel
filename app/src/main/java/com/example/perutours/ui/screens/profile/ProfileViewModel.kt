@@ -5,14 +5,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.UserProfile
 import com.example.perutours.data.repository.ProfileRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ProfileViewModel : ViewModel() {
+class ProfileViewModel(
+    private val repository: ProfileRepository,
+    private val auth: FirebaseAuth
+) : ViewModel() {
 
-    private val repository = ProfileRepository()
+    constructor() : this(
+        repository = ProfileRepository(),
+        auth = FirebaseAuth.getInstance()
+    )
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> =
@@ -39,10 +46,7 @@ class ProfileViewModel : ViewModel() {
 
             try {
 
-                val currentUser =
-                    com.google.firebase.auth.FirebaseAuth
-                        .getInstance()
-                        .currentUser
+                val currentUser = auth.currentUser
 
                 val uid = currentUser?.uid ?: ""
 
@@ -50,7 +54,8 @@ class ProfileViewModel : ViewModel() {
 
                     _uiState.value =
                         _uiState.value.copy(
-                            isLoadingInitialData = false
+                            isLoadingInitialData = false,
+                            message = "No hay un usuario autenticado."
                         )
 
                     return@launch
@@ -59,28 +64,36 @@ class ProfileViewModel : ViewModel() {
                 val profile =
                     repository.getProfile(uid)
 
-                _uiState.value =
-                    _uiState.value.copy(
-                        name = profile.name,
-                        email = profile.email,
-                        phone = profile.phone,
-                        dni = profile.dni,
-                        city = profile.city,
-                        role = profile.role,
-                        photoUrl = profile.photoUrl,
-                        selectedPreferences =
-                            profile.preferences.toSet(),
-                        isLoadingInitialData = false
-                    )
+                applyProfile(profile)
 
-            } catch (e: Exception) {
+            } catch (_: Exception) {
+                val uid = auth.currentUser?.uid.orEmpty()
+                val fallbackProfile = repository.getAuthProfile(uid)
 
-                _uiState.value =
-                    _uiState.value.copy(
-                        isLoadingInitialData = false
-                    )
+                applyProfile(
+                    profile = fallbackProfile,
+                    message = "No se pudieron cargar los datos de Firestore. Se muestran los datos de la cuenta."
+                )
             }
         }
+    }
+
+    private fun applyProfile(
+        profile: UserProfile,
+        message: String? = null
+    ) {
+        _uiState.value = _uiState.value.copy(
+            name = profile.name,
+            email = profile.email,
+            phone = profile.phone,
+            dni = profile.dni,
+            city = profile.city,
+            role = profile.role,
+            photoUrl = profile.photoUrl,
+            selectedPreferences = profile.preferences.toSet(),
+            isLoadingInitialData = false,
+            message = message
+        )
     }
 
     fun onNameChanged(value: String) {
@@ -144,70 +157,23 @@ class ProfileViewModel : ViewModel() {
     }
 
     private fun validateFields(): Boolean {
-
         val state = _uiState.value
-
-        val cleanName = state.name.trim()
-        val cleanPhone = state.phone.trim()
-        val cleanCity = state.city.trim()
-
-        var hasError = false
-
-        var nameError: String? = null
-        var phoneError: String? = null
-        var cityError: String? = null
-        var preferencesError: String? = null
-
-        // Nombre
-        if (cleanName.length < 3) {
-
-            nameError =
-                "Ingresa tu nombre completo (mínimo 3 caracteres)."
-
-            hasError = true
-        }
-
-        // Teléfono
-        if (
-            cleanPhone.length != 9 ||
-            !cleanPhone.startsWith("9")
-        ) {
-
-            phoneError =
-                "Ingresa un celular válido de 9 dígitos que empiece con 9."
-
-            hasError = true
-        }
-
-        // Ciudad
-        if (cleanCity.isBlank()) {
-
-            cityError =
-                "La ciudad o país de origen es obligatorio."
-
-            hasError = true
-        }
-
-        // Preferencias
-        // Mantenemos el comportamiento ORIGINAL:
-        // mínimo 1 preferencia.
-        if (state.selectedPreferences.isEmpty()) {
-
-            preferencesError =
-                "Selecciona al menos una preferencia de viaje."
-
-            hasError = true
-        }
+        val validation = ProfileValidator.validate(
+            name = state.name,
+            phone = state.phone,
+            city = state.city,
+            selectedPreferences = state.selectedPreferences
+        )
 
         _uiState.value =
             state.copy(
-                nameError = nameError,
-                phoneError = phoneError,
-                cityError = cityError,
-                preferencesError = preferencesError
+                nameError = validation.nameError,
+                phoneError = validation.phoneError,
+                cityError = validation.cityError,
+                preferencesError = validation.preferencesError
             )
 
-        return !hasError
+        return validation.isValid
     }
 
     fun saveProfile() {
@@ -232,10 +198,7 @@ class ProfileViewModel : ViewModel() {
 
             try {
 
-                val currentUser =
-                    com.google.firebase.auth.FirebaseAuth
-                        .getInstance()
-                        .currentUser
+                val currentUser = auth.currentUser
 
                 val uid =
                     currentUser?.uid ?: ""
@@ -288,10 +251,7 @@ class ProfileViewModel : ViewModel() {
 
         viewModelScope.launch {
 
-            val currentUser =
-                com.google.firebase.auth.FirebaseAuth
-                    .getInstance()
-                    .currentUser
+            val currentUser = auth.currentUser
 
             val uid =
                 currentUser?.uid ?: ""
@@ -309,7 +269,8 @@ class ProfileViewModel : ViewModel() {
 
             _uiState.value =
                 _uiState.value.copy(
-                    isUploadingPhoto = true
+                    isUploadingPhoto = true,
+                    pendingPhotoUri = uri
                 )
 
             try {
@@ -324,6 +285,7 @@ class ProfileViewModel : ViewModel() {
                     _uiState.value.copy(
                         photoUrl = remoteUrl,
                         isUploadingPhoto = false,
+                        pendingPhotoUri = null,
                         message =
                             "Foto de perfil guardada en Firebase Storage"
                     )
@@ -333,6 +295,7 @@ class ProfileViewModel : ViewModel() {
                 _uiState.value =
                     _uiState.value.copy(
                         isUploadingPhoto = false,
+                        pendingPhotoUri = null,
                         message =
                             "Error al subir la foto: ${e.localizedMessage}"
                     )
