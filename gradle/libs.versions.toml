@@ -12,7 +12,7 @@ firebaseBom = "33.7.0"
 googleGmsGoogleServices = "4.4.2"
 navigationCompose = "2.8.4"
 coilCompose = "2.7.0"
-playServicesLocation = "21.3.0"
+playServicesLocation = "21.4.0"
 
 
 [libraries]
