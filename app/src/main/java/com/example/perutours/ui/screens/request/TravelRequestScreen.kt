@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,14 +16,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -31,6 +35,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +45,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -53,15 +60,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.ContextCompat
-import com.example.perutours.ui.theme.BackgroundLight
-import com.example.perutours.ui.theme.PeruGold40
-import com.example.perutours.ui.theme.SurfaceLight
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -181,11 +188,15 @@ fun TravelRequestScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceLight)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = BackgroundLight
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -195,29 +206,48 @@ fun TravelRequestScreen(
                 .padding(20.dp)
         ) {
             Text(
-                text = "Cuéntanos cómo quieres viajar",
+                text = "Planea tu próximo viaje",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Usaremos estos datos para preparar una cotización personalizada.",
+                text = "Completa la ruta y las fechas para preparar una cotización personalizada.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            Text(
+                text = "Los campos marcados con * son obligatorios.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
+            )
+
+            FormSectionHeader(
+                icon = Icons.Default.FlightTakeoff,
+                title = "Ruta",
+                subtitle = "Indica desde dónde partes y a dónde quieres viajar."
             )
 
             OutlinedTextField(
                 value = uiState.destination,
                 onValueChange = viewModel::onDestinationChanged,
-                label = { Text("Destino") },
+                label = { Text("Destino *") },
                 placeholder = { Text("Ej. Cusco") },
+                leadingIcon = {
+                    Icon(Icons.Default.FlightTakeoff, contentDescription = null)
+                },
                 isError = uiState.destinationError != null,
                 supportingText = uiState.destinationError?.let { error ->
                     { Text(error) }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next
+                )
             )
 
             Spacer(Modifier.height(14.dp))
@@ -225,7 +255,7 @@ fun TravelRequestScreen(
             OutlinedTextField(
                 value = uiState.originCity,
                 onValueChange = viewModel::onOriginCityChanged,
-                label = { Text("Ciudad de origen") },
+                label = { Text("Ciudad de origen *") },
                 placeholder = { Text("Detecta o escribe tu ciudad") },
                 leadingIcon = {
                     Icon(Icons.Default.LocationOn, contentDescription = null)
@@ -252,10 +282,20 @@ fun TravelRequestScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next
+                )
             )
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(24.dp))
+
+            FormSectionHeader(
+                icon = Icons.Default.CalendarMonth,
+                title = "Fechas",
+                subtitle = "Selecciona la salida y el retorno de tu viaje."
+            )
 
             DateTimeField(
                 label = "Salida",
@@ -273,28 +313,53 @@ fun TravelRequestScreen(
                 onClick = { dateTimeTarget = "return" }
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
-            Text(
-                text = "Cantidad de viajeros",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold
+            FormSectionHeader(
+                icon = Icons.Default.People,
+                title = "Viajeros y detalles",
+                subtitle = "Indica cuántas personas viajan y agrega información útil."
             )
-            Row(
+
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                IconButton(onClick = viewModel::decrementTravelerCount) {
-                    Icon(Icons.Default.Remove, contentDescription = "Reducir viajeros")
-                }
-                Text(
-                    text = uiState.travelerCount.toString(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(onClick = viewModel::incrementTravelerCount) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar viajeros")
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Cantidad de viajeros",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Máximo 20 personas",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilledTonalIconButton(onClick = viewModel::decrementTravelerCount) {
+                            Icon(Icons.Default.Remove, contentDescription = "Reducir viajeros")
+                        }
+                        Text(
+                            text = uiState.travelerCount.toString(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        FilledTonalIconButton(onClick = viewModel::incrementTravelerCount) {
+                            Icon(Icons.Default.Add, contentDescription = "Agregar viajeros")
+                        }
+                    }
                 }
             }
             uiState.travelerCountError?.let { error ->
@@ -327,7 +392,10 @@ fun TravelRequestScreen(
                     .fillMaxWidth()
                     .height(54.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 if (uiState.isSaving) {
                     CircularProgressIndicator(
@@ -347,6 +415,49 @@ fun TravelRequestScreen(
             Spacer(Modifier.height(20.dp))
         }
     }
+}
+
+@Composable
+private fun FormSectionHeader(
+    icon: ImageVector,
+    title: String,
+    subtitle: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.padding(8.dp)
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    HorizontalDivider(
+        modifier = Modifier.padding(bottom = 14.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
 }
 
 @Composable
