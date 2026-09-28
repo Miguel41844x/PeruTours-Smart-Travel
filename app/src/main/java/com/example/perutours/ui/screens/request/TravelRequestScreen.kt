@@ -202,9 +202,9 @@ fun TravelRequestScreen(
 
             OutlinedTextField(
                 value = uiState.originCity,
-                onValueChange = {},
+                onValueChange = viewModel::onOriginCityChanged,
                 label = { Text("Ciudad de origen") },
-                placeholder = { Text("Se detectará con tu ubicación") },
+                placeholder = { Text("Detecta o escribe tu ciudad") },
                 leadingIcon = {
                     Icon(Icons.Default.LocationOn, contentDescription = null)
                 },
@@ -221,11 +221,14 @@ fun TravelRequestScreen(
                     }
                 },
                 isError = uiState.originCityError != null,
-                supportingText = uiState.originCityError?.let { error ->
-                    { Text(error) }
+                supportingText = {
+                    val error = uiState.originCityError
+                    when {
+                        error != null -> Text(error)
+                        uiState.originLatitude != null -> Text("Detectada por GPS; puedes editarla.")
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp)
             )
