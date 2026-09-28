@@ -14,14 +14,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,12 +35,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +58,8 @@ import com.example.perutours.ui.theme.SurfaceLight
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.Calendar
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +70,28 @@ fun TravelRequestScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var dateTimeTarget by rememberSaveable { mutableStateOf<String?>(null) }
+
+    dateTimeTarget?.let { target ->
+        val initialValue = if (target == "departure") {
+            uiState.departureAtMillis
+        } else {
+            uiState.returnAtMillis
+        }
+
+        RequestDateTimePicker(
+            initialValue = initialValue,
+            onDismiss = { dateTimeTarget = null },
+            onConfirm = { value ->
+                if (target == "departure") {
+                    viewModel.onDepartureChanged(value)
+                } else {
+                    viewModel.onReturnChanged(value)
+                }
+                dateTimeTarget = null
+            }
+        )
+    }
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let { message ->
@@ -150,7 +182,7 @@ fun TravelRequestScreen(
                 label = "Salida",
                 value = uiState.departureAtMillis,
                 error = uiState.departureError,
-                onClick = {}
+                onClick = { dateTimeTarget = "departure" }
             )
 
             Spacer(Modifier.height(12.dp))
@@ -159,7 +191,7 @@ fun TravelRequestScreen(
                 label = "Retorno",
                 value = uiState.returnAtMillis,
                 error = uiState.returnError,
-                onClick = {}
+                onClick = { dateTimeTarget = "return" }
             )
 
             Spacer(Modifier.height(20.dp))
@@ -224,7 +256,7 @@ fun TravelRequestScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Icon(Icons.Default.Send, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                     Text(
                         text = "Revisar solicitud",
                         modifier = Modifier.padding(start = 8.dp),
@@ -275,4 +307,101 @@ private fun DateTimeField(
 
 private fun formatDateTime(value: Long): String {
     return SimpleDateFormat("dd/MM/yyyy - HH:mm", Locale.getDefault()).format(Date(value))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RequestDateTimePicker(
+    initialValue: Long,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit
+) {
+    val baseValue = initialValue.takeIf { it > 0L } ?: System.currentTimeMillis()
+    val initialCalendar = remember(baseValue) {
+        Calendar.getInstance().apply { timeInMillis = baseValue }
+    }
+    val datePickerState = androidx.compose.material3.rememberDatePickerState(
+        initialSelectedDateMillis = baseValue
+    )
+    val timePickerState = androidx.compose.material3.rememberTimePickerState(
+        initialHour = initialCalendar.get(Calendar.HOUR_OF_DAY),
+        initialMinute = initialCalendar.get(Calendar.MINUTE),
+        is24Hour = true
+    )
+    var selectingTime by remember { mutableStateOf(false) }
+
+    if (!selectingTime) {
+        DatePickerDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (datePickerState.selectedDateMillis != null) {
+                            selectingTime = true
+                        }
+                    }
+                ) {
+                    Text("Continuar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Selecciona la hora") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selectedDate = datePickerState.selectedDateMillis ?: return@TextButton
+                        onConfirm(
+                            combineDateAndTime(
+                                selectedDateMillis = selectedDate,
+                                hour = timePickerState.hour,
+                                minute = timePickerState.minute
+                            )
+                        )
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+private fun combineDateAndTime(
+    selectedDateMillis: Long,
+    hour: Int,
+    minute: Int
+): Long {
+    val utcDate = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        timeInMillis = selectedDateMillis
+    }
+    return Calendar.getInstance().apply {
+        clear()
+        set(
+            utcDate.get(Calendar.YEAR),
+            utcDate.get(Calendar.MONTH),
+            utcDate.get(Calendar.DAY_OF_MONTH),
+            hour,
+            minute
+        )
+    }.timeInMillis
 }
