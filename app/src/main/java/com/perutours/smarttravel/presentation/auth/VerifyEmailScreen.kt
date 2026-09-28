@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Forward
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Forward
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -119,7 +119,7 @@ fun VerifyEmailScreen(
                     strokeWidth = 2.dp
                 )
             } else {
-                Icon(Icons.Filled.Forward, contentDescription = null)
+                Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (cooldownSeconds > 0) "Reenviar en ${cooldownSeconds}s" else "Reenviar correo de verificación",
@@ -160,7 +160,7 @@ fun VerifyEmailScreen(
                 .fillMaxWidth()
                 .height(50.dp)
         ) {
-            Icon(Icons.Filled.Logout, contentDescription = null)
+            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Cerrar sesión", fontSize = 14.sp)
         }

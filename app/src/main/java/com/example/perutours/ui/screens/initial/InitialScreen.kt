@@ -5,7 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -123,7 +123,7 @@ fun InitialScreen(
                 ) {
                     Text("Crear cuenta nueva", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Default.ArrowForward, contentDescription = null, tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White)
                 }
 
                 OutlinedButton(
