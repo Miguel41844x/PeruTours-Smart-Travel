@@ -11,6 +11,7 @@ composeBom = "2026.02.01"
 firebaseBom = "33.7.0"
 googleGmsGoogleServices = "4.4.2"
 navigationCompose = "2.8.4"
+coilCompose = "2.7.0"
 
 
 [libraries]
@@ -33,6 +34,11 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 # Firebase (sin versión, usa BOM)
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
