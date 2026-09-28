@@ -1,4 +1,4 @@
-package com.example.perutours.ui.theme.screens.home
+package com.example.perutours.ui.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.perutours.ui.theme.*
+import com.google.firebase.auth.FirebaseAuth
 
 data class DestinationMock(
     val title: String,
@@ -32,10 +33,12 @@ data class DestinationMock(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    userName: String = "Viajero",
-    onLogoutClick: () -> Unit
+    auth: FirebaseAuth,
+    navigateToInitial: () -> Unit
 ) {
     var selectedNavIndex by remember { mutableIntStateOf(0) }
+    val userEmail = auth.currentUser?.email ?: "Viajero"
+    val userName = auth.currentUser?.displayName ?: userEmail.substringBefore("@")
 
     val mockDestinations = listOf(
         DestinationMock("Machu Picchu Mágico", "Cusco", "S/ 1,250", "4.9", "4D / 3N"),
@@ -63,7 +66,13 @@ fun HomeScreen(
                         selected = selectedNavIndex == index,
                         onClick = { selectedNavIndex = index },
                         icon = { Icon(icon, contentDescription = label) },
-                        label = { Text(label, fontSize = 11.sp, fontWeight = if (selectedNavIndex == index) FontWeight.Bold else FontWeight.Normal) },
+                        label = {
+                            Text(
+                                label,
+                                fontSize = 11.sp,
+                                fontWeight = if (selectedNavIndex == index) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = PeruGold40,
                             selectedTextColor = PeruGold40,
@@ -101,17 +110,26 @@ fun HomeScreen(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("¡Allianllachu, $userName!", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("¡Allianllachu, $userName!", fontSize = 17.sp, fontWeight = FontWeight.Bold)
                         Text("¿Cuál será tu próxima aventura?", fontSize = 12.sp, color = Color(0xFF78716C))
                     }
                 }
 
-                IconButton(onClick = onLogoutClick) {
-                    Icon(Icons.Default.Logout, contentDescription = "Cerrar sesión", tint = Color(0xFF78716C))
+                IconButton(
+                    onClick = {
+                        auth.signOut()
+                        navigateToInitial()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Logout,
+                        contentDescription = "Cerrar sesión",
+                        tint = Color(0xFF78716C)
+                    )
                 }
             }
 
-            // Barra de Búsqueda estilo Airbnb
+            // Barra de Búsqueda
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -132,8 +150,9 @@ fun HomeScreen(
                 }
             }
 
-            // Sección Accesos Rápidos
             Spacer(modifier = Modifier.height(18.dp))
+
+            // Chips de acceso rápido
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -153,7 +172,7 @@ fun HomeScreen(
                 }
             }
 
-            // Carrusel de Destinos Populares
+            // Destinos Destacados
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 "Destinos Destacados",
@@ -176,7 +195,6 @@ fun HomeScreen(
                         elevation = CardDefaults.cardElevation(3.dp)
                     ) {
                         Column {
-                            // Placeholder de foto
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()

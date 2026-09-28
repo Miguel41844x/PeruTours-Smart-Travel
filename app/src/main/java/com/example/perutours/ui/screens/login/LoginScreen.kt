@@ -1,9 +1,12 @@
-package com.example.perutours.ui.theme.screens.login
+package com.example.perutours.ui.screens.login
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -14,25 +17,30 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.perutours.R
 import com.example.perutours.ui.theme.BackgroundLight
 import com.example.perutours.ui.theme.PeruGold40
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (userRole: String) -> Unit,
-    onNavigateToSignUp: () -> Unit
+    auth: FirebaseAuth,
+    navigateToSignUp: () -> Unit,
+    navigateToHome: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -41,11 +49,12 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
                 Text(
                     text = "¡Bienvenido de vuelta!",
@@ -57,15 +66,24 @@ fun LoginScreen(
                     text = "Ingresa tus credenciales para acceder a tu panel turístico.",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
+                    modifier = Modifier.padding(top = 6.dp, bottom = 28.dp)
                 )
 
-                // Input Correo
+                // Campo Correo Electrónico
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = {
+                        email = it
+                        errorMessage = null
+                    },
                     label = { Text("Correo electrónico") },
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = PeruGold40) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = null,
+                            tint = PeruGold40
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     singleLine = true,
@@ -74,17 +92,26 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Input Contraseña
+                // Campo Contraseña
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = {
+                        password = it
+                        errorMessage = null
+                    },
                     label = { Text("Contraseña") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PeruGold40) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = PeruGold40
+                        )
+                    },
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
-                                if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = null
+                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (passwordVisible) "Ocultar" else "Mostrar"
                             )
                         }
                     },
@@ -99,55 +126,143 @@ fun LoginScreen(
                     Text(
                         text = errorMessage ?: "",
                         color = MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
 
                 TextButton(
-                    onClick = { /* Flujo recuperar contraseña */ },
-                    modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
+                    onClick = { /* Acción para recuperar contraseña */ },
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 4.dp)
                 ) {
                     Text("¿Olvidaste tu contraseña?", color = PeruGold40, fontSize = 13.sp)
                 }
             }
 
-            // Acciones de pie
+            Spacer(modifier = Modifier.height(24.dp))
+
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Botón Iniciar Sesión con Firebase
                 Button(
                     onClick = {
                         if (email.isBlank() || password.isBlank()) {
                             errorMessage = "Por favor ingresa tu correo y contraseña"
                         } else {
-                            // Detección automática del rol (simulado o desde base de datos)
-                            val detectedRole = when {
-                                email.contains("agente") -> "agente"
-                                email.contains("atencion") -> "atencion"
-                                email.contains("admin") -> "admin"
-                                email.contains("gerente") -> "gerente"
-                                else -> "cliente"
-                            }
-                            onLoginSuccess(detectedRole)
+                            isLoading = true
+                            auth.signInWithEmailAndPassword(email.trim(), password.trim())
+                                .addOnCompleteListener { task ->
+                                    isLoading = false
+                                    if (task.isSuccessful) {
+                                        navigateToHome()
+                                    } else {
+                                        val errorMsg = task.exception?.localizedMessage ?: ""
+                                        errorMessage = when {
+                                            errorMsg.contains("badly formatted", true) -> "El formato de correo no es válido"
+                                            errorMsg.contains("invalid-credential", true) -> "Correo o contraseña incorrectos"
+                                            else -> "Error al iniciar sesión. Revisa tus datos."
+                                        }
+                                    }
+                                }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
+                    enabled = !isLoading,
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
                 ) {
-                    Text("Iniciar sesión", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            text = "Iniciar sesión",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // Divisor "o continúa con"
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = Color(0xFFE7E5E4),
+                        thickness = 1.dp
+                    )
+                    Text(
+                        text = "o continúa con",
+                        fontSize = 12.sp,
+                        color = Color(0xFF78716C),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = Color(0xFFE7E5E4),
+                        thickness = 1.dp
+                    )
+                }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("¿Aún no tienes cuenta? ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                    TextButton(onClick = onNavigateToSignUp) {
-                        Text("Regístrate aquí", color = PeruGold40, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                // Botón Continuar con Google
+                OutlinedButton(
+                    onClick = { navigateToHome() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, Color(0xFFE7E5E4))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.google),
+                            contentDescription = "Google",
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Continuar con Google",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF1C1917)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Enlace a Registro
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "¿Aún no tienes cuenta? ",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                    TextButton(onClick = navigateToSignUp) {
+                        Text(
+                            text = "Regístrate aquí",
+                            color = PeruGold40,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }

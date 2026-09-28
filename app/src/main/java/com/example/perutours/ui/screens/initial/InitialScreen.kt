@@ -1,5 +1,6 @@
-package com.example.perutours.ui.theme.screens.initial
+package com.example.perutours.ui.screens.initial
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +25,8 @@ import com.example.perutours.ui.theme.PeruTerracotta40
 
 @Composable
 fun InitialScreen(
-    onNavigateToLogin: () -> Unit,
-    onNavigateToSignUp: () -> Unit
+    navigateToLogin: () -> Unit,
+    navigateToSignUp: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -35,7 +36,7 @@ fun InitialScreen(
                     colors = listOf(
                         BackgroundDark,
                         Color(0xFF292524),
-                        Color(0xFF451A03) // Acento sutil tierra cálida
+                        Color(0xFF451A03)
                     )
                 )
             )
@@ -48,7 +49,6 @@ fun InitialScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Insignia Superior
             Surface(
                 color = PeruGold40.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(50.dp)
@@ -62,7 +62,6 @@ fun InitialScreen(
                 )
             }
 
-            // Logo & Identidad de Marca
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
@@ -110,13 +109,12 @@ fun InitialScreen(
                 )
             }
 
-            // Botones de acción táctiles (mínimo 52dp)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = onNavigateToSignUp,
+                    onClick = navigateToSignUp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
@@ -129,13 +127,13 @@ fun InitialScreen(
                 }
 
                 OutlinedButton(
-                    onClick = onNavigateToLogin,
+                    onClick = navigateToLogin,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(brush = Brush.horizontalGradient(listOf(Color.White.copy(0.4f), Color.White.copy(0.4f))))
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
                 ) {
                     Text("Ya tengo una cuenta", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
