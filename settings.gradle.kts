@@ -24,4 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "PeruTours"
 include(":app")
+<<<<<<< HEAD
  
+=======
+>>>>>>> codex/correcciones-hu02

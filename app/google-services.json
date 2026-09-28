@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "110426677713",
+    "project_id": "peru-tours-bc8f8",
+    "storage_bucket": "peru-tours-bc8f8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:110426677713:android:3f691ad7652490ad8400f0",
+        "android_client_info": {
+          "package_name": "com.example.perutours"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "110426677713-jetuuh0hmq0hat8vactj6982oen6lfa3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.perutours",
+            "certificate_hash": "39920c38e9d5f2e560a949cb4daf51ed02c1fb78"
+          }
+        },
+        {
+          "client_id": "110426677713-gpnd0s3t5h6j06dh4130m05qh309b970.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEoWYwWE9bB6UJ58V1u_zjeSlG8c_eLsE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "110426677713-gpnd0s3t5h6j06dh4130m05qh309b970.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
