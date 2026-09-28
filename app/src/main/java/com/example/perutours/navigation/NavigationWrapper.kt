@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import com.example.perutours.ui.screens.home.HomeScreen
 import com.example.perutours.ui.screens.initial.InitialScreen
 import com.example.perutours.ui.screens.login.LoginScreen
+import com.example.perutours.ui.screens.profile.ProfileScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
 import com.google.firebase.auth.FirebaseAuth
 
@@ -63,11 +64,23 @@ fun NavigationWrapper(
         composable(route = "home") {
             HomeScreen(
                 auth = auth,
-                // CRITERIO 3: Cierre de sesión seguro limpiando historial
+                navigateToProfile = {
+                    navHostController.navigate(route = "profile")
+                },
                 navigateToInitial = {
                     navHostController.navigate(route = "initial") {
                         popUpTo(0) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        // Gestión de Perfil y Preferencias
+        composable(route = "profile") {
+            ProfileScreen(
+                auth = auth,
+                navigateBack = {
+                    navHostController.popBackStack()
                 }
             )
         }

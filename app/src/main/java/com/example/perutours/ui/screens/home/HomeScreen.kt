@@ -2,15 +2,16 @@ package com.example.perutours.ui.screens.home
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,11 +24,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.perutours.R
 import com.example.perutours.ui.theme.BackgroundLight
 import com.example.perutours.ui.theme.PeruGold40
 import com.example.perutours.ui.theme.SurfaceLight
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 data class TourPackage(
     val title: String,
@@ -35,6 +38,7 @@ data class TourPackage(
     val duration: String,
     val price: String,
     val rating: String,
+    val category: String,
     val imageRes: Int
 )
 
@@ -42,20 +46,48 @@ data class TourPackage(
 @Composable
 fun HomeScreen(
     auth: FirebaseAuth,
+    navigateToProfile: () -> Unit = {},
     navigateToInitial: () -> Unit
 ) {
     val currentUser = auth.currentUser
-    val userName = currentUser?.displayName?.ifBlank { "Turista" } ?: "Turista"
+    val uid = currentUser?.uid ?: ""
+    val rawName = currentUser?.displayName ?: "Turista"
+
+    var userName by remember {
+        mutableStateOf(rawName.split("|").firstOrNull()?.trim() ?: "Turista")
+    }
+    var photoUrl by remember {
+        mutableStateOf(currentUser?.photoUrl?.toString() ?: "")
+    }
+    var userPreferences by remember {
+        mutableStateOf(listOf<String>())
+    }
     val userEmail = currentUser?.email ?: ""
     var showLogoutDialog by remember { mutableStateOf(false) }
 
+    // Cargar datos actualizados desde Firestore cada vez que se muestra HomeScreen
+    LaunchedEffect(uid) {
+        if (uid.isNotEmpty()) {
+            FirebaseFirestore.getInstance().collection("users").document(uid)
+                .addSnapshotListener { snapshot, _ ->
+                    if (snapshot != null && snapshot.exists()) {
+                        snapshot.getString("name")?.takeIf { it.isNotBlank() }?.let { userName = it }
+                        snapshot.getString("photoUrl")?.let { photoUrl = it }
+                        val prefs = snapshot.get("preferences") as? List<*>
+                        if (prefs != null) {
+                            userPreferences = prefs.filterIsInstance<String>()
+                        }
+                    }
+                }
+        }
+    }
+
     val featuredPackages = listOf(
-        TourPackage("Machu Picchu Mágico", "Cusco, Perú", "4 días / 3 noches", "S/ 1,299", "4.9", R.drawable.machu_picchu),
-        TourPackage("Líneas de Nazca y Huacachina", "Ica, Perú", "2 días / 1 noche", "S/ 480", "4.8", R.drawable.machu_picchu),
-        TourPackage("Cañón del Colca y Arequipa", "Arequipa, Perú", "3 días / 2 noches", "S/ 650", "4.7", R.drawable.machu_picchu)
+        TourPackage("Machu Picchu Mágico", "Cusco, Perú", "4 días / 3 noches", "S/ 1,299", "4.9", "Historia y Cultura", R.drawable.machu_picchu),
+        TourPackage("Líneas de Nazca y Huacachina", "Ica, Perú", "2 días / 1 noche", "S/ 480", "4.8", "Aventura y Trekking", R.drawable.machu_picchu),
+        TourPackage("Cañón del Colca y Arequipa", "Arequipa, Perú", "3 días / 2 noches", "S/ 650", "4.7", "Naturaleza y Selva", R.drawable.machu_picchu)
     )
 
-    // Diálogo de confirmación para Cerrar Sesión
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -65,12 +97,12 @@ fun HomeScreen(
                 Button(
                     onClick = {
                         showLogoutDialog = false
-                        auth.signOut() // CRITERIO 3: Cierra la sesión en Firebase
-                        navigateToInitial() // Regresa a la pantalla inicial y borra backstack
+                        auth.signOut()
+                        navigateToInitial()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Cerrar Sesión", color = Color.White)
+                    Text("Cerrar Sesión", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -85,36 +117,58 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = "Hola, $userName 👋",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = userEmail,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { navigateToProfile() }
+                    ) {
+                        if (photoUrl.isNotBlank()) {
+                            AsyncImage(
+                                model = photoUrl,
+                                contentDescription = "Avatar",
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
+                        Column {
+                            Text(
+                                text = "Hola, $userName 👋",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (userPreferences.isNotEmpty()) {
+                                    "Intereses: ${userPreferences.take(2).joinToString(" • ")}"
+                                } else {
+                                    userEmail
+                                },
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Notificaciones */ }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notificaciones")
+                    // Botón para abrir la pantalla de Gestión de Perfil (HU02)
+                    IconButton(onClick = navigateToProfile) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Mi Perfil",
+                            tint = PeruGold40
+                        )
                     }
-                    // CRITERIO 3: Botón de Logout
                     IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(
-                            imageVector = Icons.Default.ExitToApp,
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                             contentDescription = "Cerrar sesión",
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = SurfaceLight
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceLight)
             )
         },
         containerColor = BackgroundLight
@@ -126,22 +180,24 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-            // Banner de bienvenida
+            // Tarjeta Personalización de Perfil
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navigateToProfile() },
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = PeruGold40)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "Descubre el Perú con nosotros",
+                        text = "Descubre el Perú a tu medida",
                         color = Color.White,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = "Accede a tarifas exclusivas en tours, pasajes y hospedajes certificados.",
-                        color = Color.White.copy(alpha = 0.9f),
+                        text = "Toca aquí para personalizar tu foto de perfil, datos y preferencias de viaje.",
+                        color = Color.White.copy(alpha = 0.92f),
                         fontSize = 13.sp,
                         modifier = Modifier.padding(top = 6.dp)
                     )
@@ -236,7 +292,7 @@ fun HomeScreen(
                                     color = PeruGold40
                                 )
                                 Button(
-                                    onClick = { /* Ver detalle */ },
+                                    onClick = { },
                                     shape = RoundedCornerShape(10.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
                                 ) {
