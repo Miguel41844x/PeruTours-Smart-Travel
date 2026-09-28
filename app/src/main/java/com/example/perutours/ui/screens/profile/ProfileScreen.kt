@@ -8,7 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Person
@@ -63,7 +63,7 @@ private fun createTempImageUri(context: Context): Uri {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     auth: FirebaseAuth,
@@ -94,6 +94,21 @@ fun ProfileScreen(
     var photoUrl by remember { mutableStateOf(currentUser?.photoUrl?.toString() ?: "") }
     var localPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
+    // Catálogo de preferencias turísticas para personalizar la experiencia
+    val availablePreferences = listOf(
+        "Aventura y Trekking",
+        "Historia y Cultura",
+        "Naturaleza y Selva",
+        "Gastronomía Peruana",
+        "Playas y Relax",
+        "Turismo Vivencial",
+        "Fotografía y Paisajes",
+        "Viaje en Familia"
+    )
+    var selectedPreferences by remember {
+        mutableStateOf(setOf("Historia y Cultura", "Gastronomía Peruana"))
+    }
+
     // Estados de carga, subida y modal de selección de cámara/galería
     var isLoadingInitialData by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
@@ -113,6 +128,11 @@ fun ProfileScreen(
                         doc.getString("city")?.takeIf { it.isNotBlank() }?.let { city = it }
                         doc.getString("role")?.takeIf { it.isNotBlank() }?.let { role = it }
                         doc.getString("photoUrl")?.takeIf { it.isNotBlank() }?.let { photoUrl = it }
+
+                        val savedPrefs = doc.get("preferences") as? List<*>
+                        if (!savedPrefs.isNullOrEmpty()) {
+                            selectedPreferences = savedPrefs.filterIsInstance<String>().toSet()
+                        }
                     }
                     isLoadingInitialData = false
                 }
@@ -510,6 +530,70 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
+                // SECCIÓN 3: PREFERENCIAS DE VIAJE (CHIPS INTERACTIVOS)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceLight),
+                    border = BorderStroke(1.dp, Color(0xFFE7E5E4))
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Text(
+                            text = "Mis Preferencias de Viaje *",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Elige al menos 1 interés para recibir recomendaciones personalizadas.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF78716C),
+                            modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
+                        )
+
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            availablePreferences.forEach { preference ->
+                                val isSelected = selectedPreferences.contains(preference)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        selectedPreferences = if (isSelected) {
+                                            selectedPreferences - preference
+                                        } else {
+                                            selectedPreferences + preference
+                                        }
+                                    },
+                                    label = {
+                                        Text(
+                                            text = preference,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    leadingIcon = if (isSelected) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    } else null,
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = PeruGold40.copy(alpha = 0.18f),
+                                        selectedLabelColor = PeruGold40,
+                                        selectedLeadingIconColor = PeruGold40
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // BOTÓN GUARDAR
@@ -525,6 +609,7 @@ fun ProfileScreen(
                             "city" to city.trim(),
                             "role" to role,
                             "photoUrl" to photoUrl,
+                            "preferences" to selectedPreferences.toList(),
                             "updatedAt" to System.currentTimeMillis()
                         )
 
