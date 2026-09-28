@@ -1,5 +1,9 @@
 package com.example.perutours.ui.screens.request
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -48,10 +53,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.content.ContextCompat
 import com.example.perutours.ui.theme.BackgroundLight
 import com.example.perutours.ui.theme.PeruGold40
 import com.example.perutours.ui.theme.SurfaceLight
@@ -70,7 +77,42 @@ fun TravelRequestScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     var dateTimeTarget by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) {
+            viewModel.detectCurrentLocation()
+        } else {
+            viewModel.onLocationPermissionDenied()
+        }
+    }
+
+    fun requestLocation() {
+        val fineGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (fineGranted || coarseGranted) {
+            viewModel.detectCurrentLocation()
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
 
     dateTimeTarget?.let { target ->
         val initialValue = if (target == "departure") {
@@ -165,6 +207,18 @@ fun TravelRequestScreen(
                 placeholder = { Text("Se detectará con tu ubicación") },
                 leadingIcon = {
                     Icon(Icons.Default.LocationOn, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (uiState.isLocating) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    } else {
+                        IconButton(onClick = ::requestLocation) {
+                            Icon(
+                                Icons.Default.MyLocation,
+                                contentDescription = "Detectar ubicación"
+                            )
+                        }
+                    }
                 },
                 isError = uiState.originCityError != null,
                 supportingText = uiState.originCityError?.let { error ->

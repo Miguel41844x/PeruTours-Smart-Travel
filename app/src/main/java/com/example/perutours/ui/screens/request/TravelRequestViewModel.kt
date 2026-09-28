@@ -1,11 +1,16 @@
 package com.example.perutours.ui.screens.request
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.location.LocationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class TravelRequestViewModel : ViewModel() {
+class TravelRequestViewModel(application: Application) : AndroidViewModel(application) {
+    private val locationRepository = LocationRepository(application)
     private val _uiState = MutableStateFlow(TravelRequestUiState())
     val uiState: StateFlow<TravelRequestUiState> = _uiState.asStateFlow()
 
@@ -60,6 +65,39 @@ class TravelRequestViewModel : ViewModel() {
         if (value.length <= 500) {
             _uiState.value = _uiState.value.copy(notes = value)
         }
+    }
+
+    fun detectCurrentLocation() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLocating = true, message = null)
+
+            try {
+                val location = locationRepository.getCurrentLocation()
+                _uiState.value = _uiState.value.copy(
+                    originCity = location.city,
+                    originLatitude = location.latitude,
+                    originLongitude = location.longitude,
+                    originCityError = null,
+                    isLocating = false,
+                    message = if (location.city.isBlank()) {
+                        "Ubicación detectada. Escribe tu ciudad de origen."
+                    } else {
+                        "Ciudad de origen detectada automáticamente."
+                    }
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLocating = false,
+                    message = e.localizedMessage ?: "No se pudo detectar tu ubicación."
+                )
+            }
+        }
+    }
+
+    fun onLocationPermissionDenied() {
+        _uiState.value = _uiState.value.copy(
+            message = "Necesitamos permiso de ubicación para detectar la ciudad de origen."
+        )
     }
 
     fun validate(): Boolean {
