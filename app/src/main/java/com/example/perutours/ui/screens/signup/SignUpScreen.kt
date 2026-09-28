@@ -1,7 +1,7 @@
 package com.example.perutours.ui.screens.signup
 
+import android.util.Patterns
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,14 +20,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.perutours.R
 import com.example.perutours.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
@@ -50,12 +48,12 @@ fun SignUpScreen(
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
     var selectedRoleId by remember { mutableStateOf("cliente") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
-
-    // Diálogo informativo para cuando se envía el correo de verificación
     var showVerificationDialog by remember { mutableStateOf(false) }
 
     val roles = listOf(
@@ -66,13 +64,13 @@ fun SignUpScreen(
         RoleOption("gerente", "Gerente Comercial", "Métricas y analítica gerencial", "📊", RoleManagerAccent)
     )
 
-    // Diálogo del Criterio 2
+    // Diálogo informativo Criterio 2
     if (showVerificationDialog) {
         AlertDialog(
-            onDismissRequest = { /* Debe pulsar el botón */ },
+            onDismissRequest = { },
             title = { Text("¡Verifica tu correo!", fontWeight = FontWeight.Bold) },
             text = {
-                Text("Hemos enviado un correo de verificación a $email. Por favor revisa tu bandeja de entrada o carpeta de spam y valida tu cuenta antes de iniciar sesión.")
+                Text("Hemos enviado un correo a $email. Por favor valida tu cuenta en tu bandeja de entrada o spam antes de iniciar sesión.")
             },
             confirmButton = {
                 Button(
@@ -88,10 +86,7 @@ fun SignUpScreen(
         )
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = BackgroundLight
-    ) {
+    Surface(modifier = Modifier.fillMaxSize(), color = BackgroundLight) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -107,13 +102,13 @@ fun SignUpScreen(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Ingresa tus datos y selecciona tu rol en PeruTours.",
+                text = "Completa tus datos reales para tu credencial en PeruTours.",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 22.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
             )
 
-            // Nombre
+            // 1. Nombre
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it; errorMessage = null },
@@ -126,7 +121,7 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Correo
+            // 2. Correo con validación de formato
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it; errorMessage = null },
@@ -140,25 +135,29 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Teléfono
+            // 3. Teléfono de 9 dígitos
             OutlinedTextField(
                 value = phone,
-                onValueChange = { phone = it; errorMessage = null },
-                label = { Text("Teléfono celular (+51)") },
+                onValueChange = {
+                    if (it.length <= 9 && it.all { char -> char.isDigit() }) phone = it
+                    errorMessage = null
+                },
+                label = { Text("Teléfono celular (9 dígitos)") },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = PeruGold40) },
+                prefix = { Text("+51 ") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Contraseña
+            // 4. Contraseña
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it; errorMessage = null },
-                label = { Text("Contraseña") },
+                label = { Text("Contraseña (mínimo 6 caracteres)") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PeruGold40) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -175,11 +174,34 @@ fun SignUpScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 5. Confirmar Contraseña
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it; errorMessage = null },
+                label = { Text("Confirmar contraseña") },
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PeruGold40) },
+                trailingIcon = {
+                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                        Icon(
+                            imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = null
+                        )
+                    }
+                },
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Selector de Roles
             Text(
-                text = "Selecciona tu rol en la agencia:",
+                text = "Selecciona tu rol en PeruTours:",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -193,9 +215,9 @@ fun SignUpScreen(
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
                         .clickable { selectedRoleId = role.id },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) role.color.copy(alpha = 0.10f) else SurfaceLight
+                        containerColor = if (isSelected) role.color.copy(alpha = 0.12f) else SurfaceLight
                     ),
                     border = BorderStroke(
                         width = if (isSelected) 2.dp else 1.dp,
@@ -205,24 +227,24 @@ fun SignUpScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = role.color.copy(alpha = 0.18f),
-                            modifier = Modifier.size(44.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            color = role.color.copy(alpha = 0.20f),
+                            modifier = Modifier.size(40.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(role.emoji, fontSize = 20.sp)
+                                Text(role.emoji, fontSize = 18.sp)
                             }
                         }
 
-                        Spacer(Modifier.width(14.dp))
+                        Spacer(Modifier.width(12.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(role.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text(role.subtitle, fontSize = 12.sp, color = Color(0xFF78716C))
+                            Text(role.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(role.subtitle, fontSize = 11.sp, color = Color(0xFF78716C))
                         }
 
                         RadioButton(
@@ -239,47 +261,65 @@ fun SignUpScreen(
                     text = errorMessage ?: "",
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(top = 10.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Botón de Registro con Envío de Correo de Verificación (Criterio 1 y 2)
+            // Botón de Registro con validaciones completas y envío de correo
             Button(
                 onClick = {
-                    if (name.isBlank() || email.isBlank() || password.isBlank()) {
-                        errorMessage = "Por favor completa todos los campos"
-                    } else if (password.length < 6) {
-                        errorMessage = "La contraseña debe tener al menos 6 caracteres"
-                    } else {
-                        isLoading = true
-                        auth.createUserWithEmailAndPassword(email.trim(), password.trim())
-                            .addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    val user = auth.currentUser
-                                    val profileUpdates = userProfileChangeRequest {
-                                        displayName = name.trim()
-                                    }
-                                    user?.updateProfile(profileUpdates)
+                    val cleanEmail = email.trim()
+                    val cleanPass = password.trim()
+                    val cleanConfirm = confirmPassword.trim()
+                    val cleanName = name.trim()
 
-                                    // 👉 CRITERIO 2: Enviar correo de verificación
-                                    user?.sendEmailVerification()
-                                        ?.addOnCompleteListener {
-                                            isLoading = false
-                                            auth.signOut() // Lo desconectamos hasta que valide
-                                            showVerificationDialog = true // Muestra aviso al usuario
+                    when {
+                        cleanName.isBlank() || cleanEmail.isBlank() || phone.isBlank() || cleanPass.isBlank() -> {
+                            errorMessage = "Por favor completa todos los campos obligatorios."
+                        }
+                        !Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches() -> {
+                            errorMessage = "El formato del correo electrónico no es válido."
+                        }
+                        phone.length != 9 || !phone.startsWith("9") -> {
+                            errorMessage = "Ingresa un celular válido de 9 dígitos que comience con 9."
+                        }
+                        cleanPass.length < 6 -> {
+                            errorMessage = "La contraseña debe tener al menos 6 caracteres."
+                        }
+                        cleanPass != cleanConfirm -> {
+                            errorMessage = "Las contraseñas no coinciden."
+                        }
+                        else -> {
+                            isLoading = true
+                            auth.createUserWithEmailAndPassword(cleanEmail, cleanPass)
+                                .addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        val user = auth.currentUser
+                                        val profileUpdates = userProfileChangeRequest {
+                                            displayName = "$cleanName | $selectedRoleId | $phone"
                                         }
-                                } else {
-                                    isLoading = false
-                                    val errorMsg = task.exception?.localizedMessage ?: ""
-                                    errorMessage = when {
-                                        errorMsg.contains("already in use", true) -> "Este correo electrónico ya está registrado."
-                                        errorMsg.contains("badly formatted", true) -> "El formato del correo electrónico no es válido."
-                                        else -> "Error al registrarse: $errorMsg"
+
+                                        // Guarda el nombre y luego envía el correo de verificación
+                                        user?.updateProfile(profileUpdates)?.addOnCompleteListener {
+                                            user.sendEmailVerification().addOnCompleteListener {
+                                                isLoading = false
+                                                auth.signOut()
+                                                showVerificationDialog = true
+                                            }
+                                        }
+                                    } else {
+                                        isLoading = false
+                                        val errorMsg = task.exception?.localizedMessage ?: ""
+                                        errorMessage = when {
+                                            errorMsg.contains("already in use", true) -> "Este correo electrónico ya está registrado."
+                                            else -> "Error al registrarse: $errorMsg"
+                                        }
                                     }
                                 }
-                            }
+                        }
                     }
                 },
                 modifier = Modifier
@@ -301,55 +341,9 @@ fun SignUpScreen(
                 }
             }
 
-            // Separador
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFE7E5E4), thickness = 1.dp)
-                Text(
-                    text = "o continúa con",
-                    fontSize = 12.sp,
-                    color = Color(0xFF78716C),
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color(0xFFE7E5E4), thickness = 1.dp)
-            }
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // Botón Google
-            OutlinedButton(
-                onClick = { navigateToLogin() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, Color(0xFFE7E5E4))
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.google),
-                        contentDescription = "Google",
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Registrarse con Google",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1C1917)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Pie con enlace a Login
+            // Enlace a Login
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -369,8 +363,6 @@ fun SignUpScreen(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

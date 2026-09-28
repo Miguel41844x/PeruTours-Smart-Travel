@@ -1,7 +1,6 @@
 package com.example.perutours.ui.screens.login
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
+import android.util.Patterns
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,14 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.perutours.R
 import com.example.perutours.ui.theme.BackgroundLight
 import com.example.perutours.ui.theme.PeruGold40
 import com.google.firebase.auth.FirebaseAuth
@@ -112,7 +109,7 @@ fun LoginScreen(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                                contentDescription = if (passwordVisible) "Ocultar" else "Mostrar"
                             )
                         }
                     },
@@ -134,21 +131,25 @@ fun LoginScreen(
                     )
                 }
 
-                // CRITERIO 4: Recuperación de contraseña por correo
+                // Criterio 4: Recuperación de contraseña por correo
                 TextButton(
                     onClick = {
-                        if (email.isBlank()) {
+                        val cleanEmail = email.trim()
+                        if (cleanEmail.isBlank()) {
                             isSuccessMessage = false
-                            infoMessage = "Por favor ingresa tu correo arriba para enviarte el enlace de recuperación."
+                            infoMessage = "Por favor ingresa tu correo arriba para enviarte el enlace."
+                        } else if (!Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+                            isSuccessMessage = false
+                            infoMessage = "Por favor ingresa un correo electrónico válido."
                         } else {
-                            auth.sendPasswordResetEmail(email.trim())
+                            auth.sendPasswordResetEmail(cleanEmail)
                                 .addOnSuccessListener {
                                     isSuccessMessage = true
-                                    infoMessage = "Te hemos enviado un enlace a $email para restablecer tu contraseña."
+                                    infoMessage = "Te hemos enviado un enlace a $cleanEmail para restablecer tu contraseña."
                                 }
                                 .addOnFailureListener { e ->
                                     isSuccessMessage = false
-                                    infoMessage = "Error al solicitar recuperación: ${e.localizedMessage}"
+                                    infoMessage = "Error: ${e.localizedMessage}"
                                 }
                         }
                     },
@@ -166,26 +167,32 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Botón Iniciar Sesión con VALIDACIÓN DE CORREO (Criterio 2)
+                // Criterio 1 y Criterio 2: Botón Iniciar Sesión con comprobación estricta
                 Button(
                     onClick = {
-                        if (email.isBlank() || password.isBlank()) {
+                        val cleanEmail = email.trim()
+                        val cleanPass = password.trim()
+
+                        if (cleanEmail.isBlank() || cleanPass.isBlank()) {
                             isSuccessMessage = false
-                            infoMessage = "Por favor ingresa tu correo y contraseña"
+                            infoMessage = "Por favor ingresa tu correo y contraseña."
+                        } else if (!Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+                            isSuccessMessage = false
+                            infoMessage = "El formato del correo no es válido."
                         } else {
                             isLoading = true
                             isSuccessMessage = false
-                            auth.signInWithEmailAndPassword(email.trim(), password.trim())
+                            auth.signInWithEmailAndPassword(cleanEmail, cleanPass)
                                 .addOnCompleteListener { task ->
                                     isLoading = false
                                     if (task.isSuccessful) {
                                         val user = auth.currentUser
 
-                                        // 👉 CRITERIO 2: Bloquear si no está verificado
+                                        // CRITERIO 2: Bloquear si no está verificado
                                         if (user != null && user.isEmailVerified) {
                                             navigateToHome()
                                         } else {
-                                            auth.signOut() // Cierra sesión inmediatamente
+                                            auth.signOut()
                                             isSuccessMessage = false
                                             infoMessage = "Debes verificar tu correo antes de ingresar. Revisa tu bandeja de entrada o spam."
                                         }
@@ -195,7 +202,7 @@ fun LoginScreen(
                                         infoMessage = when {
                                             errorMsg.contains("badly formatted", true) -> "El formato de correo no es válido."
                                             errorMsg.contains("invalid-credential", true) -> "Correo o contraseña incorrectos."
-                                            else -> "Error al iniciar sesión. Revisa tus datos."
+                                            else -> "Error al iniciar sesión. Revisa tus credenciales."
                                         }
                                     }
                                 }
@@ -220,61 +227,7 @@ fun LoginScreen(
                     }
                 }
 
-                // Divisor
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    HorizontalDivider(
-                        modifier = Modifier.weight(1f),
-                        color = Color(0xFFE7E5E4),
-                        thickness = 1.dp
-                    )
-                    Text(
-                        text = "o continúa con",
-                        fontSize = 12.sp,
-                        color = Color(0xFF78716C),
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.weight(1f),
-                        color = Color(0xFFE7E5E4),
-                        thickness = 1.dp
-                    )
-                }
-
-                // Botón Google
-                OutlinedButton(
-                    onClick = { navigateToHome() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White),
-                    border = BorderStroke(1.dp, Color(0xFFE7E5E4))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.google),
-                            contentDescription = "Google",
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "Continuar con Google",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF1C1917)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Enlace a Registro
                 Row(

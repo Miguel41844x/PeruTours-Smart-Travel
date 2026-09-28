@@ -17,8 +17,8 @@ fun NavigationWrapper(
 ) {
     val currentUser = auth.currentUser
 
-    // CRITERIO 3: Inicio de sesión persistente
-    // Si ya existe usuario y además tiene el correo verificado, ingresa directamente a Home.
+    // CRITERIO 3: Persistencia de sesión
+    // Solo si el usuario ya inició sesión Y su correo ya está verificado, entra directo a Home
     val startDestination = if (currentUser != null && currentUser.isEmailVerified) {
         "home"
     } else {
@@ -43,7 +43,6 @@ fun NavigationWrapper(
                 navigateToSignUp = { navHostController.navigate(route = "signUp") },
                 navigateToHome = {
                     navHostController.navigate(route = "home") {
-                        // Limpia el backstack para evitar volver atrás al login
                         popUpTo("initial") { inclusive = true }
                     }
                 }
@@ -64,10 +63,9 @@ fun NavigationWrapper(
         composable(route = "home") {
             HomeScreen(
                 auth = auth,
-                // CRITERIO 3: Cierre de sesión (Logout completo)
+                // CRITERIO 3: Cierre de sesión seguro limpiando historial
                 navigateToInitial = {
                     navHostController.navigate(route = "initial") {
-                        // Limpia todo el historial de la aplicación
                         popUpTo(0) { inclusive = true }
                     }
                 }
