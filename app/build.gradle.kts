@@ -53,6 +53,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.material:material-icons-extended")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
+
 // Firebase (BOM controla versiones)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
@@ -70,4 +72,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.coil.compose)
+
 }

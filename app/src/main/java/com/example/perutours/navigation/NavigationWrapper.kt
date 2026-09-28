@@ -78,8 +78,7 @@ fun NavigationWrapper(
         // Gestión de Perfil y Preferencias
         composable(route = "profile") {
             ProfileScreen(
-                auth = auth,
-                navigateBack = {
+                onBack = {
                     navHostController.popBackStack()
                 }
             )
