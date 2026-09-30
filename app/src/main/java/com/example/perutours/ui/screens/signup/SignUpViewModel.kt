@@ -1,6 +1,5 @@
 package com.example.perutours.ui.screens.signup
 
-import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.userProfileChangeRequest
@@ -17,25 +16,25 @@ class SignUpViewModel(
     val uiState: StateFlow<SignUpUiState> = _uiState.asStateFlow()
 
     fun onNameChange(name: String) {
-        _uiState.update { it.copy(name = name, errorMessage = null) }
+        _uiState.update { it.copy(name = name, nameError = null, generalError = null) }
     }
 
     fun onEmailChange(email: String) {
-        _uiState.update { it.copy(email = email, errorMessage = null) }
+        _uiState.update { it.copy(email = email, emailError = null, generalError = null) }
     }
 
     fun onPhoneChange(phone: String) {
         if (phone.length <= 9 && phone.all { it.isDigit() }) {
-            _uiState.update { it.copy(phone = phone, errorMessage = null) }
+            _uiState.update { it.copy(phone = phone, phoneError = null, generalError = null) }
         }
     }
 
     fun onPasswordChange(password: String) {
-        _uiState.update { it.copy(password = password, errorMessage = null) }
+        _uiState.update { it.copy(password = password, passwordError = null, generalError = null) }
     }
 
     fun onConfirmPasswordChange(confirmPassword: String) {
-        _uiState.update { it.copy(confirmPassword = confirmPassword, errorMessage = null) }
+        _uiState.update { it.copy(confirmPassword = confirmPassword, confirmPasswordError = null, generalError = null) }
     }
 
     fun togglePasswordVisibility() {
@@ -56,75 +55,80 @@ class SignUpViewModel(
 
     fun register() {
         val state = _uiState.value
-        val cleanName = state.name.trim()
+
+        // Ejecutar validación pura a través de SignUpValidator
+        val validation = SignUpValidator.validate(
+            name = state.name,
+            email = state.email,
+            phone = state.phone,
+            password = state.password,
+            confirmPassword = state.confirmPassword
+        )
+
+        if (!validation.isValid) {
+            _uiState.update {
+                it.copy(
+                    nameError = validation.nameError,
+                    emailError = validation.emailError,
+                    phoneError = validation.phoneError,
+                    passwordError = validation.passwordError,
+                    confirmPasswordError = validation.confirmPasswordError
+                )
+            }
+            return
+        }
+
+        // Si es válido, limpiar errores e invocar Firebase
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                generalError = null,
+                nameError = null,
+                emailError = null,
+                phoneError = null,
+                passwordError = null,
+                confirmPasswordError = null
+            )
+        }
+
         val cleanEmail = state.email.trim()
-        val cleanPhone = state.phone.trim()
         val cleanPass = state.password.trim()
-        val cleanConfirm = state.confirmPassword.trim()
+        val cleanName = state.name.trim()
+        val cleanPhone = state.phone.trim()
 
-        // Validaciones estrictas
-        when {
-            cleanName.isBlank() || cleanEmail.isBlank() || cleanPhone.isBlank() || cleanPass.isBlank() -> {
-                _uiState.update { it.copy(errorMessage = "Por favor completa todos los campos obligatorios.") }
-            }
-            !Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches() -> {
-                _uiState.update { it.copy(errorMessage = "El formato del correo electrónico no es válido.") }
-            }
-            cleanPhone.length != 9 || !cleanPhone.startsWith("9") -> {
-                _uiState.update { it.copy(errorMessage = "Ingresa un celular válido de 9 dígitos que comience con 9.") }
-            }
-            cleanPass.length < 6 -> {
-                _uiState.update { it.copy(errorMessage = "La contraseña debe tener al menos 6 caracteres.") }
-            }
-            !cleanPass.any { it.isUpperCase() } -> {
-                _uiState.update { it.copy(errorMessage = "La contraseña debe contener al menos una letra mayúscula.") }
-            }
-            !cleanPass.any { it.isDigit() } -> {
-                _uiState.update { it.copy(errorMessage = "La contraseña debe contener al menos un número.") }
-            }
-            !cleanPass.any { !it.isLetterOrDigit() } -> {
-                _uiState.update { it.copy(errorMessage = "La contraseña debe contener al menos un símbolo (ej. @ # $ % & *).") }
-            }
-            cleanPass != cleanConfirm -> {
-                _uiState.update { it.copy(errorMessage = "Las contraseñas no coinciden.") }
-            }
-            else -> {
-                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-                auth.createUserWithEmailAndPassword(cleanEmail, cleanPass)
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            val user = auth.currentUser
-                            val profileUpdates = userProfileChangeRequest {
-                                displayName = "$cleanName | ${state.selectedRoleId} | $cleanPhone"
-                            }
+        auth.createUserWithEmailAndPassword(cleanEmail, cleanPass)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    val profileUpdates = userProfileChangeRequest {
+                        displayName = "$cleanName | ${state.selectedRoleId} | $cleanPhone"
+                    }
 
-                            user?.updateProfile(profileUpdates)?.addOnCompleteListener {
-                                user.sendEmailVerification().addOnCompleteListener {
-                                    auth.signOut()
-                                    _uiState.update {
-                                        it.copy(
-                                            isLoading = false,
-                                            showVerificationDialog = true
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            val errorMsg = task.exception?.localizedMessage.orEmpty()
-                            val userFriendlyError = when {
-                                errorMsg.contains("already in use", ignoreCase = true) ->
-                                    "Este correo electrónico ya está registrado."
-                                else -> "Error al registrarse: $errorMsg"
-                            }
+                    user?.updateProfile(profileUpdates)?.addOnCompleteListener {
+                        user.sendEmailVerification().addOnCompleteListener {
+                            auth.signOut()
                             _uiState.update {
                                 it.copy(
                                     isLoading = false,
-                                    errorMessage = userFriendlyError
+                                    showVerificationDialog = true
                                 )
                             }
                         }
                     }
+                } else {
+                    val errorMsg = task.exception?.localizedMessage.orEmpty()
+                    val userFriendlyError = when {
+                        errorMsg.contains("already in use", ignoreCase = true) ->
+                            "Este correo electrónico ya está registrado."
+                        else -> "Error al registrarse: $errorMsg"
+                    }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            generalError = userFriendlyError
+                        )
+                    }
+                }
             }
-        }
     }
 }
