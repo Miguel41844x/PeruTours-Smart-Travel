@@ -1,7 +1,5 @@
 package com.example.perutours.ui.screens.signup
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,15 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.perutours.ui.theme.*
-
-data class RoleOption(
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val emoji: String,
-    val color: Color
-)
+import com.example.perutours.ui.theme.BackgroundLight
+import com.example.perutours.ui.theme.PeruGold40
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,14 +37,7 @@ fun SignUpScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val roles = listOf(
-        RoleOption("cliente", "Cliente / Turista", "Explora, cotiza y reserva viajes", "🧭", RoleTouristAccent),
-        RoleOption("atencion", "Atención Turística", "Revisa solicitudes y asesora clientes", "🎧", RoleSupportAccent),
-        RoleOption("agente", "Agente Turístico", "Elabora cotizaciones y reservas", "📋", RoleAgentAccent),
-        RoleOption("admin", "Administrador", "Proveedores y validación de pagos", "🛡️", RoleAdminAccent),
-        RoleOption("gerente", "Gerente Comercial", "Métricas y analítica gerencial", "📊", RoleManagerAccent)
-    )
-
+    // Diálogo informativo Criterio 2: Verificación de correo
     if (uiState.showVerificationDialog) {
         AlertDialog(
             onDismissRequest = { },
@@ -91,13 +75,13 @@ fun SignUpScreen(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Completa tus datos reales para tu credencial en PeruTours.",
+                text = "Únete a PeruTours y empieza a viajar",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
             )
 
-            // Nombre
+            // Nombre completo
             OutlinedTextField(
                 value = uiState.name,
                 onValueChange = viewModel::onNameChange,
@@ -112,7 +96,7 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Correo con validación
+            // Correo con validación de formato
             OutlinedTextField(
                 value = uiState.email,
                 onValueChange = viewModel::onEmailChange,
@@ -128,40 +112,39 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Teléfono (9 dígitos)
+            // Teléfono (exactamente 9 dígitos numéricos)
             OutlinedTextField(
                 value = uiState.phone,
                 onValueChange = viewModel::onPhoneChange,
                 label = { Text("Teléfono celular (9 dígitos)") },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = PeruGold40) },
-                prefix = { Text("+51 ") },
                 isError = uiState.phoneError != null,
                 supportingText = uiState.phoneError?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Contraseña con reglas
+            // Contraseña (mínimo 6 caracteres, mayúscula, minúscula y número)
             OutlinedTextField(
                 value = uiState.password,
                 onValueChange = viewModel::onPasswordChange,
-                label = { Text("Contraseña (mín. 6, mayúscula, número y símbolo)") },
+                label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PeruGold40) },
                 trailingIcon = {
                     IconButton(onClick = viewModel::togglePasswordVisibility) {
                         Icon(
                             imageVector = if (uiState.passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = null
+                            contentDescription = if (uiState.passwordVisible) "Ocultar" else "Mostrar"
                         )
                     }
                 },
+                visualTransformation = if (uiState.passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 isError = uiState.passwordError != null,
                 supportingText = uiState.passwordError?.let { { Text(it) } },
-                visualTransformation = if (uiState.passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 singleLine = true,
@@ -180,77 +163,36 @@ fun SignUpScreen(
                     IconButton(onClick = viewModel::toggleConfirmPasswordVisibility) {
                         Icon(
                             imageVector = if (uiState.confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = null
+                            contentDescription = if (uiState.confirmPasswordVisible) "Ocultar" else "Mostrar"
                         )
                     }
                 },
+                visualTransformation = if (uiState.confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 isError = uiState.confirmPasswordError != null,
                 supportingText = uiState.confirmPasswordError?.let { { Text(it) } },
-                visualTransformation = if (uiState.confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
+            // Las cuentas públicas siempre se registran como clientes (como estaba antes)
             Text(
-                text = "Selecciona tu rol en PeruTours:",
+                text = "Tipo de cuenta",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Cliente / Turista",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
 
-            roles.forEach { role ->
-                val isSelected = uiState.selectedRoleId == role.id
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clickable { viewModel.onRoleSelect(role.id) },
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) role.color.copy(alpha = 0.12f) else SurfaceLight
-                    ),
-                    border = BorderStroke(
-                        width = if (isSelected) 2.dp else 1.dp,
-                        color = if (isSelected) role.color else Color(0xFFE7E5E4)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = role.color.copy(alpha = 0.20f),
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(role.emoji, fontSize = 18.sp)
-                            }
-                        }
-
-                        Spacer(Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(role.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(role.subtitle, fontSize = 11.sp, color = Color(0xFF78716C))
-                        }
-
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { viewModel.onRoleSelect(role.id) },
-                            colors = RadioButtonDefaults.colors(selectedColor = role.color)
-                        )
-                    }
-                }
-            }
-
+            // Error general de Firebase si ocurre
             if (uiState.generalError != null) {
                 Text(
                     text = uiState.generalError ?: "",
@@ -263,6 +205,7 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Botón de Registro
             Button(
                 onClick = viewModel::register,
                 modifier = Modifier
@@ -286,6 +229,7 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
+            // Enlace a Login
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
