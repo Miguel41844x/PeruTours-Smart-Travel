@@ -41,11 +41,12 @@ fun NavigationWrapper(
 
         composable(route = "logIn") {
             LoginScreen(
-                auth = auth,
-                navigateToSignUp = { navHostController.navigate(route = "signUp") },
+                navigateToSignUp = {
+                    navHostController.navigate(route = "signUp")
+                },
                 navigateToHome = {
                     navHostController.navigate(route = "home") {
-                        popUpTo("initial") { inclusive = true }
+                        popUpTo("logIn") { inclusive = true }
                     }
                 }
             )
@@ -53,7 +54,6 @@ fun NavigationWrapper(
 
         composable(route = "signUp") {
             SignUpScreen(
-                auth = auth,
                 navigateToLogin = {
                     navHostController.navigate(route = "logIn") {
                         popUpTo("signUp") { inclusive = true }
