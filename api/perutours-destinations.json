@@ -1,0 +1,46 @@
+[
+  {
+    "id": "1",
+    "title": "Machu Picchu Mágico",
+    "location": "Cusco, Perú",
+    "duration": "4 días / 3 noches",
+    "price": "S/ 1,299",
+    "rating": "4.9",
+    "category": "Historia y Cultura",
+    "imageUrl": "https://images.unsplash.com/photo-1526392060635-9d6019884377?q=80&w=800",
+    "description": "Explora la ciudadela inca, el Valle Sagrado y la milenaria ciudad del Cusco con guías certificados."
+  },
+  {
+    "id": "2",
+    "title": "Líneas de Nazca y Huacachina",
+    "location": "Ica, Perú",
+    "duration": "2 días / 1 noche",
+    "price": "S/ 480",
+    "rating": "4.8",
+    "category": "Aventura y Trekking",
+    "imageUrl": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=800",
+    "description": "Sobrevuelo sobre los misteriosos geoglifos de Nazca y paseo en tubulares por las dunas de Huacachina."
+  },
+  {
+    "id": "3",
+    "title": "Cañón del Colca y Arequipa",
+    "location": "Arequipa, Perú",
+    "duration": "3 días / 2 noches",
+    "price": "S/ 650",
+    "rating": "4.7",
+    "category": "Naturaleza y Selva",
+    "imageUrl": "https://images.unsplash.com/photo-1589308078059-be1415eab4c3?q=80&w=800",
+    "description": "Avistamiento del majestuoso vuelo del cóndor en el Cañón del Colca y recorrido por la Ciudad Blanca."
+  },
+  {
+    "id": "4",
+    "title": "Lago Titicaca e Islas Flotantes",
+    "location": "Puno, Perú",
+    "duration": "2 días / 1 noche",
+    "price": "S/ 520",
+    "rating": "4.8",
+    "category": "Historia y Cultura",
+    "imageUrl": "https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800",
+    "description": "Navega por el lago navegable más alto del mundo y convive con las comunidades tradicionales de los Uros y Taquile."
+  }
+]
