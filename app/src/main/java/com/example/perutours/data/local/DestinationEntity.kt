@@ -9,9 +9,10 @@ data class DestinationEntity(
     @PrimaryKey val id: String,
     val title: String,
     val location: String,
+    val duration: String,
     val price: String,
     val rating: String,
-    val duration: String,
+    val category: String = "Popular",
     val imageUrl: String,
     val description: String? = null
 ) {
@@ -20,9 +21,10 @@ data class DestinationEntity(
             id = id,
             title = title,
             location = location,
+            duration = duration,
             price = price,
             rating = rating,
-            duration = duration,
+            category = category,
             imageUrl = imageUrl,
             description = description
         )
@@ -34,9 +36,10 @@ fun DestinationDto.toEntity(): DestinationEntity {
         id = id,
         title = title,
         location = location,
+        duration = duration,
         price = price,
         rating = rating,
-        duration = duration,
+        category = category,
         imageUrl = imageUrl,
         description = description
     )
