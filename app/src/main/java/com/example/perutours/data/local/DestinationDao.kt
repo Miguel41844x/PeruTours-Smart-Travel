@@ -13,8 +13,8 @@ interface DestinationDao {
     fun getAllDestinations(): Flow<List<DestinationEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(destinations: List<DestinationEntity>)
+    fun insertAll(destinations: List<DestinationEntity>)
 
     @Query("DELETE FROM destinations")
-    suspend fun clearAll()
+    fun clearAll()
 }
