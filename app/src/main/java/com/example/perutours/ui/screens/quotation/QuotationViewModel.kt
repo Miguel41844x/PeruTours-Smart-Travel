@@ -44,6 +44,23 @@ class QuotationViewModel(
         }
     }
 
+    fun loadQuotationById(quotationId: String) {
+        if (quotationId.isBlank()) return
+        viewModelScope.launch {
+            _uiState.value = QuotationUiState.Loading
+            try {
+                val quotation = repository.getQuotationById(quotationId)
+                if (quotation != null) {
+                    _uiState.value = QuotationUiState.Success(quotation)
+                } else {
+                    _uiState.value = QuotationUiState.Error("No se encontró la cotización")
+                }
+            } catch (e: Exception) {
+                _uiState.value = QuotationUiState.Error(e.localizedMessage ?: "Error al cargar la cotización")
+            }
+        }
+    }
+
     fun addServiceFromCatalog(catalog: CatalogService) {
         val newItem = QuotationServiceItem(
             id = catalog.id,
