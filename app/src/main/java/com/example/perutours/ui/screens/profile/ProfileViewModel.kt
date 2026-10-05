@@ -121,10 +121,10 @@ class ProfileViewModel(
     }
 
     fun onDniChanged(value: String) {
-
         _uiState.value =
             _uiState.value.copy(
-                dni = value
+                dni = value,
+                dniError = null
             )
     }
 
@@ -161,6 +161,7 @@ class ProfileViewModel(
         val validation = ProfileValidator.validate(
             name = state.name,
             phone = state.phone,
+            dni = state.dni,
             city = state.city,
             selectedPreferences = state.selectedPreferences
         )
@@ -169,6 +170,7 @@ class ProfileViewModel(
             state.copy(
                 nameError = validation.nameError,
                 phoneError = validation.phoneError,
+                dniError = validation.dniError,
                 cityError = validation.cityError,
                 preferencesError = validation.preferencesError
             )

@@ -938,17 +938,17 @@ fun ProfileScreen(
                         // DNI
 
                         OutlinedTextField(
-
-                            value =
-                                uiState.dni,
-
-                            onValueChange =
-                                viewModel::onDniChanged,
-
-                            label = {
-                                Text(
-                                    "DNI / Pasaporte (Opcional)"
-                                )
+                            value = uiState.dni,
+                            onValueChange = viewModel::onDniChanged,
+                            label = { Text("DNI / Pasaporte (Opcional)") },
+                            isError = uiState.dniError != null,
+                            supportingText = {
+                                uiState.dniError?.let {
+                                    Text(
+                                        text = it,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             },
 
                             leadingIcon = {

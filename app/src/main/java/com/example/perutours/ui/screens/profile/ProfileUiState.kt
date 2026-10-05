@@ -16,6 +16,7 @@ data class ProfileUiState(
     // Errores de validación
     val nameError: String? = null,
     val phoneError: String? = null,
+    val dniError: String? = null,
     val cityError: String? = null,
     val preferencesError: String? = null,
 
