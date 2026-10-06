@@ -1,6 +1,7 @@
 package com.example.perutours.ui.screens.profile
 
 import android.net.Uri
+import com.example.perutours.data.model.Preference
 
 data class ProfileUiState(
     val name: String = "",
@@ -11,7 +12,11 @@ data class ProfileUiState(
     val email: String = "",
     val photoUrl: String = "",
 
+    // IDs de preferencias seleccionadas
     val selectedPreferences: Set<String> = emptySet(),
+
+    // Preferencias obtenidas desde Firestore
+    val availablePreferences: List<Preference> = emptyList(),
 
     // Errores de validación
     val nameError: String? = null,

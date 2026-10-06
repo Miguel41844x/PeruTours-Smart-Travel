@@ -56,6 +56,10 @@ fun HomeScreen(
     var userPreferences by remember {
         mutableStateOf(listOf<String>())
     }
+
+    var userPreferenceNames by remember {
+        mutableStateOf(listOf<String>())
+    }
     val userEmail = currentUser?.email ?: ""
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -68,8 +72,33 @@ fun HomeScreen(
                         snapshot.getString("name")?.takeIf { it.isNotBlank() }?.let { userName = it }
                         snapshot.getString("photoUrl")?.let { photoUrl = it }
                         val prefs = snapshot.get("preferences") as? List<*>
+
                         if (prefs != null) {
-                            userPreferences = prefs.filterIsInstance<String>()
+
+                            userPreferences =
+                                prefs.filterIsInstance<String>()
+
+                            FirebaseFirestore
+                                .getInstance()
+                                .collection("preferences")
+                                .get()
+                                .addOnSuccessListener { preferencesSnapshot ->
+
+                                    val namesById =
+                                        preferencesSnapshot.documents.associate { document ->
+                                            document.id to (
+                                                    document.getString("name")
+                                                        ?: ""
+                                                    )
+                                        }
+
+                                    userPreferenceNames =
+                                        userPreferences
+                                            .mapNotNull { preferenceId ->
+                                                namesById[preferenceId]
+                                                    ?.takeIf { it.isNotBlank() }
+                                            }
+                                }
                         }
                     }
                 }
@@ -142,8 +171,8 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (userPreferences.isNotEmpty()) {
-                                    "Intereses: ${userPreferences.take(2).joinToString(" • ")}"
+                                text = if (userPreferenceNames.isNotEmpty()) {
+                                    "Intereses: ${userPreferenceNames.joinToString(" • ")}"
                                 } else {
                                     userEmail
                                 },

@@ -1093,108 +1093,69 @@ fun ProfileScreen(
                         )
 
                         FlowRow(
-
-                            modifier =
-                                Modifier.fillMaxWidth(),
-
-                            horizontalArrangement =
-                                Arrangement.spacedBy(8.dp),
-
-                            verticalArrangement =
-                                Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
 
-                            viewModel
-                                .availablePreferences
-                                .forEach { preference ->
+                            uiState.availablePreferences.forEach { preference ->
 
-                                    val isSelected =
-                                        uiState
-                                            .selectedPreferences
-                                            .contains(
-                                                preference
-                                            )
-
-                                    FilterChip(
-
-                                        selected =
-                                            isSelected,
-
-                                        onClick = {
-
-                                            viewModel
-                                                .togglePreference(
-                                                    preference
-                                                )
-                                        },
-
-                                        label = {
-
-                                            Text(
-                                                text =
-                                                    preference,
-
-                                                fontSize =
-                                                    12.sp,
-
-                                                fontWeight =
-                                                    if (
-                                                        isSelected
-                                                    ) {
-                                                        FontWeight.Bold
-                                                    } else {
-                                                        FontWeight.Normal
-                                                    }
-                                            )
-                                        },
-
-                                        leadingIcon =
-                                            if (
-                                                isSelected
-                                            ) {
-
-                                                {
-
-                                                    Icon(
-                                                        imageVector =
-                                                            Icons.Default.Check,
-
-                                                        contentDescription =
-                                                            null,
-
-                                                        modifier =
-                                                            Modifier.size(
-                                                                16.dp
-                                                            )
-                                                    )
-                                                }
-
-                                            } else {
-                                                null
-                                            },
-
-                                        colors =
-                                            FilterChipDefaults
-                                                .filterChipColors(
-
-                                                    selectedContainerColor =
-                                                        PeruGold40
-                                                            .copy(
-                                                                alpha =
-                                                                    0.18f
-                                                            ),
-
-                                                    selectedLabelColor =
-                                                        PeruGold40,
-
-                                                    selectedLeadingIconColor =
-                                                        PeruGold40
-                                                )
+                                val isSelected =
+                                    uiState.selectedPreferences.contains(
+                                        preference.id
                                     )
-                                }
-                        }
 
-                        if (
+                                FilterChip(
+                                    selected = isSelected,
+
+                                    onClick = {
+                                        viewModel.togglePreference(
+                                            preference.id
+                                        )
+                                    },
+
+                                    label = {
+                                        Text(
+                                            text = preference.name,
+                                            fontSize = 12.sp,
+                                            fontWeight =
+                                                if (isSelected) {
+                                                    FontWeight.Bold
+                                                } else {
+                                                    FontWeight.Normal
+                                                }
+                                        )
+                                    },
+
+                                    leadingIcon =
+                                        if (isSelected) {
+                                            {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        } else {
+                                            null
+                                        },
+
+                                    colors =
+                                        FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor =
+                                                PeruGold40.copy(alpha = 0.18f),
+
+                                            selectedLabelColor =
+                                                PeruGold40,
+
+                                            selectedLeadingIconColor =
+                                                PeruGold40
+                                        )
+                                )
+                            }
+
+
+                            if (
                             uiState.preferencesError != null
                         ) {
 
@@ -1219,6 +1180,7 @@ fun ProfileScreen(
                         }
                     }
                 }
+            }
 
                 Spacer(
                     modifier =

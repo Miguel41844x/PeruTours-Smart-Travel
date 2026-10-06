@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
+import com.example.perutours.data.model.Preference
 
 class ProfileRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -164,5 +165,30 @@ class ProfileRepository(
             .await()
 
         return remoteUrl
+    }
+
+    suspend fun getPreferences(): List<Preference> {
+
+        val snapshot = firestore
+            .collection("preferences")
+            .get()
+            .await()
+
+        return snapshot.documents
+            .mapNotNull { document ->
+
+                val name = document.getString("name")
+                    ?: return@mapNotNull null
+
+                Preference(
+                    id = document.id,
+                    name = name,
+                    description = document.getString("description").orEmpty(),
+                    active = document.getBoolean("active") ?: true,
+                    order = document.getLong("order")?.toInt() ?: 0
+                )
+            }
+            .filter { it.active }
+            .sortedBy { it.order }
     }
 }

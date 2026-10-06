@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.perutours.data.model.Preference
 
 class ProfileViewModel(
     private val repository: ProfileRepository,
@@ -25,16 +26,6 @@ class ProfileViewModel(
     val uiState: StateFlow<ProfileUiState> =
         _uiState.asStateFlow()
 
-    val availablePreferences = listOf(
-        "Aventura y Trekking",
-        "Historia y Cultura",
-        "Naturaleza y Selva",
-        "Gastronomía Peruana",
-        "Playas y Relax",
-        "Turismo Vivencial",
-        "Fotografía y Paisajes",
-        "Viaje en Familia"
-    )
 
     init {
         loadProfile()
@@ -47,7 +38,6 @@ class ProfileViewModel(
             try {
 
                 val currentUser = auth.currentUser
-
                 val uid = currentUser?.uid ?: ""
 
                 if (uid.isEmpty()) {
@@ -61,39 +51,79 @@ class ProfileViewModel(
                     return@launch
                 }
 
+                // Cargar preferencias desde Firestore
+                val preferences =
+                    repository.getPreferences()
+
+                // Cargar perfil desde Firestore
                 val profile =
                     repository.getProfile(uid)
 
-                applyProfile(profile)
+                applyProfile(
+                    profile = profile,
+                    preferences = preferences
+                )
 
             } catch (_: Exception) {
-                val uid = auth.currentUser?.uid.orEmpty()
-                val fallbackProfile = repository.getAuthProfile(uid)
 
-                applyProfile(
-                    profile = fallbackProfile,
-                    message = "No se pudieron cargar los datos de Firestore. Se muestran los datos de la cuenta."
-                )
+                val uid =
+                    auth.currentUser?.uid.orEmpty()
+
+                try {
+
+                    val preferences =
+                        repository.getPreferences()
+
+                    val fallbackProfile =
+                        repository.getAuthProfile(uid)
+
+                    applyProfile(
+                        profile = fallbackProfile,
+                        preferences = preferences,
+                        message =
+                            "No se pudieron cargar los datos del perfil desde Firestore."
+                    )
+
+                } catch (e: Exception) {
+
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoadingInitialData = false,
+                            message =
+                                "No se pudieron cargar las preferencias desde Firestore."
+                        )
+                }
             }
         }
     }
 
     private fun applyProfile(
         profile: UserProfile,
+        preferences: List<Preference>,
         message: String? = null
     ) {
-        _uiState.value = _uiState.value.copy(
-            name = profile.name,
-            email = profile.email,
-            phone = profile.phone,
-            dni = profile.dni,
-            city = profile.city,
-            role = profile.role,
-            photoUrl = profile.photoUrl,
-            selectedPreferences = profile.preferences.toSet(),
-            isLoadingInitialData = false,
-            message = message
-        )
+
+        _uiState.value =
+            _uiState.value.copy(
+                name = profile.name,
+                email = profile.email,
+                phone = profile.phone,
+                dni = profile.dni,
+                city = profile.city,
+                role = profile.role,
+                photoUrl = profile.photoUrl,
+
+                // Aquí se mantienen los IDs guardados
+                selectedPreferences =
+                    profile.preferences.toSet(),
+
+                // Preferencias obtenidas de Firestore
+                availablePreferences =
+                    preferences,
+
+                isLoadingInitialData = false,
+                message = message
+            )
     }
 
     fun onNameChanged(value: String) {
@@ -137,16 +167,19 @@ class ProfileViewModel(
             )
     }
 
-    fun togglePreference(preference: String) {
+    fun togglePreference(preferenceId: String) {
 
         val current =
             _uiState.value.selectedPreferences
 
         val updated =
-            if (current.contains(preference)) {
-                current - preference
+            if (current.contains(preferenceId)) {
+
+                current - preferenceId
+
             } else {
-                current + preference
+
+                current + preferenceId
             }
 
         _uiState.value =
