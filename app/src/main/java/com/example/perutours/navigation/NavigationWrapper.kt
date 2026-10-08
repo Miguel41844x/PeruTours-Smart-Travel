@@ -25,6 +25,8 @@ import com.example.perutours.ui.screens.quotation.QuotationViewModel
 import com.example.perutours.ui.screens.request.TravelRequestScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
 import com.google.firebase.auth.FirebaseAuth
+import com.example.perutours.ui.screens.agent.AgentHomeScreen
+import com.example.perutours.navigation.RoleRouterScreen
 
 @Composable
 fun NavigationWrapper(
@@ -35,11 +37,12 @@ fun NavigationWrapper(
 
     // CRITERIO 3: Persistencia de sesión
     // Solo si el usuario ya inició sesión Y su correo ya está verificado, entra directo a Home
-    val startDestination = if (currentUser != null && currentUser.isEmailVerified) {
-        "home"
-    } else {
-        "initial"
-    }
+    val startDestination =
+        if (currentUser != null && currentUser.isEmailVerified) {
+            "role_router"
+        } else {
+            "initial"
+        }
 
     NavHost(
         navController = navHostController,
@@ -59,8 +62,10 @@ fun NavigationWrapper(
                     navHostController.navigate(route = "signUp")
                 },
                 navigateToHome = {
-                    navHostController.navigate(route = "home") {
-                        popUpTo("logIn") { inclusive = true }
+                    navHostController.navigate(route = "role_router") {
+                        popUpTo("logIn") {
+                            inclusive = true
+                        }
                     }
                 }
             )
@@ -71,6 +76,38 @@ fun NavigationWrapper(
                 navigateToLogin = {
                     navHostController.navigate(route = "logIn") {
                         popUpTo("signUp") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(route = "role_router") {
+
+            RoleRouterScreen(
+                navController = navHostController,
+                auth = auth
+            )
+        }
+
+        composable(route = "agent_home") {
+
+            AgentHomeScreen(
+
+                auth = auth,
+
+                onViewRequests = {
+                    // Todavía no hacemos esta pantalla.
+                    // La conectaremos en el siguiente paso.
+                },
+
+                onLogout = {
+
+                    auth.signOut()
+
+                    navHostController.navigate("initial") {
+                        popUpTo(0) {
+                            inclusive = true
+                        }
                     }
                 }
             )
