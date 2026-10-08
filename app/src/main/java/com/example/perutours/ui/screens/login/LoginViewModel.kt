@@ -6,6 +6,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import com.example.perutours.data.messaging.FCMTokenManager
+import kotlinx.coroutines.launch
+import androidx.lifecycle.viewModelScope
 
 class LoginViewModel(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -13,6 +16,8 @@ class LoginViewModel(
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+
+    private val fcmTokenManager = FCMTokenManager()
 
     fun onEmailChange(email: String) {
         _uiState.update {
@@ -102,8 +107,21 @@ class LoginViewModel(
                     val user = auth.currentUser
                     // Criterio 2: Bloquear acceso si no ha verificado su email
                     if (user != null && user.isEmailVerified) {
-                        _uiState.update { it.copy(isLoading = false) }
-                        onLoginSuccess()
+
+                        viewModelScope.launch {
+
+                            try {
+                                fcmTokenManager.saveToken()
+                            } catch (e: Exception) {
+                                // No impedimos el acceso si falla FCM.
+                            }
+
+                            _uiState.update {
+                                it.copy(isLoading = false)
+                            }
+
+                            onLoginSuccess()
+                        }
                     } else if (user != null) {
                         user.sendEmailVerification()
                             .addOnCompleteListener { verificationTask ->
