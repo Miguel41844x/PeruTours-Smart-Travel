@@ -37,19 +37,37 @@ fun QuotationDetailScreen(
             )
         },
         bottomBar = {
-            Surface(shadowElevation = 8.dp) {
+            Surface(
+                shadowElevation = 8.dp,
+                modifier = Modifier.navigationBarsPadding()
+            ) {
                 Button(
                     onClick = { onAcceptQuotation(quotation.id) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 16.dp,
+                            bottom = 8.dp
+                        )
                         .height(50.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF059669)
+                    )
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null)
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null
+                    )
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Aceptar Cotización y Generar Reserva", fontWeight = FontWeight.Bold)
+
+                    Text(
+                        "Aceptar Cotización y Generar Reserva",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

@@ -14,10 +14,13 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import com.example.perutours.data.repository.ProfileRepository
+import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestRepository
 
 class QuotationViewModel(
     private val repository: QuotationRepository = QuotationRepository(),
+    private val catalogRepository: ServiceCatalogRepository =
+        ServiceCatalogRepository(),
     private val travelRequestRepository: TravelRequestRepository = TravelRequestRepository(),
     private val profileRepository: ProfileRepository = ProfileRepository()
 ) : ViewModel() {
@@ -28,6 +31,38 @@ class QuotationViewModel(
     private val _uiState = MutableStateFlow<QuotationUiState>(QuotationUiState.Idle)
     val uiState: StateFlow<QuotationUiState> = _uiState.asStateFlow()
 
+    private val _catalogServices =
+        MutableStateFlow<List<CatalogService>>(emptyList())
+
+    val catalogServices: StateFlow<List<CatalogService>> =
+        _catalogServices.asStateFlow()
+
+    private val _catalogLoading =
+        MutableStateFlow(false)
+
+    val catalogLoading: StateFlow<Boolean> =
+        _catalogLoading.asStateFlow()
+
+
+    fun loadCatalogServices() {
+        viewModelScope.launch {
+            _catalogLoading.value = true
+            try {
+                catalogRepository.syncCatalog()
+                _catalogServices.value =
+                    catalogRepository.getServices()
+
+            } catch (e: Exception) {
+                _uiState.value =
+                    QuotationUiState.Error(
+                        e.localizedMessage
+                            ?: "No se pudo cargar el catálogo de servicios."
+                    )
+            } finally {
+                _catalogLoading.value = false
+            }
+        }
+    }
 
     fun loadRequestForQuotation(requestId: String) {
         if (requestId.isBlank()) {

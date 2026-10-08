@@ -1,5 +1,5 @@
 import {setGlobalOptions} from "firebase-functions";
-import {onDocumentUpdated} from "firebase-functions/v2/firestore";
+import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
@@ -11,32 +11,23 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
-export const enviarNotificacionCotizacion = onDocumentUpdated(
+export const enviarNotificacionCotizacion = onDocumentCreated(
   "cotizaciones/{quotationId}",
   async (event) => {
-    const before = event.data?.before.data();
-    const after = event.data?.after.data();
 
-    if (!before || !after) {
+    const quotation = event.data?.data();
+
+    if (!quotation) {
       return;
     }
 
-    // Solo enviamos la notificación cuando pasa a "Cotizado".
-    if (
-      before.status === "Cotizado" ||
-      after.status !== "Cotizado"
-    ) {
-      return;
-    }
-
-    const clientId = after.clientId;
+    const clientId = quotation.clientId;
 
     if (!clientId) {
       console.log("La cotización no tiene clientId.");
       return;
     }
 
-    // Buscamos el perfil del cliente.
     const clientDocument = await db
       .collection("users")
       .doc(clientId)
@@ -59,20 +50,21 @@ export const enviarNotificacionCotizacion = onDocumentUpdated(
     }
 
     const destination =
-      after.destination || "tu viaje";
+      quotation.destination || "tu viaje";
 
     const totalAmount =
-      after.totalAmount ?? 0;
+      quotation.totalAmount ?? 0;
 
-    const quotationId = event.params.quotationId;
+    const quotationId =
+      event.params.quotationId;
 
-    const message = {
+    await messaging.send({
       token: fcmToken,
 
       notification: {
         title: "¡Tu cotización está lista! ✈️",
         body:
-          "El agente preparó tu propuesta para " +
+          `El agente preparó tu propuesta para ` +
           `${destination} por $${totalAmount} USD.`,
       },
 
@@ -81,20 +73,10 @@ export const enviarNotificacionCotizacion = onDocumentUpdated(
         type: "quotation",
         status: "Cotizado",
       },
-    };
+    });
 
-    try {
-      const response = await messaging.send(message);
-
-      console.log(
-        "Notificación enviada correctamente:",
-        response
-      );
-    } catch (error) {
-      console.error(
-        "Error al enviar la notificación FCM:",
-        error
-      );
-    }
+    console.log(
+      "Notificación enviada correctamente."
+    );
   }
 );

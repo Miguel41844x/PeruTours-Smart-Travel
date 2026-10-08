@@ -42,7 +42,7 @@ fun ServiceCatalogItemCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = catalogService.category.uppercase(),
+                    text = "${catalogService.city.uppercase()} • ${catalogService.category.uppercase()}",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFB45309)

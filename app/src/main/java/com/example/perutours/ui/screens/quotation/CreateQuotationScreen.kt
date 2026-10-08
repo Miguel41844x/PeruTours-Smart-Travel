@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.perutours.data.model.ServiceCatalogData
 import com.example.perutours.ui.screens.quotation.components.AddCustomServiceDialog
 import com.example.perutours.ui.screens.quotation.components.FinancialSummaryCard
 import com.example.perutours.ui.screens.quotation.components.ServiceCatalogItemCard
@@ -28,6 +27,13 @@ fun CreateQuotationScreen(
 ) {
     val formState by viewModel.formState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val catalogServices by viewModel.catalogServices.collectAsState()
+    val catalogLoading by viewModel.catalogLoading.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadCatalogServices()
+    }
+
     var showCustomDialog by remember { mutableStateOf(false) }
 
     val baseCost = formState.selectedServices.sumOf { it.unitCost * it.quantity }
@@ -43,7 +49,7 @@ fun CreateQuotationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("HU05 • Elaborar Cotización", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+                title = { Text("Elaborar Cotización", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
@@ -62,18 +68,32 @@ fun CreateQuotationScreen(
                     onClick = { viewModel.saveQuotation() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp)
+                        .navigationBarsPadding()
                         .height(52.dp),
                     shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFD97706)
+                    ),
                     enabled = uiState !is QuotationUiState.Loading
                 ) {
                     if (uiState is QuotationUiState.Loading) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
                     } else {
-                        Icon(Icons.Default.Check, contentDescription = null)
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null
+                        )
+
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Registrar en Firestore ('Cotizado') y Enviar FCM", fontWeight = FontWeight.Bold)
+
+                        Text(
+                            "Registrar cotización y Notificar",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -163,13 +183,34 @@ fun CreateQuotationScreen(
                 )
             }
 
-            items(ServiceCatalogData.predefinedServices) { service ->
-                val isSelected = formState.selectedServices.any { it.id == service.id }
-                ServiceCatalogItemCard(
-                    catalogService = service,
-                    isSelected = isSelected,
-                    onToggle = { viewModel.addServiceFromCatalog(service) }
-                )
+            if (catalogLoading) {
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+            } else {
+
+                items(catalogServices) { service ->
+
+                    val isSelected =
+                        formState.selectedServices.any {
+                            it.id == service.id
+                        }
+
+                    ServiceCatalogItemCard(
+                        catalogService = service,
+                        isSelected = isSelected,
+                        onToggle = {
+                            viewModel.addServiceFromCatalog(service)
+                        }
+                    )
+                }
             }
 
             item {
