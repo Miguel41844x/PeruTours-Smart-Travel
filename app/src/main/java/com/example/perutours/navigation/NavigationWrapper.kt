@@ -210,8 +210,8 @@ fun NavigationWrapper(
                         quotation = state.quotation,
                         onNavigateBack = { navHostController.popBackStack() },
                         onAcceptQuotation = {
-                            navHostController.navigate("home") {
-                                popUpTo("home") { inclusive = true }
+                            navHostController.navigate("agent_home") {
+                                popUpTo("agent_home") { inclusive = true }
                             }
                         }
                     )

@@ -5,7 +5,7 @@ import com.example.perutours.data.model.TravelRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-
+import com.example.perutours.data.repository.ProfileRepository
 class QuotationRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -18,8 +18,23 @@ class QuotationRepository(
      */
     suspend fun saveQuotation(quotation: Quotation): Quotation {
         val currentAgent = auth.currentUser
-        val agentEmail = currentAgent?.email ?: "agente@perutours.pe"
-        val agentUid = currentAgent?.uid ?: "agent_luis_galvez"
+            ?: throw IllegalStateException(
+                "No hay un agente autenticado."
+            )
+
+        val agentUid = currentAgent.uid
+        val agentEmail = currentAgent.email ?: ""
+
+        val agentDocument = firestore
+            .collection("users")
+            .document(agentUid)
+            .get()
+            .await()
+
+        val agentName =
+            agentDocument.getString("name")
+                ?.takeIf { it.isNotBlank() }
+                ?: agentEmail
 
         val docRef = firestore.collection(COLLECTION_QUOTATIONS).document()
         val quotationId = docRef.id
@@ -27,7 +42,7 @@ class QuotationRepository(
         val quotationToSave = quotation.copy(
             id = quotationId,
             agentId = agentUid,
-            agentName = agentEmail,
+            agentName = agentName,
             status = Quotation.STATUS_QUOTED,
             createdAtMillis = System.currentTimeMillis()
         )
