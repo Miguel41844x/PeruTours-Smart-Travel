@@ -39,6 +39,17 @@ class TravelRequestRepository(
             }
     }
 
+    suspend fun getAllRequests(): List<TravelRequest> {
+        return firestore
+            .collection(COLLECTION_NAME)
+            .get()
+            .await()
+            .documents
+            .mapNotNull {
+                it.toObject(TravelRequest::class.java)
+            }
+    }
+
     suspend fun getRequestById(requestId: String): TravelRequest? {
         if (requestId.isBlank()) return null
 

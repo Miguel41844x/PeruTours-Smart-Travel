@@ -13,23 +13,14 @@ class AgentRequestsViewModel(
     private val repository: TravelRequestRepository = TravelRequestRepository()
 ) : ViewModel() {
 
-    private val _requests =
-        MutableStateFlow<List<TravelRequest>>(emptyList())
+    private val _requests = MutableStateFlow<List<TravelRequest>>(emptyList())
+    val requests: StateFlow<List<TravelRequest>> = _requests.asStateFlow()
 
-    val requests: StateFlow<List<TravelRequest>> =
-        _requests.asStateFlow()
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isLoading =
-        MutableStateFlow(false)
-
-    val isLoading: StateFlow<Boolean> =
-        _isLoading.asStateFlow()
-
-    private val _error =
-        MutableStateFlow<String?>(null)
-
-    val error: StateFlow<String?> =
-        _error.asStateFlow()
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
         loadRequests()
@@ -39,13 +30,11 @@ class AgentRequestsViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-
             try {
-                _requests.value = repository.getPendingRequests()
+                // Ahora trae TODAS las solicitudes (Pendientes y Cotizadas)
+                _requests.value = repository.getAllRequests()
             } catch (e: Exception) {
-                _error.value =
-                    e.localizedMessage
-                        ?: "No se pudieron cargar las solicitudes."
+                _error.value = e.localizedMessage ?: "No se pudieron cargar las solicitudes."
             } finally {
                 _isLoading.value = false
             }
