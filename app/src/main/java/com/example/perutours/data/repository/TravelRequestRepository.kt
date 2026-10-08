@@ -24,6 +24,37 @@ class TravelRequestRepository(
         return savedRequest
     }
 
+    suspend fun getPendingRequests(): List<TravelRequest> {
+        return firestore
+            .collection(COLLECTION_NAME)
+            .whereEqualTo(
+                "status",
+                TravelRequest.STATUS_PENDING_QUOTE
+            )
+            .get()
+            .await()
+            .documents
+            .mapNotNull {
+                it.toObject(TravelRequest::class.java)
+            }
+    }
+
+    suspend fun getRequestById(requestId: String): TravelRequest? {
+        if (requestId.isBlank()) return null
+
+        val document = firestore
+            .collection(COLLECTION_NAME)
+            .document(requestId)
+            .get()
+            .await()
+
+        return if (document.exists()) {
+            document.toObject(TravelRequest::class.java)
+        } else {
+            null
+        }
+    }
+
     companion object {
         const val COLLECTION_NAME = "travel_requests"
     }

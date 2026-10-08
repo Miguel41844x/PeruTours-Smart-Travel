@@ -87,12 +87,61 @@ fun CreateQuotationScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    text = "Cliente: ${formState.clientName} • Destino: ${formState.destination}",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF4B5563)
-                )
+                if (uiState is QuotationUiState.Loading) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                if (uiState is QuotationUiState.Error) {
+                    Text(
+                        text = (uiState as QuotationUiState.Error).message,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+
+                        Text(
+                            text = "Datos de la solicitud",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "Cliente: ${formState.clientName}",
+                            fontSize = 14.sp
+                        )
+
+                        Text(
+                            text = "Correo: ${formState.clientEmail}",
+                            fontSize = 14.sp
+                        )
+
+                        Text(
+                            text = "Destino: ${formState.destination}",
+                            fontSize = 14.sp
+                        )
+
+                        Text(
+                            text = "Viajeros: ${formState.travelerCount}",
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             }
 
             item {

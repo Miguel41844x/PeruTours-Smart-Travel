@@ -13,9 +13,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.perutours.data.repository.ProfileRepository
+import com.example.perutours.data.repository.TravelRequestRepository
 
 class QuotationViewModel(
-    private val repository: QuotationRepository = QuotationRepository()
+    private val repository: QuotationRepository = QuotationRepository(),
+    private val travelRequestRepository: TravelRequestRepository = TravelRequestRepository(),
+    private val profileRepository: ProfileRepository = ProfileRepository()
 ) : ViewModel() {
 
     private val _formState = MutableStateFlow(QuotationFormState())
@@ -24,23 +28,53 @@ class QuotationViewModel(
     private val _uiState = MutableStateFlow<QuotationUiState>(QuotationUiState.Idle)
     val uiState: StateFlow<QuotationUiState> = _uiState.asStateFlow()
 
-    fun initFromRequest(
-        requestId: String,
-        clientId: String,
-        clientName: String,
-        destination: String,
-        travelers: Int,
-        fcmToken: String = ""
-    ) {
-        _formState.update { current ->
-            current.copy(
-                requestId = requestId,
-                clientId = clientId,
-                clientName = clientName,
-                destination = destination,
-                travelerCount = travelers,
-                clientFcmToken = fcmToken.ifBlank { "fcm_token_client_${clientName.lowercase().replace(" ", "_")}" }
-            )
+
+    fun loadRequestForQuotation(requestId: String) {
+        if (requestId.isBlank()) {
+            _uiState.value =
+                QuotationUiState.Error("No se recibió el ID de la solicitud.")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = QuotationUiState.Loading
+
+            try {
+                // 1. Obtener la solicitud
+                val request =
+                    travelRequestRepository.getRequestById(requestId)
+                        ?: throw IllegalStateException(
+                            "No se encontró la solicitud de viaje."
+                        )
+
+                // 2. Obtener el perfil del cliente
+                val clientProfile =
+                    profileRepository.getProfile(request.userId)
+
+                // 3. Cargar los datos reales en el formulario
+                _formState.update { current ->
+                    current.copy(
+                        requestId = request.id,
+                        clientId = request.userId,
+                        clientName = clientProfile.name,
+                        clientEmail = clientProfile.email,
+                        destination = request.destination,
+                        travelerCount = request.travelerCount,
+                        clientFcmToken = ""
+                    )
+                }
+
+                // Ya cargamos correctamente la solicitud.
+                _uiState.value = QuotationUiState.Idle
+
+            } catch (e: Exception) {
+
+                _uiState.value =
+                    QuotationUiState.Error(
+                        e.localizedMessage
+                            ?: "No se pudo cargar la solicitud."
+                    )
+            }
         }
     }
 
@@ -140,6 +174,7 @@ class QuotationViewModel(
             requestId = form.requestId,
             clientId = form.clientId,
             clientName = form.clientName,
+            clientEmail = form.clientEmail,
             destination = form.destination,
             travelerCount = form.travelerCount,
             services = form.selectedServices,

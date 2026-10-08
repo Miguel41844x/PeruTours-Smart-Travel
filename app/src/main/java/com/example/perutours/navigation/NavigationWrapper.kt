@@ -26,7 +26,8 @@ import com.example.perutours.ui.screens.request.TravelRequestScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
-import com.example.perutours.navigation.RoleRouterScreen
+import com.example.perutours.ui.screens.agent.AgentRequestsScreen
+import com.example.perutours.ui.screens.agent.AgentHomeScreen
 
 @Composable
 fun NavigationWrapper(
@@ -96,8 +97,7 @@ fun NavigationWrapper(
                 auth = auth,
 
                 onViewRequests = {
-                    // Todavía no hacemos esta pantalla.
-                    // La conectaremos en el siguiente paso.
+                    navHostController.navigate("agent_requests")
                 },
 
                 onLogout = {
@@ -151,26 +151,45 @@ fun NavigationWrapper(
             )
         }
 
+        composable(route = "agent_requests") {
+            AgentRequestsScreen(
+                onNavigateBack = {
+                    navHostController.popBackStack()
+                },
+                onRequestSelected = { requestId ->
+                    navHostController.navigate(
+                        "create_quotation/$requestId"
+                    )
+                }
+            )
+        }
+
         composable(route = "create_quotation/{requestId}") { backStackEntry ->
-            val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+
+            val requestId =
+                backStackEntry.arguments?.getString("requestId")
+                    ?: ""
+
             val quotationViewModel: QuotationViewModel = viewModel()
 
             LaunchedEffect(requestId) {
-                quotationViewModel.initFromRequest(
-                    requestId = requestId,
-                    clientId = "client_demo",
-                    clientName = "Cliente",
-                    destination = "Cusco & Machu Picchu",
-                    travelers = 2
-                )
+                quotationViewModel.loadRequestForQuotation(requestId)
             }
 
             CreateQuotationScreen(
                 viewModel = quotationViewModel,
-                onNavigateBack = { navHostController.popBackStack() },
+                onNavigateBack = {
+                    navHostController.popBackStack()
+                },
                 onQuotationCreated = { quotationId ->
-                    navHostController.navigate("quotation_detail/$quotationId") {
-                        popUpTo("create_quotation/{requestId}") { inclusive = true }
+                    navHostController.navigate(
+                        "quotation_detail/$quotationId"
+                    ) {
+                        popUpTo(
+                            "create_quotation/{requestId}"
+                        ) {
+                            inclusive = true
+                        }
                     }
                 }
             )
