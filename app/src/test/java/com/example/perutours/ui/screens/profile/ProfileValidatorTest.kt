@@ -36,7 +36,7 @@ class ProfileValidatorTest {
         )
 
         assertFalse(result.isValid)
-        assertEquals("Ingresa tu nombre completo (mínimo 3 caracteres).", result.nameError)
+        assertEquals("El nombre completo es obligatorio.", result.nameError)
         assertEquals("Ingresa un celular válido de 9 dígitos que empiece con 9.", result.phoneError)
         assertEquals("La ciudad o país de origen es obligatorio.", result.cityError)
         assertEquals("Selecciona al menos una preferencia de viaje.", result.preferencesError)
