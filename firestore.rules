@@ -1,0 +1,780 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // users/{userId}
+    //   Full profile: uid, name, email, phone, dni, city, role,
+    //   photoUrl, preferences, updatedAt; optional fcmToken.
+    //   A bootstrap document may contain only photoUrl and/or fcmToken.
+    //   Profiles contain PII and are readable by their owner or an agent
+    //   while preparing and managing a travel quotation.
+    //
+    // travel_requests/{requestId}
+    //   id, userId, destination, originCity, originLatitude,
+    //   originLongitude, departureAtMillis, returnAtMillis,
+    //   travelerCount, notes, status, createdAtMillis;
+    //   optional quotationId after an agent creates a quotation.
+    //
+    // catalog_services/{serviceId}
+    //   id, name, city, category, unitCost, description,
+    //   defaultQuantity, active.
+    //
+    // preferences/{preferenceId}
+    //   id, name, description, active, order.
+    //
+    // cotizaciones/{quotationId}
+    //   id, requestId, clientId, clientName, clientEmail, destination,
+    //   travelerCount, services, baseCost, marginPercent, totalAmount,
+    //   currency, validityDate, conditions, status, agentId, agentName,
+    //   clientFcmToken, createdAtMillis, respondedAtMillis,
+    //   latestObservation, reservationId.
+    //
+    // cotizaciones/{quotationId}/observations/{observationId}
+    //   id, quotationId, authorId, authorName, message,
+    //   resultingStatus, createdAtMillis.
+    //
+    // reservations/{reservationId}
+    //   id, quotationId, requestId, clientId, agentId, destination,
+    //   travelerCount, totalAmount, currency, status, createdAtMillis.
+    //   HU06 uses the quotation ID as the reservation document ID.
+    //
+    // fcm_push_logs/{logId}
+    //   toToken, title, body, quotationId, status, timestamp.
+    //
+    // All time values currently produced by the Android app are epoch
+    // milliseconds (integer), not Firestore Timestamp values.
+    // ===============================================================
+
+    // ===============================================================
+    // Authentication and authorization helpers
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function userPath(userId) {
+      return /databases/$(database)/documents/users/$(userId);
+    }
+
+    function hasUserProfile(userId) {
+      return exists(userPath(userId));
+    }
+
+    function hasRole(role) {
+      return isAuthenticated()
+        && hasUserProfile(request.auth.uid)
+        && get(userPath(request.auth.uid)).data.role == role;
+    }
+
+    function isClient() {
+      return hasRole('cliente');
+    }
+
+    function isAgent() {
+      return hasRole('agente');
+    }
+
+    // Verify UID has not been tampered with on create.
+    function uidUnchanged() {
+      return isAuthenticated()
+        && (!('uid' in request.resource.data)
+          || request.resource.data.uid == request.auth.uid);
+    }
+
+    // Ensure an existing UID field is not modified on update.
+    function uidNotModified() {
+      return !('uid' in resource.data)
+        || (('uid' in request.resource.data)
+          && request.resource.data.uid == resource.data.uid);
+    }
+
+    // ===============================================================
+    // Generic validation helpers
+    // ===============================================================
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data)
+        .affectedKeys().hasAny(fields);
+    }
+
+    function validString(value, minLength, maxLength) {
+      return value is string
+        && value.size() >= minLength
+        && value.size() <= maxLength;
+    }
+
+    function validOptionalString(data, field, maxLength) {
+      return !(field in data)
+        || (data[field] is string && data[field].size() <= maxLength);
+    }
+
+    function isValidEmail(value) {
+      return value is string
+        && value.size() <= 254
+        && value.matches('^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$');
+    }
+
+    function isValidUrl(value) {
+      return value is string
+        && value.size() <= 2048
+        && (value == '' || value.matches('^https://.*'));
+    }
+
+    function isRecentMillis(value) {
+      return value is int
+        && value >= request.time.toMillis() - 300000
+        && value <= request.time.toMillis() + 300000;
+    }
+
+    function isPositiveBoundedNumber(value, maximum) {
+      return value is number && value >= 0 && value <= maximum;
+    }
+
+    function isValidListStringItem(values, index, maxLength) {
+      return values.size() <= index
+        || (values[index] is string
+          && values[index].size() > 0
+          && values[index].size() <= maxLength);
+    }
+
+    // Firestore Rules has no general-purpose loop, so the profile list is
+    // capped and each possible element is checked explicitly.
+    function isValidPreferenceIdList(values) {
+      return values is list
+        && values.size() >= 1
+        && values.size() <= 10
+        && isValidListStringItem(values, 0, 100)
+        && isValidListStringItem(values, 1, 100)
+        && isValidListStringItem(values, 2, 100)
+        && isValidListStringItem(values, 3, 100)
+        && isValidListStringItem(values, 4, 100)
+        && isValidListStringItem(values, 5, 100)
+        && isValidListStringItem(values, 6, 100)
+        && isValidListStringItem(values, 7, 100)
+        && isValidListStringItem(values, 8, 100)
+        && isValidListStringItem(values, 9, 100);
+    }
+
+    // ===============================================================
+    // Domain validators
+    // ===============================================================
+
+    function isValidBootstrapUser(data) {
+      return hasOnlyAllowedFields(data, ['photoUrl', 'fcmToken'])
+        && data.keys().hasAny(['photoUrl', 'fcmToken'])
+        && validOptionalString(data, 'fcmToken', 4096)
+        && (!('photoUrl' in data) || isValidUrl(data.photoUrl));
+    }
+
+    function isValidFullUser(data) {
+      return hasRequiredFields(data, [
+          'uid', 'name', 'email', 'phone', 'dni', 'city', 'role',
+          'photoUrl', 'preferences', 'updatedAt'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'uid', 'name', 'email', 'phone', 'dni', 'city', 'role',
+          'photoUrl', 'preferences', 'updatedAt', 'fcmToken'
+        ])
+        && validString(data.uid, 1, 128)
+        && validString(data.name, 3, 100)
+        && isValidEmail(data.email)
+        && data.email == request.auth.token.email
+        && data.phone is string
+        && data.phone.matches('^9[0-9]{8}$')
+        && data.dni is string
+        && data.dni.size() <= 12
+        && (data.dni == ''
+          || data.dni.matches('^[0-9]{8}$')
+          || (data.dni.size() >= 6 && data.dni.matches('^[A-Za-z0-9]+$')))
+        && validString(data.city, 2, 100)
+        && data.role in ['cliente', 'agente']
+        && isValidUrl(data.photoUrl)
+        && isValidPreferenceIdList(data.preferences)
+        && data.updatedAt is int
+        && data.updatedAt > 0
+        && validOptionalString(data, 'fcmToken', 4096);
+    }
+
+    function isValidUser(data) {
+      return isValidBootstrapUser(data) || isValidFullUser(data);
+    }
+
+    function isValidUserCreate(userId) {
+      return isOwner(userId)
+        && uidUnchanged()
+        && isValidUser(request.resource.data)
+        && (isValidBootstrapUser(request.resource.data)
+          || (request.resource.data.uid == userId
+            && request.resource.data.role == 'cliente'
+            && isRecentMillis(request.resource.data.updatedAt)));
+    }
+
+    function isValidUserUpdate(userId) {
+      return isOwner(userId)
+        && uidNotModified()
+        && isValidUser(request.resource.data)
+        && (
+          // Once a complete profile exists, it may never be downgraded to a
+          // bootstrap document and its role remains immutable.
+          (('role' in resource.data)
+            && isValidFullUser(request.resource.data)
+            && request.resource.data.uid == userId
+            && request.resource.data.role == resource.data.role)
+          ||
+          // A bootstrap profile can become a complete client profile, never
+          // an agent profile, or remain a restricted bootstrap profile.
+          (!('role' in resource.data)
+            && (isValidBootstrapUser(request.resource.data)
+              || (isValidFullUser(request.resource.data)
+                && request.resource.data.uid == userId
+                && request.resource.data.role == 'cliente')))
+        )
+        && (!request.resource.data.diff(resource.data)
+            .affectedKeys().hasAny(['updatedAt'])
+          || isRecentMillis(request.resource.data.updatedAt));
+    }
+
+    function isValidCoordinates(data) {
+      return (
+          data.originLatitude == null
+          && data.originLongitude == null
+        ) || (
+          data.originLatitude is number
+          && data.originLatitude >= -90
+          && data.originLatitude <= 90
+          && data.originLongitude is number
+          && data.originLongitude >= -180
+          && data.originLongitude <= 180
+        );
+    }
+
+    function isValidTravelRequest(data) {
+      return hasRequiredFields(data, [
+          'id', 'userId', 'destination', 'originCity',
+          'originLatitude', 'originLongitude', 'departureAtMillis',
+          'returnAtMillis', 'travelerCount', 'notes', 'status',
+          'createdAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'userId', 'destination', 'originCity',
+          'originLatitude', 'originLongitude', 'departureAtMillis',
+          'returnAtMillis', 'travelerCount', 'notes', 'status',
+          'createdAtMillis', 'quotationId'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.userId, 1, 128)
+        && validString(data.destination, 3, 120)
+        && validString(data.originCity, 2, 120)
+        && isValidCoordinates(data)
+        && data.departureAtMillis is int
+        && data.returnAtMillis is int
+        && data.departureAtMillis > data.createdAtMillis
+        && data.returnAtMillis > data.departureAtMillis
+        && data.travelerCount is int
+        && data.travelerCount >= 1
+        && data.travelerCount <= 20
+        && data.notes is string
+        && data.notes.size() <= 1000
+        && data.status in [
+          'Pendiente de cotizacion', 'Cotizado', 'Aceptada',
+          'Observada', 'Cancelada'
+        ]
+        && data.createdAtMillis is int
+        && data.createdAtMillis > 0
+        && validOptionalString(data, 'quotationId', 128);
+    }
+
+    function isValidCatalogService(data) {
+      return hasRequiredFields(data, [
+          'id', 'name', 'city', 'category', 'unitCost',
+          'description', 'defaultQuantity', 'active'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'name', 'city', 'category', 'unitCost',
+          'description', 'defaultQuantity', 'active'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.name, 1, 120)
+        && validString(data.city, 1, 100)
+        && validString(data.category, 1, 80)
+        && isPositiveBoundedNumber(data.unitCost, 1000000)
+        && data.description is string
+        && data.description.size() <= 1000
+        && data.defaultQuantity is int
+        && data.defaultQuantity >= 1
+        && data.defaultQuantity <= 100
+        && data.active is bool;
+    }
+
+    function isValidPreference(data) {
+      return hasRequiredFields(data, [
+          'id', 'name', 'description', 'active', 'order'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'name', 'description', 'active', 'order'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.name, 1, 100)
+        && data.description is string
+        && data.description.size() <= 500
+        && data.active is bool
+        && data.order is int
+        && data.order >= 0
+        && data.order <= 10000;
+    }
+
+    function isValidQuotationServiceItem(item) {
+      return item is map
+        && hasRequiredFields(item, [
+          'id', 'name', 'category', 'unitCost', 'quantity', 'subtotal'
+        ])
+        && hasOnlyAllowedFields(item, [
+          'id', 'name', 'category', 'unitCost', 'quantity', 'subtotal'
+        ])
+        && validString(item.id, 1, 128)
+        && validString(item.name, 1, 120)
+        && validString(item.category, 1, 80)
+        && isPositiveBoundedNumber(item.unitCost, 1000000)
+        && item.quantity is int
+        && item.quantity >= 1
+        && item.quantity <= 100
+        && isPositiveBoundedNumber(item.subtotal, 100000000)
+        && item.subtotal == item.unitCost * item.quantity;
+    }
+
+    function isValidServiceItemAt(items, index) {
+      return items.size() <= index
+        || isValidQuotationServiceItem(items[index]);
+    }
+
+    // As with preferences, every allowed list position is inspected.
+    function isValidQuotationServices(items) {
+      return items is list
+        && items.size() >= 1
+        && items.size() <= 20
+        && isValidServiceItemAt(items, 0)
+        && isValidServiceItemAt(items, 1)
+        && isValidServiceItemAt(items, 2)
+        && isValidServiceItemAt(items, 3)
+        && isValidServiceItemAt(items, 4)
+        && isValidServiceItemAt(items, 5)
+        && isValidServiceItemAt(items, 6)
+        && isValidServiceItemAt(items, 7)
+        && isValidServiceItemAt(items, 8)
+        && isValidServiceItemAt(items, 9)
+        && isValidServiceItemAt(items, 10)
+        && isValidServiceItemAt(items, 11)
+        && isValidServiceItemAt(items, 12)
+        && isValidServiceItemAt(items, 13)
+        && isValidServiceItemAt(items, 14)
+        && isValidServiceItemAt(items, 15)
+        && isValidServiceItemAt(items, 16)
+        && isValidServiceItemAt(items, 17)
+        && isValidServiceItemAt(items, 18)
+        && isValidServiceItemAt(items, 19);
+    }
+
+    function isValidQuotation(data) {
+      return hasRequiredFields(data, [
+          'id', 'requestId', 'clientId', 'clientName', 'clientEmail',
+          'destination', 'travelerCount', 'services', 'baseCost',
+          'marginPercent', 'totalAmount', 'currency', 'validityDate',
+          'conditions', 'status', 'agentId', 'agentName',
+          'clientFcmToken', 'createdAtMillis', 'respondedAtMillis',
+          'latestObservation', 'reservationId'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'requestId', 'clientId', 'clientName', 'clientEmail',
+          'destination', 'travelerCount', 'services', 'baseCost',
+          'marginPercent', 'totalAmount', 'currency', 'validityDate',
+          'conditions', 'status', 'agentId', 'agentName',
+          'clientFcmToken', 'createdAtMillis', 'respondedAtMillis',
+          'latestObservation', 'reservationId'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.requestId, 1, 128)
+        && validString(data.clientId, 1, 128)
+        && validString(data.clientName, 1, 100)
+        && isValidEmail(data.clientEmail)
+        && validString(data.destination, 3, 120)
+        && data.travelerCount is int
+        && data.travelerCount >= 1
+        && data.travelerCount <= 20
+        && isValidQuotationServices(data.services)
+        && isPositiveBoundedNumber(data.baseCost, 100000000)
+        && data.marginPercent is int
+        && data.marginPercent >= 0
+        && data.marginPercent <= 100
+        && isPositiveBoundedNumber(data.totalAmount, 200000000)
+        && data.totalAmount >= data.baseCost
+        && data.currency in ['USD', 'PEN']
+        && data.validityDate is string
+        && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.conditions is string
+        && data.conditions.size() <= 2000
+        && data.status in ['Cotizado', 'Aceptada', 'Observada', 'Cancelada']
+        && validString(data.agentId, 1, 128)
+        && validString(data.agentName, 1, 100)
+        && data.clientFcmToken is string
+        && data.clientFcmToken.size() <= 4096
+        && data.createdAtMillis is int
+        && data.createdAtMillis > 0
+        && (data.respondedAtMillis == null
+          || (data.respondedAtMillis is int && data.respondedAtMillis > 0))
+        && data.latestObservation is string
+        && data.latestObservation.size() <= 500
+        && data.reservationId is string
+        && data.reservationId.size() <= 128;
+    }
+
+    function isValidObservation(data) {
+      return hasRequiredFields(data, [
+          'id', 'quotationId', 'authorId', 'authorName', 'message',
+          'resultingStatus', 'createdAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'quotationId', 'authorId', 'authorName', 'message',
+          'resultingStatus', 'createdAtMillis'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.quotationId, 1, 128)
+        && validString(data.authorId, 1, 128)
+        && validString(data.authorName, 1, 100)
+        && validString(data.message, 10, 500)
+        && data.resultingStatus == 'Observada'
+        && isRecentMillis(data.createdAtMillis);
+    }
+
+    function isValidReservation(data) {
+      return hasRequiredFields(data, [
+          'id', 'quotationId', 'requestId', 'clientId', 'agentId',
+          'destination', 'travelerCount', 'totalAmount', 'currency',
+          'status', 'createdAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'quotationId', 'requestId', 'clientId', 'agentId',
+          'destination', 'travelerCount', 'totalAmount', 'currency',
+          'status', 'createdAtMillis'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.quotationId, 1, 128)
+        && validString(data.requestId, 1, 128)
+        && validString(data.clientId, 1, 128)
+        && validString(data.agentId, 1, 128)
+        && validString(data.destination, 3, 120)
+        && data.travelerCount is int
+        && data.travelerCount >= 1
+        && data.travelerCount <= 20
+        && isPositiveBoundedNumber(data.totalAmount, 200000000)
+        && data.currency in ['USD', 'PEN']
+        && data.status == 'Confirmada'
+        && isRecentMillis(data.createdAtMillis);
+    }
+
+    function isValidFcmPushLog(data) {
+      return hasRequiredFields(data, [
+          'toToken', 'title', 'body', 'quotationId', 'status', 'timestamp'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'toToken', 'title', 'body', 'quotationId', 'status', 'timestamp'
+        ])
+        && data.toToken is string
+        && data.toToken.size() <= 4096
+        && validString(data.title, 1, 200)
+        && validString(data.body, 1, 500)
+        && validString(data.quotationId, 1, 128)
+        && data.status == 'Cotizado'
+        && isRecentMillis(data.timestamp);
+    }
+
+    // ===============================================================
+    // Relationship and transition helpers
+    // ===============================================================
+
+    function requestPath(requestId) {
+      return /databases/$(database)/documents/travel_requests/$(requestId);
+    }
+
+    function quotationPath(quotationId) {
+      return /databases/$(database)/documents/cotizaciones/$(quotationId);
+    }
+
+    function reservationPath(reservationId) {
+      return /databases/$(database)/documents/reservations/$(reservationId);
+    }
+
+    function quotationBelongsToRequester(quotationId) {
+      return exists(quotationPath(quotationId))
+        && get(quotationPath(quotationId)).data.clientId == request.auth.uid;
+    }
+
+    function quotationBelongsToAgent(quotationId) {
+      return exists(quotationPath(quotationId))
+        && get(quotationPath(quotationId)).data.agentId == request.auth.uid;
+    }
+
+    function isValidAgentQuotationCreate(quotationId) {
+      let data = request.resource.data;
+      let requestAfter = getAfter(requestPath(data.requestId)).data;
+      let client = get(userPath(data.clientId)).data;
+      let agent = get(userPath(request.auth.uid)).data;
+      return isAgent()
+        && isValidQuotation(data)
+        && data.id == quotationId
+        && data.agentId == request.auth.uid
+        && data.agentName == agent.name
+        && data.clientName == client.name
+        && data.clientEmail == client.email
+        && data.clientFcmToken == ''
+        && data.status == 'Cotizado'
+        && data.respondedAtMillis == null
+        && data.latestObservation == ''
+        && data.reservationId == ''
+        && isRecentMillis(data.createdAtMillis)
+        && requestAfter.id == data.requestId
+        && requestAfter.userId == data.clientId
+        && requestAfter.status == 'Cotizado'
+        && requestAfter.quotationId == quotationId;
+    }
+
+    function isValidClientQuotationUpdate(quotationId) {
+      let data = request.resource.data;
+      let changed = data.diff(resource.data).affectedKeys();
+      let canRespond = resource.data.status in ['Cotizado', 'Observada'];
+      let accepted = data.status == 'Aceptada'
+        && data.reservationId == quotationId
+        && existsAfter(reservationPath(quotationId))
+        && getAfter(reservationPath(quotationId)).data.clientId == request.auth.uid
+        && getAfter(reservationPath(quotationId)).data.quotationId == quotationId;
+      let observed = data.status == 'Observada'
+        && validString(data.latestObservation, 10, 500)
+        && data.reservationId == resource.data.reservationId;
+      let cancelled = data.status == 'Cancelada'
+        && data.latestObservation == ''
+        && data.reservationId == resource.data.reservationId;
+      return isClient()
+        && resource.data.clientId == request.auth.uid
+        && isValidQuotation(data)
+        && canRespond
+        && isRecentMillis(data.respondedAtMillis)
+        && changed.hasOnly([
+          'status', 'respondedAtMillis', 'latestObservation', 'reservationId'
+        ])
+        && (accepted || observed || cancelled);
+    }
+
+    function isValidAgentQuotationUpdate() {
+      return isAgent()
+        && resource.data.agentId == request.auth.uid
+        && isValidQuotation(request.resource.data)
+        && resource.data.status == 'Observada'
+        && request.resource.data.status == 'Cotizado'
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['status']);
+    }
+
+    function isValidAgentRequestQuotationUpdate(requestId) {
+      let data = request.resource.data;
+      let quotationAfter = getAfter(quotationPath(data.quotationId)).data;
+      return isAgent()
+        && resource.data.status == 'Pendiente de cotizacion'
+        && data.status == 'Cotizado'
+        && data.id == requestId
+        && data.quotationId is string
+        && data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'quotationId'])
+        && quotationAfter.id == data.quotationId
+        && quotationAfter.requestId == requestId
+        && quotationAfter.clientId == resource.data.userId
+        && quotationAfter.agentId == request.auth.uid
+        && quotationAfter.status == 'Cotizado';
+    }
+
+    function isValidClientRequestResponseUpdate(requestId) {
+      let data = request.resource.data;
+      let quotationAfter = getAfter(quotationPath(data.quotationId)).data;
+      return isClient()
+        && resource.data.userId == request.auth.uid
+        && resource.data.status in ['Cotizado', 'Observada']
+        && data.status in ['Aceptada', 'Observada', 'Cancelada']
+        && data.id == requestId
+        && data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && quotationAfter.id == data.quotationId
+        && quotationAfter.requestId == requestId
+        && quotationAfter.clientId == request.auth.uid
+        && quotationAfter.status == data.status;
+    }
+
+    function isValidAssignedAgentRequestUpdate(requestId) {
+      let data = request.resource.data;
+      let quotationAfter = getAfter(quotationPath(data.quotationId)).data;
+      return isAgent()
+        && data.id == requestId
+        && data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && quotationAfter.requestId == requestId
+        && quotationAfter.agentId == request.auth.uid
+        && quotationAfter.status == data.status;
+    }
+
+    // ===============================================================
+    // Collection rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAgent();
+      allow create: if isValidUserCreate(userId);
+      allow update: if isValidUserUpdate(userId);
+      allow delete: if false;
+    }
+
+    match /travel_requests/{requestId} {
+      allow read: if isAuthenticated()
+        && (resource.data.userId == request.auth.uid || isAgent());
+
+      allow create: if isClient()
+        && isValidTravelRequest(request.resource.data)
+        && request.resource.data.id == requestId
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'Pendiente de cotizacion'
+        && !('quotationId' in request.resource.data)
+        && isRecentMillis(request.resource.data.createdAtMillis);
+
+      allow update: if isValidTravelRequest(request.resource.data)
+        && areImmutableFieldsUnchanged([
+          'id', 'userId', 'destination', 'originCity',
+          'originLatitude', 'originLongitude', 'departureAtMillis',
+          'returnAtMillis', 'travelerCount', 'notes', 'createdAtMillis'
+        ])
+        && (
+          isValidAgentRequestQuotationUpdate(requestId)
+          || isValidClientRequestResponseUpdate(requestId)
+          || isValidAssignedAgentRequestUpdate(requestId)
+        );
+
+      allow delete: if false;
+    }
+
+    match /catalog_services/{serviceId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAgent()
+        && isValidCatalogService(request.resource.data)
+        && request.resource.data.id == serviceId;
+      allow delete: if false;
+    }
+
+    match /preferences/{preferenceId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAgent()
+        && isValidPreference(request.resource.data)
+        && request.resource.data.id == preferenceId;
+      allow delete: if false;
+    }
+
+    match /cotizaciones/{quotationId} {
+      allow read: if isAuthenticated()
+        && (resource.data.clientId == request.auth.uid
+          || (isAgent() && resource.data.agentId == request.auth.uid));
+
+      allow create: if isValidAgentQuotationCreate(quotationId);
+
+      allow update: if isValidClientQuotationUpdate(quotationId)
+        || isValidAgentQuotationUpdate();
+
+      allow delete: if false;
+
+      match /observations/{observationId} {
+        allow read: if isAuthenticated()
+          && exists(quotationPath(quotationId))
+          && (
+            get(quotationPath(quotationId)).data.clientId == request.auth.uid
+            || (isAgent()
+              && get(quotationPath(quotationId)).data.agentId == request.auth.uid)
+          );
+
+        allow create: if isClient()
+          && isValidObservation(request.resource.data)
+          && request.resource.data.id == observationId
+          && request.resource.data.quotationId == quotationId
+          && request.resource.data.authorId == request.auth.uid
+          && existsAfter(quotationPath(quotationId))
+          && getAfter(quotationPath(quotationId)).data.clientId == request.auth.uid
+          && getAfter(quotationPath(quotationId)).data.status == 'Observada'
+          && getAfter(quotationPath(quotationId)).data.latestObservation
+            == request.resource.data.message
+          && getAfter(quotationPath(quotationId)).data.respondedAtMillis
+            == request.resource.data.createdAtMillis;
+
+        allow update, delete: if false;
+      }
+    }
+
+    match /reservations/{reservationId} {
+      allow read: if isAuthenticated()
+        && (resource.data.clientId == request.auth.uid
+          || (isAgent() && resource.data.agentId == request.auth.uid));
+
+      allow create: if isClient()
+        && isValidReservation(request.resource.data)
+        && request.resource.data.id == reservationId
+        && request.resource.data.quotationId == reservationId
+        && request.resource.data.clientId == request.auth.uid
+        && existsAfter(quotationPath(reservationId))
+        && getAfter(quotationPath(reservationId)).data.status == 'Aceptada'
+        && getAfter(quotationPath(reservationId)).data.clientId
+          == request.auth.uid
+        && getAfter(quotationPath(reservationId)).data.reservationId
+          == reservationId
+        && getAfter(quotationPath(reservationId)).data.requestId
+          == request.resource.data.requestId
+        && getAfter(quotationPath(reservationId)).data.agentId
+          == request.resource.data.agentId
+        && getAfter(quotationPath(reservationId)).data.destination
+          == request.resource.data.destination
+        && getAfter(quotationPath(reservationId)).data.travelerCount
+          == request.resource.data.travelerCount
+        && getAfter(quotationPath(reservationId)).data.totalAmount
+          == request.resource.data.totalAmount
+        && getAfter(quotationPath(reservationId)).data.currency
+          == request.resource.data.currency;
+
+      allow update, delete: if false;
+    }
+
+    match /fcm_push_logs/{logId} {
+      allow read: if isAgent()
+        && quotationBelongsToAgent(resource.data.quotationId);
+
+      allow create: if isAgent()
+        && isValidFcmPushLog(request.resource.data)
+        && existsAfter(quotationPath(request.resource.data.quotationId))
+        && getAfter(quotationPath(request.resource.data.quotationId)).data.agentId
+          == request.auth.uid
+        && getAfter(quotationPath(request.resource.data.quotationId)).data.status
+          == 'Cotizado';
+
+      allow update, delete: if false;
+    }
+
+    // Default deny for every path not explicitly covered above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
