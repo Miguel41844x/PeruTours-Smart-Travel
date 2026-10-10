@@ -19,7 +19,10 @@ import com.example.perutours.ui.screens.initial.InitialScreen
 import com.example.perutours.ui.screens.login.LoginScreen
 import com.example.perutours.ui.screens.profile.ProfileScreen
 import com.example.perutours.ui.screens.quotation.CreateQuotationScreen
+import com.example.perutours.ui.screens.quotation.CustomerQuotationViewModel
+import com.example.perutours.ui.screens.quotation.CustomerQuotationsScreen
 import com.example.perutours.ui.screens.quotation.QuotationDetailScreen
+import com.example.perutours.ui.screens.quotation.QuotationResponseUiState
 import com.example.perutours.ui.screens.quotation.QuotationUiState
 import com.example.perutours.ui.screens.quotation.QuotationViewModel
 import com.example.perutours.ui.screens.request.TravelRequestScreen
@@ -119,6 +122,9 @@ fun NavigationWrapper(
                 navigateToTravelRequest = {
                     navHostController.navigate(route = "travelRequest")
                 },
+                navigateToQuotations = {
+                    navHostController.navigate(route = "customer_quotations")
+                },
                 navigateToProfile = {
                     navHostController.navigate(route = "profile")
                 },
@@ -183,7 +189,7 @@ fun NavigationWrapper(
                 },
                 onQuotationCreated = { quotationId ->
                     navHostController.navigate(
-                        "quotation_detail/$quotationId"
+                        "agent_quotation_detail/$quotationId"
                     ) {
                         popUpTo(
                             "create_quotation/{requestId}"
@@ -195,7 +201,7 @@ fun NavigationWrapper(
             )
         }
 
-        composable(route = "quotation_detail/{quotationId}") { backStackEntry ->
+        composable(route = "agent_quotation_detail/{quotationId}") { backStackEntry ->
             val quotationId = backStackEntry.arguments?.getString("quotationId") ?: ""
             val quotationViewModel: QuotationViewModel = viewModel()
             val uiState by quotationViewModel.uiState.collectAsState()
@@ -209,11 +215,7 @@ fun NavigationWrapper(
                     QuotationDetailScreen(
                         quotation = state.quotation,
                         onNavigateBack = { navHostController.popBackStack() },
-                        onAcceptQuotation = {
-                            navHostController.navigate("agent_home") {
-                                popUpTo("agent_home") { inclusive = true }
-                            }
-                        }
+                        showCustomerActions = false
                     )
                 }
                 is QuotationUiState.Loading -> {
@@ -238,6 +240,60 @@ fun NavigationWrapper(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
+                    }
+                }
+            }
+        }
+
+        composable(route = "customer_quotations") {
+            CustomerQuotationsScreen(
+                onNavigateBack = { navHostController.popBackStack() },
+                onQuotationSelected = { quotationId ->
+                    navHostController.navigate("customer_quotation/$quotationId")
+                }
+            )
+        }
+
+        composable(route = "customer_quotation/{quotationId}") { backStackEntry ->
+            val quotationId = backStackEntry.arguments?.getString("quotationId").orEmpty()
+            val customerViewModel: CustomerQuotationViewModel = viewModel()
+            val detailState by customerViewModel.detailState.collectAsState()
+            val responseState by customerViewModel.responseState.collectAsState()
+
+            LaunchedEffect(quotationId) {
+                customerViewModel.loadQuotation(quotationId)
+            }
+
+            val quotation = detailState.quotation
+            if (quotation != null) {
+                QuotationDetailScreen(
+                    quotation = quotation,
+                    observations = detailState.observations,
+                    showCustomerActions = true,
+                    isSavingResponse = responseState is QuotationResponseUiState.Saving,
+                    responseMessage = when (val response = responseState) {
+                        is QuotationResponseUiState.Success -> response.message
+                        is QuotationResponseUiState.Error -> response.message
+                        else -> null
+                    },
+                    responseIsError = responseState is QuotationResponseUiState.Error,
+                    onNavigateBack = { navHostController.popBackStack() },
+                    onAcceptQuotation = customerViewModel::acceptQuotation,
+                    onObserveQuotation = customerViewModel::observeQuotation,
+                    onCancelQuotation = customerViewModel::cancelQuotation
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (detailState.isLoading) {
+                        CircularProgressIndicator()
+                    } else {
+                        Text(
+                            text = detailState.errorMessage
+                                ?: "No se pudo mostrar la cotización."
+                        )
                     }
                 }
             }

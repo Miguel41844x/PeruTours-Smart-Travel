@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -38,6 +39,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun HomeScreen(
     auth: FirebaseAuth,
     navigateToTravelRequest: () -> Unit = {},
+    navigateToQuotations: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
     navigateToInitial: () -> Unit,
     viewModel: HomeViewModel = viewModel()
@@ -252,6 +254,29 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Solicitar un viaje",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = navigateToQuotations,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, PeruGold40)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                    contentDescription = null,
+                    tint = PeruGold40
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Mis cotizaciones",
+                    color = PeruGold40,
                     fontWeight = FontWeight.Bold
                 )
             }
