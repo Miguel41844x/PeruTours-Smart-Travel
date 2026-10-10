@@ -30,6 +30,7 @@ class ProfileValidatorTest {
         val result = ProfileValidator.validate(
             name = "  ",
             phone = "",
+            dni = "",
             city = " ",
             selectedPreferences = emptySet()
         )
