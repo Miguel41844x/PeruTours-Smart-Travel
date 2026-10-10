@@ -1,11 +1,10 @@
 package com.example.perutours.data.repository
 
 import com.example.perutours.data.model.Quotation
-import com.example.perutours.data.model.TravelRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-import com.example.perutours.data.repository.ProfileRepository
+
 class QuotationRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -90,6 +89,14 @@ class QuotationRepository(
         return snapshot.toObjects(Quotation::class.java)
     }
 
+    suspend fun getCurrentClientQuotations(): List<Quotation> {
+        val clientId = auth.currentUser?.uid
+            ?: throw IllegalStateException("Debes iniciar sesión para consultar tus cotizaciones.")
+
+        return getQuotationsByClient(clientId)
+            .sortedByDescending { it.createdAtMillis }
+    }
+
     suspend fun getQuotationById(quotationId: String): Quotation? {
         val snapshot = firestore.collection(COLLECTION_QUOTATIONS)
             .document(quotationId)
@@ -104,6 +111,57 @@ class QuotationRepository(
             .update("status", newStatus)
             .await()
         return true
+    }
+
+    suspend fun cancelQuotation(quotationId: String): Quotation =
+        updateClientDecision(
+            quotationId = quotationId,
+            newStatus = Quotation.STATUS_CANCELLED
+        )
+
+    private suspend fun updateClientDecision(
+        quotationId: String,
+        newStatus: String,
+        latestObservation: String = ""
+    ): Quotation {
+        val clientId = auth.currentUser?.uid
+            ?: throw IllegalStateException("Debes iniciar sesión para responder la cotización.")
+        val quotationRef = firestore.collection(COLLECTION_QUOTATIONS).document(quotationId)
+
+        return firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(quotationRef)
+            val quotation = snapshot.toObject(Quotation::class.java)
+                ?: throw IllegalStateException("No se encontró la cotización.")
+
+            if (quotation.clientId != clientId) {
+                throw IllegalAccessException("Esta cotización no pertenece al usuario autenticado.")
+            }
+            if (!Quotation.canClientRespond(quotation.status)) {
+                throw IllegalStateException("La cotización ya fue respondida.")
+            }
+
+            val respondedAt = System.currentTimeMillis()
+            transaction.update(
+                quotationRef,
+                mapOf(
+                    "status" to newStatus,
+                    "respondedAtMillis" to respondedAt,
+                    "latestObservation" to latestObservation
+                )
+            )
+
+            if (quotation.requestId.isNotBlank()) {
+                val requestRef = firestore.collection(COLLECTION_REQUESTS)
+                    .document(quotation.requestId)
+                transaction.update(requestRef, "status", newStatus)
+            }
+
+            quotation.copy(
+                status = newStatus,
+                respondedAtMillis = respondedAt,
+                latestObservation = latestObservation
+            )
+        }.await()
     }
 
     companion object {
