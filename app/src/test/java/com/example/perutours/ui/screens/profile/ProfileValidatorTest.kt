@@ -61,6 +61,7 @@ class ProfileValidatorTest {
         val result = ProfileValidator.validate(
             name = "  Ana Ruiz  ",
             phone = " 987654321 ",
+            dni = "",
             city = "  Cusco  ",
             selectedPreferences = setOf("Gastronomía Peruana")
         )
