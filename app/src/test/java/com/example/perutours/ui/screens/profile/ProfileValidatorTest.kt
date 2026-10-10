@@ -47,6 +47,7 @@ class ProfileValidatorTest {
         val result = ProfileValidator.validate(
             name = "Ana Ruiz",
             phone = "812345678",
+            dni = "",
             city = "Cusco",
             selectedPreferences = setOf("Aventura y Trekking")
         )
