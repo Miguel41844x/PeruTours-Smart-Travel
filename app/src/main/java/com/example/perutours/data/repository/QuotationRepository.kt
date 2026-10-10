@@ -1,6 +1,7 @@
 package com.example.perutours.data.repository
 
 import com.example.perutours.data.model.Quotation
+import com.example.perutours.data.model.QuotationObservation
 import com.example.perutours.data.model.Reservation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -176,6 +177,77 @@ class QuotationRepository(
         }.await()
     }
 
+    suspend fun observeQuotation(quotationId: String, message: String): Quotation {
+        val cleanMessage = message.trim()
+        require(cleanMessage.isNotEmpty()) { "Escribe una observación antes de enviarla." }
+
+        val currentUser = auth.currentUser
+            ?: throw IllegalStateException("Debes iniciar sesión para observar la cotización.")
+        val authorName = currentUser.displayName
+            ?.substringBefore("|")
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: currentUser.email.orEmpty()
+        val quotationRef = firestore.collection(COLLECTION_QUOTATIONS).document(quotationId)
+        val observationRef = quotationRef.collection(SUBCOLLECTION_OBSERVATIONS).document()
+
+        return firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(quotationRef)
+            val quotation = snapshot.toObject(Quotation::class.java)
+                ?: throw IllegalStateException("No se encontró la cotización.")
+
+            if (quotation.clientId != currentUser.uid) {
+                throw IllegalAccessException("Esta cotización no pertenece al usuario autenticado.")
+            }
+            if (!Quotation.canClientRespond(quotation.status)) {
+                throw IllegalStateException("La cotización ya fue respondida.")
+            }
+
+            val respondedAt = System.currentTimeMillis()
+            val observation = QuotationObservation(
+                id = observationRef.id,
+                quotationId = quotation.id,
+                authorId = currentUser.uid,
+                authorName = authorName,
+                message = cleanMessage,
+                createdAtMillis = respondedAt
+            )
+
+            transaction.set(observationRef, observation)
+            transaction.update(
+                quotationRef,
+                mapOf(
+                    "status" to Quotation.STATUS_OBSERVED,
+                    "respondedAtMillis" to respondedAt,
+                    "latestObservation" to cleanMessage
+                )
+            )
+
+            if (quotation.requestId.isNotBlank()) {
+                val requestRef = firestore.collection(COLLECTION_REQUESTS)
+                    .document(quotation.requestId)
+                transaction.update(requestRef, "status", Quotation.STATUS_OBSERVED)
+            }
+
+            quotation.copy(
+                status = Quotation.STATUS_OBSERVED,
+                respondedAtMillis = respondedAt,
+                latestObservation = cleanMessage
+            )
+        }.await()
+    }
+
+    suspend fun getObservationHistory(quotationId: String): List<QuotationObservation> {
+        val snapshot = firestore.collection(COLLECTION_QUOTATIONS)
+            .document(quotationId)
+            .collection(SUBCOLLECTION_OBSERVATIONS)
+            .orderBy("createdAtMillis")
+            .get()
+            .await()
+
+        return snapshot.toObjects(QuotationObservation::class.java)
+    }
+
     private suspend fun updateClientDecision(
         quotationId: String,
         newStatus: String,
@@ -226,5 +298,6 @@ class QuotationRepository(
         const val COLLECTION_REQUESTS = "travel_requests"
         const val COLLECTION_FCM_LOGS = "fcm_push_logs"
         const val COLLECTION_RESERVATIONS = "reservations"
+        const val SUBCOLLECTION_OBSERVATIONS = "observations"
     }
 }
