@@ -28,7 +28,10 @@ data class Quotation(
     val agentId: String = "",
     val agentName: String = "Nataly Chávez",
     val clientFcmToken: String = "",
-    val createdAtMillis: Long = System.currentTimeMillis()
+    val createdAtMillis: Long = System.currentTimeMillis(),
+    val respondedAtMillis: Long? = null,
+    val latestObservation: String = "",
+    val reservationId: String = ""
 ) {
     companion object {
         const val STATUS_QUOTED = "Cotizado"
