@@ -1,6 +1,7 @@
 package com.example.perutours.data.repository
 
 import com.example.perutours.data.model.Quotation
+import com.example.perutours.data.model.Reservation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -119,6 +120,62 @@ class QuotationRepository(
             newStatus = Quotation.STATUS_CANCELLED
         )
 
+    suspend fun acceptQuotation(quotationId: String): Quotation {
+        val clientId = auth.currentUser?.uid
+            ?: throw IllegalStateException("Debes iniciar sesión para aceptar la cotización.")
+        val quotationRef = firestore.collection(COLLECTION_QUOTATIONS).document(quotationId)
+        val reservationRef = firestore.collection(COLLECTION_RESERVATIONS).document(quotationId)
+
+        return firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(quotationRef)
+            val quotation = snapshot.toObject(Quotation::class.java)
+                ?: throw IllegalStateException("No se encontró la cotización.")
+
+            if (quotation.clientId != clientId) {
+                throw IllegalAccessException("Esta cotización no pertenece al usuario autenticado.")
+            }
+            if (!Quotation.canClientRespond(quotation.status)) {
+                throw IllegalStateException("La cotización ya fue respondida.")
+            }
+
+            val respondedAt = System.currentTimeMillis()
+            val reservation = Reservation(
+                id = reservationRef.id,
+                quotationId = quotation.id,
+                requestId = quotation.requestId,
+                clientId = quotation.clientId,
+                agentId = quotation.agentId,
+                destination = quotation.destination,
+                travelerCount = quotation.travelerCount,
+                totalAmount = quotation.totalAmount,
+                currency = quotation.currency,
+                createdAtMillis = respondedAt
+            )
+
+            transaction.set(reservationRef, reservation)
+            transaction.update(
+                quotationRef,
+                mapOf(
+                    "status" to Quotation.STATUS_ACCEPTED,
+                    "respondedAtMillis" to respondedAt,
+                    "reservationId" to reservation.id
+                )
+            )
+
+            if (quotation.requestId.isNotBlank()) {
+                val requestRef = firestore.collection(COLLECTION_REQUESTS)
+                    .document(quotation.requestId)
+                transaction.update(requestRef, "status", Quotation.STATUS_ACCEPTED)
+            }
+
+            quotation.copy(
+                status = Quotation.STATUS_ACCEPTED,
+                respondedAtMillis = respondedAt,
+                reservationId = reservation.id
+            )
+        }.await()
+    }
+
     private suspend fun updateClientDecision(
         quotationId: String,
         newStatus: String,
@@ -168,5 +225,6 @@ class QuotationRepository(
         const val COLLECTION_QUOTATIONS = "cotizaciones"
         const val COLLECTION_REQUESTS = "travel_requests"
         const val COLLECTION_FCM_LOGS = "fcm_push_logs"
+        const val COLLECTION_RESERVATIONS = "reservations"
     }
 }
