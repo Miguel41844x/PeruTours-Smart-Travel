@@ -53,7 +53,7 @@ class ProfileValidatorTest {
         )
 
         assertFalse(result.isValid)
-        assertEquals("Ingresa un celular válido de 9 dígitos que empiece con 9.", result.phoneError)
+        assertEquals("El celular debe comenzar con 9.", result.phoneError)
     }
 
     @Test
