@@ -34,6 +34,9 @@ data class Quotation(
         const val STATUS_QUOTED = "Cotizado"
         const val STATUS_ACCEPTED = "Aceptada"
         const val STATUS_OBSERVED = "Observada"
-        const val STATUS_REJECTED = "Rechazada"
+        const val STATUS_CANCELLED = "Cancelada"
+
+        fun canClientRespond(status: String): Boolean =
+            status == STATUS_QUOTED || status == STATUS_OBSERVED
     }
 }
