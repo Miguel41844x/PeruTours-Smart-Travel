@@ -14,7 +14,6 @@ const messaging = getMessaging();
 export const enviarNotificacionCotizacion = onDocumentCreated(
   "cotizaciones/{quotationId}",
   async (event) => {
-
     const quotation = event.data?.data();
 
     if (!quotation) {
@@ -64,7 +63,7 @@ export const enviarNotificacionCotizacion = onDocumentCreated(
       notification: {
         title: "¡Tu cotización está lista! ✈️",
         body:
-          `El agente preparó tu propuesta para ` +
+          "El agente preparó tu propuesta para " +
           `${destination} por $${totalAmount} USD.`,
       },
 
