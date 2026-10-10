@@ -107,6 +107,17 @@ class QuotationRepository(
         return snapshot.toObject(Quotation::class.java)
     }
 
+    suspend fun getCurrentClientQuotationById(quotationId: String): Quotation? {
+        val clientId = auth.currentUser?.uid
+            ?: throw IllegalStateException("Debes iniciar sesión para consultar la cotización.")
+        val quotation = getQuotationById(quotationId) ?: return null
+
+        if (quotation.clientId != clientId) {
+            throw IllegalAccessException("Esta cotización no pertenece al usuario autenticado.")
+        }
+        return quotation
+    }
+
     suspend fun updateQuotationStatus(quotationId: String, newStatus: String): Boolean {
         firestore.collection(COLLECTION_QUOTATIONS)
             .document(quotationId)
