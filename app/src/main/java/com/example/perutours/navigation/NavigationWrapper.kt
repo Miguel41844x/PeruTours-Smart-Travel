@@ -27,6 +27,7 @@ import com.example.perutours.ui.screens.quotation.QuotationUiState
 import com.example.perutours.ui.screens.quotation.QuotationViewModel
 import com.example.perutours.ui.screens.request.TravelRequestScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
+import com.example.perutours.service.MyFirebaseMessagingService
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
@@ -35,7 +36,10 @@ import com.example.perutours.ui.screens.agent.AgentHomeScreen
 @Composable
 fun NavigationWrapper(
     navHostController: NavHostController,
-    auth: FirebaseAuth
+    auth: FirebaseAuth,
+    pendingQuotationId: String? = null,
+    pendingNotificationType: String? = null,
+    onPendingQuotationConsumed: () -> Unit = {}
 ) {
     val currentUser = auth.currentUser
 
@@ -47,6 +51,23 @@ fun NavigationWrapper(
         } else {
             "initial"
         }
+
+    LaunchedEffect(pendingQuotationId, pendingNotificationType, currentUser?.uid) {
+        val quotationId = pendingQuotationId?.takeIf { it.isNotBlank() }
+        if (quotationId != null && currentUser?.isEmailVerified == true) {
+            val route = if (
+                pendingNotificationType == MyFirebaseMessagingService.TYPE_QUOTATION_RESPONSE
+            ) {
+                "agent_quotation_detail/$quotationId"
+            } else {
+                "customer_quotation/$quotationId"
+            }
+            navHostController.navigate(route) {
+                launchSingleTop = true
+            }
+            onPendingQuotationConsumed()
+        }
+    }
 
     NavHost(
         navController = navHostController,

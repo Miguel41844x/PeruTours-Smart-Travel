@@ -1,5 +1,8 @@
 import {setGlobalOptions} from "firebase-functions";
-import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {
+  onDocumentCreated,
+  onDocumentUpdated,
+} from "firebase-functions/v2/firestore";
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import {getMessaging} from "firebase-admin/messaging";
@@ -77,5 +80,53 @@ export const enviarNotificacionCotizacion = onDocumentCreated(
     console.log(
       "Notificación enviada correctamente."
     );
+  }
+);
+
+export const enviarRespuestaCotizacion = onDocumentUpdated(
+  "cotizaciones/{quotationId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+
+    if (!before || !after || before.status === after.status) {
+      return;
+    }
+
+    const responseStatuses = ["Aceptada", "Observada", "Cancelada"];
+    if (!responseStatuses.includes(after.status) || !after.agentId) {
+      return;
+    }
+
+    const agentDocument = await db
+      .collection("users")
+      .doc(after.agentId)
+      .get();
+    const agentToken = agentDocument.data()?.fcmToken;
+
+    if (!agentToken) {
+      console.log(`El agente ${after.agentId} no tiene fcmToken.`);
+      return;
+    }
+
+    const destination = after.destination || "el viaje solicitado";
+    const quotationId = event.params.quotationId;
+
+    await messaging.send({
+      token: agentToken,
+      notification: {
+        title: "Respuesta a una cotización",
+        body:
+          `El cliente marcó como ${after.status} ` +
+          `la propuesta para ${destination}.`,
+      },
+      data: {
+        quotationId: quotationId,
+        type: "quotation_response",
+        status: after.status,
+      },
+    });
+
+    console.log(`Respuesta ${after.status} notificada al agente.`);
   }
 );
