@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -115,14 +116,21 @@ fun TravelRequestScreen(
     }
 
     dateTimeTarget?.let { target ->
+        val nowMillis = System.currentTimeMillis()
         val initialValue = if (target == "departure") {
             uiState.departureAtMillis
         } else {
             uiState.returnAtMillis
         }
+        val minimumValue = if (target == "departure") {
+            nowMillis
+        } else {
+            maxOf(nowMillis, uiState.departureAtMillis)
+        }
 
         RequestDateTimePicker(
             initialValue = initialValue,
+            minimumValue = minimumValue,
             onDismiss = { dateTimeTarget = null },
             onConfirm = { value ->
                 if (target == "departure") {
@@ -285,7 +293,10 @@ fun TravelRequestScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = viewModel::decrementTravelerCount) {
+                IconButton(
+                    onClick = viewModel::decrementTravelerCount,
+                    enabled = uiState.travelerCount > 1
+                ) {
                     Icon(Icons.Default.Remove, contentDescription = "Reducir viajeros")
                 }
                 Text(
@@ -293,7 +304,10 @@ fun TravelRequestScreen(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                IconButton(onClick = viewModel::incrementTravelerCount) {
+                IconButton(
+                    onClick = viewModel::incrementTravelerCount,
+                    enabled = uiState.travelerCount < 20
+                ) {
                     Icon(Icons.Default.Add, contentDescription = "Agregar viajeros")
                 }
             }
@@ -392,15 +406,28 @@ private fun formatDateTime(value: Long): String {
 @Composable
 private fun RequestDateTimePicker(
     initialValue: Long,
+    minimumValue: Long,
     onDismiss: () -> Unit,
     onConfirm: (Long) -> Unit
 ) {
-    val baseValue = initialValue.takeIf { it > 0L } ?: System.currentTimeMillis()
+    val baseValue = initialValue.takeIf { it > minimumValue }
+        ?: minimumValue + DEFAULT_DATE_TIME_OFFSET_MILLIS
     val initialCalendar = remember(baseValue) {
         Calendar.getInstance().apply { timeInMillis = baseValue }
     }
+    val minimumDateMillis = remember(minimumValue) {
+        toDatePickerUtcMillis(minimumValue)
+    }
+    val selectableDates = remember(minimumDateMillis) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                return utcTimeMillis >= minimumDateMillis
+            }
+        }
+    }
     val datePickerState = androidx.compose.material3.rememberDatePickerState(
-        initialSelectedDateMillis = baseValue
+        initialSelectedDateMillis = toDatePickerUtcMillis(baseValue),
+        selectableDates = selectableDates
     )
     val timePickerState = androidx.compose.material3.rememberTimePickerState(
         initialHour = initialCalendar.get(Calendar.HOUR_OF_DAY),
@@ -432,25 +459,36 @@ private fun RequestDateTimePicker(
             DatePicker(state = datePickerState)
         }
     } else {
+        val selectedDateTime = datePickerState.selectedDateMillis?.let { selectedDate ->
+            combineDateAndTime(
+                selectedDateMillis = selectedDate,
+                hour = timePickerState.hour,
+                minute = timePickerState.minute
+            )
+        }
+        val isValidTime = selectedDateTime != null && selectedDateTime > minimumValue
+
         AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Selecciona la hora") },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     TimePicker(state = timePickerState)
+                    if (!isValidTime) {
+                        Text(
+                            text = "Selecciona una hora posterior a la fecha mínima.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
             },
             confirmButton = {
                 TextButton(
+                    enabled = isValidTime,
                     onClick = {
-                        val selectedDate = datePickerState.selectedDateMillis ?: return@TextButton
-                        onConfirm(
-                            combineDateAndTime(
-                                selectedDateMillis = selectedDate,
-                                hour = timePickerState.hour,
-                                minute = timePickerState.minute
-                            )
-                        )
+                        selectedDateTime?.let(onConfirm)
                     }
                 ) {
                     Text("Aceptar")
@@ -463,6 +501,18 @@ private fun RequestDateTimePicker(
             }
         )
     }
+}
+
+private fun toDatePickerUtcMillis(value: Long): Long {
+    val localDate = Calendar.getInstance().apply { timeInMillis = value }
+    return Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        clear()
+        set(
+            localDate.get(Calendar.YEAR),
+            localDate.get(Calendar.MONTH),
+            localDate.get(Calendar.DAY_OF_MONTH)
+        )
+    }.timeInMillis
 }
 
 private fun combineDateAndTime(
@@ -484,3 +534,5 @@ private fun combineDateAndTime(
         )
     }.timeInMillis
 }
+
+private const val DEFAULT_DATE_TIME_OFFSET_MILLIS = 60 * 60 * 1000L

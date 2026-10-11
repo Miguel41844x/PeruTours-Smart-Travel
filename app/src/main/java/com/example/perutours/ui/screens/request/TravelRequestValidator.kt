@@ -25,15 +25,15 @@ object TravelRequestValidator {
         nowMillis: Long = System.currentTimeMillis()
     ): TravelRequestValidationResult {
         return TravelRequestValidationResult(
-            destinationError = if (destination.trim().length < 3) {
-                "Ingresa un destino válido."
-            } else {
-                null
+            destinationError = when (destination.trim().length) {
+                in 0..2 -> "Ingresa un destino válido."
+                in 121..Int.MAX_VALUE -> "El destino no puede superar 120 caracteres."
+                else -> null
             },
-            originCityError = if (originCity.trim().length < 2) {
-                "Ingresa la ciudad de origen."
-            } else {
-                null
+            originCityError = when (originCity.trim().length) {
+                in 0..1 -> "Ingresa la ciudad de origen."
+                in 121..Int.MAX_VALUE -> "La ciudad de origen no puede superar 120 caracteres."
+                else -> null
             },
             departureError = if (departureAtMillis <= nowMillis) {
                 "Selecciona una fecha y hora de salida futura."

@@ -62,6 +62,53 @@ class TravelRequestValidatorTest {
     }
 
     @Test
+    fun departureMustBeStrictlyAfterCurrentTime() {
+        val result = TravelRequestValidator.validate(
+            destination = "Cusco",
+            originCity = "Lima",
+            departureAtMillis = now,
+            returnAtMillis = now + 10_000L,
+            travelerCount = 1,
+            nowMillis = now
+        )
+
+        assertFalse(result.isValid)
+        assertEquals(
+            "Selecciona una fecha y hora de salida futura.",
+            result.departureError
+        )
+    }
+
+    @Test
+    fun placeNamesRespectFirestoreLengthLimit() {
+        val destinationResult = TravelRequestValidator.validate(
+            destination = "a".repeat(121),
+            originCity = "Lima",
+            departureAtMillis = now + 10_000L,
+            returnAtMillis = now + 20_000L,
+            travelerCount = 1,
+            nowMillis = now
+        )
+        val originResult = TravelRequestValidator.validate(
+            destination = "Cusco",
+            originCity = "a".repeat(121),
+            departureAtMillis = now + 10_000L,
+            returnAtMillis = now + 20_000L,
+            travelerCount = 1,
+            nowMillis = now
+        )
+
+        assertEquals(
+            "El destino no puede superar 120 caracteres.",
+            destinationResult.destinationError
+        )
+        assertEquals(
+            "La ciudad de origen no puede superar 120 caracteres.",
+            originResult.originCityError
+        )
+    }
+
+    @Test
     fun travelerCountAcceptsConfiguredLimits() {
         val minimum = validResultForTravelerCount(1)
         val maximum = validResultForTravelerCount(20)

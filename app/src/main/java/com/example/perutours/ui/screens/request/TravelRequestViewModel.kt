@@ -26,14 +26,14 @@ class TravelRequestViewModel(
 
     fun onDestinationChanged(value: String) {
         _uiState.value = _uiState.value.copy(
-            destination = value,
+            destination = value.take(MAX_PLACE_LENGTH),
             destinationError = null
         )
     }
 
     fun onOriginCityChanged(value: String) {
         _uiState.value = _uiState.value.copy(
-            originCity = value,
+            originCity = value.take(MAX_PLACE_LENGTH),
             originLatitude = null,
             originLongitude = null,
             originCityError = null
@@ -41,8 +41,10 @@ class TravelRequestViewModel(
     }
 
     fun onDepartureChanged(value: Long) {
-        _uiState.value = _uiState.value.copy(
+        val currentState = _uiState.value
+        _uiState.value = currentState.copy(
             departureAtMillis = value,
+            returnAtMillis = currentState.returnAtMillis.takeIf { it > value } ?: 0L,
             departureError = null,
             returnError = null
         )
@@ -142,7 +144,36 @@ class TravelRequestViewModel(
             _uiState.value = _uiState.value.copy(isSaving = true, message = null)
 
             try {
-                val state = _uiState.value
+                var state = _uiState.value
+                val destinationLocation = locationRepository.findPlace(state.destination)
+                if (destinationLocation == null) {
+                    _uiState.value = state.copy(
+                        destinationError = "No encontramos ese destino. Selecciona un lugar real.",
+                        isSaving = false,
+                        message = "Revisa el destino ingresado."
+                    )
+                    return@launch
+                }
+
+                if (state.originLatitude == null || state.originLongitude == null) {
+                    val originLocation = locationRepository.findPlace(state.originCity)
+                    if (originLocation == null) {
+                        _uiState.value = state.copy(
+                            originCityError = "No encontramos esa ciudad de origen.",
+                            isSaving = false,
+                            message = "Revisa la ciudad de origen ingresada."
+                        )
+                        return@launch
+                    }
+
+                    state = state.copy(
+                        originCity = originLocation.city,
+                        originLatitude = originLocation.latitude,
+                        originLongitude = originLocation.longitude
+                    )
+                    _uiState.value = state.copy(isSaving = true)
+                }
+
                 val savedRequest = requestRepository.save(
                     TravelRequest(
                         destination = state.destination.trim(),
@@ -175,5 +206,9 @@ class TravelRequestViewModel(
 
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(message = null)
+    }
+
+    companion object {
+        private const val MAX_PLACE_LENGTH = 120
     }
 }
