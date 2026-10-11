@@ -83,6 +83,7 @@ fun NavigationWrapper(
 
         composable(route = "logIn") {
             LoginScreen(
+                navigateBack = { navHostController.popBackStack() },
                 navigateToSignUp = {
                     navHostController.navigate(route = "signUp")
                 },
@@ -98,6 +99,7 @@ fun NavigationWrapper(
 
         composable(route = "signUp") {
             SignUpScreen(
+                navigateBack = { navHostController.popBackStack() },
                 navigateToLogin = {
                     navHostController.navigate(route = "logIn") {
                         popUpTo("signUp") { inclusive = true }

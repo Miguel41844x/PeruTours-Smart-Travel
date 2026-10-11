@@ -5,19 +5,20 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -26,7 +27,6 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -40,11 +40,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,17 +56,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.core.content.ContextCompat
-import com.example.perutours.ui.theme.BackgroundLight
-import com.example.perutours.ui.theme.PeruGold40
-import com.example.perutours.ui.theme.SurfaceLight
+import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.ScreenHorizontalPadding
+import com.example.perutours.ui.components.SectionHeading
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.Calendar
 import java.util.TimeZone
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,11 +86,7 @@ fun TravelRequestScreen(
     ) { permissions ->
         val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) {
-            viewModel.detectCurrentLocation()
-        } else {
-            viewModel.onLocationPermissionDenied()
-        }
+        if (granted) viewModel.detectCurrentLocation() else viewModel.onLocationPermissionDenied()
     }
 
     fun requestLocation() {
@@ -117,11 +113,7 @@ fun TravelRequestScreen(
 
     dateTimeTarget?.let { target ->
         val nowMillis = System.currentTimeMillis()
-        val initialValue = if (target == "departure") {
-            uiState.departureAtMillis
-        } else {
-            uiState.returnAtMillis
-        }
+        val initialValue = if (target == "departure") uiState.departureAtMillis else uiState.returnAtMillis
         val minimumValue = if (target == "departure") {
             nowMillis
         } else {
@@ -133,11 +125,8 @@ fun TravelRequestScreen(
             minimumValue = minimumValue,
             onDismiss = { dateTimeTarget = null },
             onConfirm = { value ->
-                if (target == "departure") {
-                    viewModel.onDepartureChanged(value)
-                } else {
-                    viewModel.onReturnChanged(value)
-                }
+                if (target == "departure") viewModel.onDepartureChanged(value)
+                else viewModel.onReturnChanged(value)
                 dateTimeTarget = null
             }
         )
@@ -153,212 +142,226 @@ fun TravelRequestScreen(
     if (uiState.savedRequestId != null) {
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("Solicitud registrada") },
-            text = {
-                Text(
-                    "Tu solicitud quedó pendiente de cotización. Te avisaremos cuando exista una propuesta."
-                )
-            },
+            title = { Text("Solicitud enviada") },
+            text = { Text("Un agente revisará los datos y preparará una cotización. Te avisaremos cuando esté lista.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.clearSavedRequest()
                         onSaved()
                     }
-                ) {
-                    Text("Volver al inicio")
-                }
+                ) { Text("Volver al inicio") }
             }
         )
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Nueva solicitud de viaje",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceLight)
-            )
-        },
+        topBar = { PeruToursTopBar(title = "Planear viaje", onBack = onBack) },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = BackgroundLight
+        bottomBar = {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 3.dp,
+                shadowElevation = 4.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .imePadding()
+                        .padding(horizontal = ScreenHorizontalPadding, vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Button(
+                        onClick = viewModel::submitRequest,
+                        enabled = !uiState.isSaving,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp)
+                            .height(52.dp)
+                    ) {
+                        if (uiState.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text("Verificando lugares...", modifier = Modifier.padding(start = 10.dp))
+                        } else {
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
+                            Text("Enviar solicitud", modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp)
+                .imePadding()
+                .padding(horizontal = ScreenHorizontalPadding, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Cuéntanos cómo quieres viajar",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Usaremos estos datos para preparar una cotización personalizada.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 720.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Cuéntanos cómo quieres viajar",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "Con estos datos prepararemos una propuesta personalizada.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            OutlinedTextField(
-                value = uiState.destination,
-                onValueChange = viewModel::onDestinationChanged,
-                label = { Text("Destino") },
-                placeholder = { Text("Ej. Cusco") },
-                isError = uiState.destinationError != null,
-                supportingText = uiState.destinationError?.let { error ->
-                    { Text(error) }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp)
-            )
+                Spacer(Modifier.height(6.dp))
+                SectionHeading(
+                    title = "Ruta",
+                    supportingText = "Verificaremos que ambos lugares existan antes de enviar."
+                )
 
-            Spacer(Modifier.height(14.dp))
+                OutlinedTextField(
+                    value = uiState.originCity,
+                    onValueChange = viewModel::onOriginCityChanged,
+                    label = { Text("Ciudad de origen") },
+                    placeholder = { Text("Ej. Lima, Perú") },
+                    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+                    trailingIcon = {
+                        if (uiState.isLocating) {
+                            CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                        } else {
+                            IconButton(onClick = ::requestLocation) {
+                                Icon(Icons.Default.MyLocation, contentDescription = "Usar mi ubicación")
+                            }
+                        }
+                    },
+                    isError = uiState.originCityError != null,
+                    supportingText = {
+                        when {
+                            uiState.originCityError != null -> Text(uiState.originCityError.orEmpty())
+                            uiState.originLatitude != null -> Text("Ubicación detectada. Puedes editarla.")
+                            else -> Text("Escribe una ciudad o usa tu ubicación actual.")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
 
-            OutlinedTextField(
-                value = uiState.originCity,
-                onValueChange = viewModel::onOriginCityChanged,
-                label = { Text("Ciudad de origen") },
-                placeholder = { Text("Detecta o escribe tu ciudad") },
-                leadingIcon = {
-                    Icon(Icons.Default.LocationOn, contentDescription = null)
-                },
-                trailingIcon = {
-                    if (uiState.isLocating) {
-                        CircularProgressIndicator(modifier = Modifier.size(22.dp))
-                    } else {
-                        IconButton(onClick = ::requestLocation) {
-                            Icon(
-                                Icons.Default.MyLocation,
-                                contentDescription = "Detectar ubicación"
+                OutlinedTextField(
+                    value = uiState.destination,
+                    onValueChange = viewModel::onDestinationChanged,
+                    label = { Text("Destino") },
+                    placeholder = { Text("Ej. Cusco, Perú") },
+                    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+                    isError = uiState.destinationError != null,
+                    supportingText = uiState.destinationError?.let { error -> { Text(error) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(8.dp))
+                SectionHeading(
+                    title = "Fechas",
+                    supportingText = "Solo puedes elegir fechas futuras."
+                )
+
+                DateTimeField(
+                    label = "Salida",
+                    value = uiState.departureAtMillis,
+                    error = uiState.departureError,
+                    onClick = { dateTimeTarget = "departure" }
+                )
+                DateTimeField(
+                    label = "Retorno",
+                    value = uiState.returnAtMillis,
+                    error = uiState.returnError,
+                    onClick = { dateTimeTarget = "return" }
+                )
+
+                tripDurationText(
+                    departure = uiState.departureAtMillis,
+                    returnAt = uiState.returnAtMillis
+                )?.let { duration ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = "Duración estimada: $duration",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                SectionHeading(
+                    title = "Viajeros y detalles",
+                    supportingText = "Puedes añadir información útil para preparar la propuesta."
+                )
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Viajeros", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Máximo 20 personas",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = viewModel::decrementTravelerCount,
+                                enabled = uiState.travelerCount > 1
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Quitar viajero")
+                            }
+                            Text(
+                                text = uiState.travelerCount.toString(),
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(horizontal = 10.dp)
+                            )
+                            IconButton(
+                                onClick = viewModel::incrementTravelerCount,
+                                enabled = uiState.travelerCount < 20
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Agregar viajero")
+                            }
+                        }
                     }
-                },
-                isError = uiState.originCityError != null,
-                supportingText = {
-                    val error = uiState.originCityError
-                    when {
-                        error != null -> Text(error)
-                        uiState.originLatitude != null -> Text("Detectada por GPS; puedes editarla.")
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Spacer(Modifier.height(18.dp))
-
-            DateTimeField(
-                label = "Salida",
-                value = uiState.departureAtMillis,
-                error = uiState.departureError,
-                onClick = { dateTimeTarget = "departure" }
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            DateTimeField(
-                label = "Retorno",
-                value = uiState.returnAtMillis,
-                error = uiState.returnError,
-                onClick = { dateTimeTarget = "return" }
-            )
-
-            Spacer(Modifier.height(20.dp))
-
-            Text(
-                text = "Cantidad de viajeros",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = viewModel::decrementTravelerCount,
-                    enabled = uiState.travelerCount > 1
-                ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Reducir viajeros")
                 }
-                Text(
-                    text = uiState.travelerCount.toString(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(
-                    onClick = viewModel::incrementTravelerCount,
-                    enabled = uiState.travelerCount < 20
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar viajeros")
+                uiState.travelerCountError?.let { error ->
+                    Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
-            }
-            uiState.travelerCountError?.let { error ->
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
+
+                OutlinedTextField(
+                    value = uiState.notes,
+                    onValueChange = viewModel::onNotesChanged,
+                    label = { Text("Notas para el agente (opcional)") },
+                    placeholder = { Text("Preferencias, restricciones o actividades de interés") },
+                    supportingText = { Text("${uiState.notes.length}/500") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
                 )
             }
-
-            Spacer(Modifier.height(14.dp))
-
-            OutlinedTextField(
-                value = uiState.notes,
-                onValueChange = viewModel::onNotesChanged,
-                label = { Text("Observaciones opcionales") },
-                supportingText = { Text("${uiState.notes.length}/500") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            Button(
-                onClick = viewModel::submitRequest,
-                enabled = !uiState.isSaving,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
-            ) {
-                if (uiState.isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                    Text(
-                        text = "Enviar solicitud",
-                        modifier = Modifier.padding(start = 8.dp),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
         }
     }
 }
@@ -370,36 +373,43 @@ private fun DateTimeField(
     error: String?,
     onClick: () -> Unit
 ) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.Bold
-    )
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Icon(Icons.Default.CalendarMonth, contentDescription = null)
-        Text(
-            text = if (value == 0L) "Seleccionar fecha y hora" else formatDateTime(value),
-            modifier = Modifier.padding(start = 8.dp)
-        )
-    }
-    error?.let {
-        Text(
-            text = it,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(top = 4.dp)
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        OutlinedButton(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+        ) {
+            Icon(Icons.Default.CalendarMonth, contentDescription = null)
+            Text(
+                text = if (value == 0L) "Seleccionar fecha y hora" else formatDateTime(value),
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+        error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
     }
 }
 
-private fun formatDateTime(value: Long): String {
-    return SimpleDateFormat("dd/MM/yyyy - HH:mm", Locale.getDefault()).format(Date(value))
+private fun formatDateTime(value: Long): String =
+    SimpleDateFormat("EEE d MMM, HH:mm", Locale.forLanguageTag("es-PE")).format(Date(value))
+
+private fun tripDurationText(departure: Long, returnAt: Long): String? {
+    if (departure <= 0L || returnAt <= departure) return null
+    val difference = returnAt - departure
+    val days = TimeUnit.MILLISECONDS.toDays(difference)
+    val hours = TimeUnit.MILLISECONDS.toHours(difference) % 24
+    return when {
+        days > 0 && hours > 0 -> "$days días y $hours horas"
+        days > 0 -> "$days días"
+        else -> "$hours horas"
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -415,14 +425,11 @@ private fun RequestDateTimePicker(
     val initialCalendar = remember(baseValue) {
         Calendar.getInstance().apply { timeInMillis = baseValue }
     }
-    val minimumDateMillis = remember(minimumValue) {
-        toDatePickerUtcMillis(minimumValue)
-    }
+    val minimumDateMillis = remember(minimumValue) { toDatePickerUtcMillis(minimumValue) }
     val selectableDates = remember(minimumDateMillis) {
         object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                return utcTimeMillis >= minimumDateMillis
-            }
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                utcTimeMillis >= minimumDateMillis
         }
     }
     val datePickerState = androidx.compose.material3.rememberDatePickerState(
@@ -442,29 +449,17 @@ private fun RequestDateTimePicker(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (datePickerState.selectedDateMillis != null) {
-                            selectingTime = true
-                        }
+                        if (datePickerState.selectedDateMillis != null) selectingTime = true
                     }
-                ) {
-                    Text("Continuar")
-                }
+                ) { Text("Continuar") }
             },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Cancelar")
-                }
-            }
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
         ) {
             DatePicker(state = datePickerState)
         }
     } else {
         val selectedDateTime = datePickerState.selectedDateMillis?.let { selectedDate ->
-            combineDateAndTime(
-                selectedDateMillis = selectedDate,
-                hour = timePickerState.hour,
-                minute = timePickerState.minute
-            )
+            combineDateAndTime(selectedDate, timePickerState.hour, timePickerState.minute)
         }
         val isValidTime = selectedDateTime != null && selectedDateTime > minimumValue
 
@@ -487,18 +482,10 @@ private fun RequestDateTimePicker(
             confirmButton = {
                 TextButton(
                     enabled = isValidTime,
-                    onClick = {
-                        selectedDateTime?.let(onConfirm)
-                    }
-                ) {
-                    Text("Aceptar")
-                }
+                    onClick = { selectedDateTime?.let(onConfirm) }
+                ) { Text("Aceptar") }
             },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Cancelar")
-                }
-            }
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
         )
     }
 }
@@ -515,11 +502,7 @@ private fun toDatePickerUtcMillis(value: Long): Long {
     }.timeInMillis
 }
 
-private fun combineDateAndTime(
-    selectedDateMillis: Long,
-    hour: Int,
-    minute: Int
-): Long {
+private fun combineDateAndTime(selectedDateMillis: Long, hour: Int, minute: Int): Long {
     val utcDate = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
         timeInMillis = selectedDateMillis
     }

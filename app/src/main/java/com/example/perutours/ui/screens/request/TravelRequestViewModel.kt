@@ -97,10 +97,10 @@ class TravelRequestViewModel(
                         "Ciudad de origen detectada automáticamente."
                     }
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLocating = false,
-                    message = e.localizedMessage ?: "No se pudo detectar tu ubicación."
+                    message = "No pudimos detectar tu ubicación. Puedes escribir la ciudad manualmente."
                 )
             }
         }
@@ -191,10 +191,10 @@ class TravelRequestViewModel(
                     isSaving = false,
                     savedRequestId = savedRequest.id
                 )
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
-                    message = "No se pudo guardar la solicitud: ${e.localizedMessage.orEmpty()}"
+                    message = "No pudimos enviar la solicitud. Revisa tu conexión e inténtalo nuevamente."
                 )
             }
         }

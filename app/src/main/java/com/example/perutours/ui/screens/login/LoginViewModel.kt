@@ -63,11 +63,11 @@ class LoginViewModel(
                     )
                 }
             }
-            .addOnFailureListener { e ->
+            .addOnFailureListener {
                 _uiState.update {
                     it.copy(
                         isSuccessMessage = false,
-                        infoMessage = "Error: ${e.localizedMessage}"
+                        infoMessage = "No pudimos enviar el enlace. Revisa el correo e inténtalo nuevamente."
                     )
                 }
             }

@@ -53,13 +53,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
             val result = repository.refreshDestinations()
 
-            result.onFailure { error ->
+            result.onFailure {
                 // Si la BD local no tiene datos y falló el internet, mostramos Error
                 if (_uiState.value.destinationsState !is HomeDestinationsState.Success) {
                     _uiState.update {
                         it.copy(
                             destinationsState = HomeDestinationsState.Error(
-                                error.localizedMessage ?: "No se pudo conectar al servidor"
+                                "Revisa tu conexión e inténtalo nuevamente."
                             )
                         )
                     }

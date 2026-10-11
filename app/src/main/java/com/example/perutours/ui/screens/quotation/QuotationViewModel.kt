@@ -52,11 +52,10 @@ class QuotationViewModel(
                 _catalogServices.value =
                     catalogRepository.getServices()
 
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _uiState.value =
                     QuotationUiState.Error(
-                        e.localizedMessage
-                            ?: "No se pudo cargar el catálogo de servicios."
+                        "No pudimos cargar el catálogo de servicios."
                     )
             } finally {
                 _catalogLoading.value = false
@@ -102,13 +101,10 @@ class QuotationViewModel(
                 // Ya cargamos correctamente la solicitud.
                 _uiState.value = QuotationUiState.Idle
 
-            } catch (e: Exception) {
+            } catch (_: Exception) {
 
                 _uiState.value =
-                    QuotationUiState.Error(
-                        e.localizedMessage
-                            ?: "No se pudo cargar la solicitud."
-                    )
+                    QuotationUiState.Error("No pudimos cargar los datos de la solicitud.")
             }
         }
     }
@@ -124,8 +120,8 @@ class QuotationViewModel(
                 } else {
                     _uiState.value = QuotationUiState.Error("No se encontró la cotización")
                 }
-            } catch (e: Exception) {
-                _uiState.value = QuotationUiState.Error(e.localizedMessage ?: "Error al cargar la cotización")
+            } catch (_: Exception) {
+                _uiState.value = QuotationUiState.Error("No pudimos cargar la cotización.")
             }
         }
     }
@@ -227,8 +223,10 @@ class QuotationViewModel(
             try {
                 val saved = repository.saveQuotation(quotation)
                 _uiState.value = QuotationUiState.Success(saved)
-            } catch (e: Exception) {
-                _uiState.value = QuotationUiState.Error(e.localizedMessage ?: "Error al guardar en Firestore")
+            } catch (_: Exception) {
+                _uiState.value = QuotationUiState.Error(
+                    "No pudimos guardar la cotización. Inténtalo nuevamente."
+                )
             }
         }
     }

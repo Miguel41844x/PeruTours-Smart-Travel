@@ -2,9 +2,11 @@ package com.example.perutours.ui.screens.quotation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,44 +14,51 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.perutours.data.model.Quotation
-import com.example.perutours.ui.theme.BackgroundLight
-import com.example.perutours.ui.theme.PeruGold40
-import com.example.perutours.ui.theme.SurfaceLight
+import com.example.perutours.ui.components.PeruToursTopBar
+import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+private enum class QuotationFilter(val label: String) {
+    ALL("Todas"),
+    PENDING("Por responder"),
+    ACCEPTED("Aceptadas"),
+    CLOSED("Cerradas")
+}
+
 @Composable
 fun CustomerQuotationsScreen(
     onNavigateBack: () -> Unit,
@@ -57,70 +66,40 @@ fun CustomerQuotationsScreen(
     viewModel: CustomerQuotationViewModel = viewModel()
 ) {
     val state by viewModel.quotationsState.collectAsStateWithLifecycle()
+    var selectedFilter by remember { mutableStateOf(QuotationFilter.ALL) }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadQuotations()
-    }
+    LaunchedEffect(Unit) { viewModel.loadQuotations() }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Mis cotizaciones",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceLight)
-            )
-        },
-        containerColor = BackgroundLight
+        topBar = { PeruToursTopBar(title = "Mis cotizaciones", onBack = onNavigateBack) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when (val currentState = state) {
-            CustomerQuotationsUiState.Loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = PeruGold40)
-                }
-            }
+            CustomerQuotationsUiState.Loading -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) { CircularProgressIndicator() }
 
-            is CustomerQuotationsUiState.Error -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = currentState.message,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = viewModel::loadQuotations,
-                        colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
-                    ) {
-                        Text("Reintentar")
-                    }
-                }
-            }
+            is CustomerQuotationsUiState.Error -> ErrorQuotations(
+                message = currentState.message,
+                onRetry = viewModel::loadQuotations,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            )
 
             is CustomerQuotationsUiState.Success -> {
+                val visibleQuotations = currentState.quotations.filter { quotation ->
+                    when (selectedFilter) {
+                        QuotationFilter.ALL -> true
+                        QuotationFilter.PENDING -> Quotation.canClientRespond(quotation.status)
+                        QuotationFilter.ACCEPTED -> quotation.status == Quotation.STATUS_ACCEPTED
+                        QuotationFilter.CLOSED -> quotation.status == Quotation.STATUS_CANCELLED
+                    }
+                }
+
                 if (currentState.quotations.isEmpty()) {
                     EmptyQuotations(
                         modifier = Modifier
@@ -132,24 +111,63 @@ fun CustomerQuotationsScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item {
-                            Text(
-                                text = "Revisa el detalle y responde las propuestas preparadas para ti.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .widthIn(max = 720.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = "Revisa las propuestas de nuestros agentes y responde cuando estés listo.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    QuotationFilter.entries.forEach { filter ->
+                                        FilterChip(
+                                            selected = selectedFilter == filter,
+                                            onClick = { selectedFilter = filter },
+                                            label = { Text(filter.label) },
+                                            leadingIcon = if (selectedFilter == filter) {
+                                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                            } else null
+                                        )
+                                    }
+                                }
+                            }
                         }
+
+                        if (visibleQuotations.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "No hay cotizaciones en esta categoría.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 36.dp)
+                                )
+                            }
+                        }
+
                         items(
-                            items = currentState.quotations,
-                            key = { quotation -> quotation.id }
+                            items = visibleQuotations,
+                            key = Quotation::id
                         ) { quotation ->
                             CustomerQuotationCard(
                                 quotation = quotation,
-                                onClick = { onQuotationSelected(quotation.id) }
+                                onClick = { onQuotationSelected(quotation.id) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .widthIn(max = 720.dp)
                             )
                         }
                     }
@@ -166,93 +184,103 @@ private fun EmptyQuotations(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
-            contentDescription = null,
-            tint = PeruGold40,
-            modifier = Modifier.size(52.dp)
-        )
-        Spacer(modifier = Modifier.height(12.dp))
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(18.dp).size(36.dp)
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text("Aún no tienes cotizaciones", style = MaterialTheme.typography.titleLarge)
         Text(
-            text = "Aún no tienes cotizaciones",
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-        )
-        Text(
-            text = "Cuando un agente prepare una propuesta aparecerá en esta sección.",
+            text = "Cuando un agente prepare una propuesta, aparecerá aquí.",
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 13.sp,
             modifier = Modifier.padding(top = 6.dp)
         )
     }
 }
 
 @Composable
+private fun ErrorQuotations(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("No pudimos cargar tus cotizaciones", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp, bottom = 16.dp)
+        )
+        Button(onClick = onRetry) { Text("Intentar de nuevo") }
+    }
+}
+
+@Composable
 private fun CustomerQuotationCard(
     quotation: Quotation,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val statusColors = quotationStatusColors(quotation.status)
-
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceLight),
+        modifier = modifier.clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = quotation.destination,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Surface(
-                    color = statusColors.first,
-                    contentColor = statusColors.second,
-                    shape = RoundedCornerShape(6.dp)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = quotation.status,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        text = quotation.destination,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "Preparada por ${quotation.agentName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Spacer(Modifier.height(0.dp))
+                QuotationStatusPill(status = quotation.status)
             }
 
-            Text(
-                text = "Asesor: ${quotation.agentName}",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 14.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
                 Column {
                     Text(
                         text = "Total",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "$${"%.2f".format(quotation.totalAmount)} ${quotation.currency}",
-                        color = PeruGold40,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 16.sp
+                        text = formatQuotationAmount(quotation.totalAmount, quotation.currency),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Válida hasta ${quotation.validityDate}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Icon(
@@ -265,9 +293,37 @@ private fun CustomerQuotationCard(
     }
 }
 
-private fun quotationStatusColors(status: String): Pair<Color, Color> = when (status) {
-    Quotation.STATUS_ACCEPTED -> Color(0xFFDCFCE7) to Color(0xFF166534)
-    Quotation.STATUS_OBSERVED -> Color(0xFFDBEAFE) to Color(0xFF1D4ED8)
-    Quotation.STATUS_CANCELLED -> Color(0xFFFEE2E2) to Color(0xFFB91C1C)
-    else -> Color(0xFFFEF3C7) to Color(0xFFB45309)
+@Composable
+internal fun QuotationStatusPill(status: String) {
+    val (container, content) = when (status) {
+        Quotation.STATUS_ACCEPTED -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        Quotation.STATUS_OBSERVED -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        Quotation.STATUS_CANCELLED -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val label = when (status) {
+        Quotation.STATUS_OBSERVED -> "Cambios solicitados"
+        Quotation.STATUS_QUOTED -> "Por responder"
+        else -> status
+    }
+
+    Surface(color = container, contentColor = content, shape = MaterialTheme.shapes.small) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+        )
+    }
 }
+
+internal fun formatQuotationAmount(amount: Double, currency: String): String {
+    val number = NumberFormat.getNumberInstance(Locale.US).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }.format(amount)
+    return "\$$number $currency"
+}
+
+internal fun formatQuotationCreatedAt(value: Long): String =
+    SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("es-PE")).format(Date(value))

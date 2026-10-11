@@ -33,8 +33,8 @@ class AgentRequestsViewModel(
             try {
                 // Ahora trae TODAS las solicitudes (Pendientes y Cotizadas)
                 _requests.value = repository.getAllRequests()
-            } catch (e: Exception) {
-                _error.value = e.localizedMessage ?: "No se pudieron cargar las solicitudes."
+            } catch (_: Exception) {
+                _error.value = "Revisa tu conexión e inténtalo nuevamente."
             } finally {
                 _isLoading.value = false
             }

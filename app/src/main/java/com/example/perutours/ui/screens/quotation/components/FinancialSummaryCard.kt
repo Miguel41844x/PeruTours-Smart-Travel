@@ -1,16 +1,23 @@
 package com.example.perutours.ui.screens.quotation.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import java.text.NumberFormat
+import java.util.Locale
 
 @Composable
 fun FinancialSummaryCard(
@@ -23,83 +30,91 @@ fun FinancialSummaryCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Estructura Financiera y Rentabilidad",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1F2937)
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Resumen financiero", style = MaterialTheme.typography.titleMedium)
+
+            SummaryRow(
+                label = "Costo de proveedores",
+                value = formatUsd(baseCost)
             )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Costo Base Neto de Proveedores:", fontSize = 12.sp, color = Color(0xFF4B5563))
-                Text("$$baseCost USD", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Margen de Ganancia de Agencia:", fontSize = 12.sp, color = Color(0xFF4B5563))
-                Text("+$marginPercent%", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFFD97706))
-            }
+            SummaryRow(
+                label = "Margen de la agencia",
+                value = "$marginPercent%",
+                emphasized = true
+            )
 
             Slider(
                 value = marginPercent.toFloat(),
                 onValueChange = { onMarginChange(it.toInt()) },
                 valueRange = 5f..35f,
-                steps = 6,
-                colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFFD97706),
-                    activeTrackColor = Color(0xFFD97706)
-                )
+                steps = 5
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("5%", style = MaterialTheme.typography.labelSmall)
+                Text("35%", style = MaterialTheme.typography.labelSmall)
+            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Tarjeta de Total
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF1C1917), RoundedCornerShape(14.dp))
-                    .padding(14.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = MaterialTheme.shapes.medium
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.padding(14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
+                        Text("Total cotizado", style = MaterialTheme.typography.labelLarge)
                         Text(
-                            text = "TOTAL COTIZADO",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF9CA3AF)
-                        )
-                        Text(
-                            text = "(${travelerCount} viajeros • $${Math.round(totalAmount / travelerCount.coerceAtLeast(1))} c/u)",
-                            fontSize = 11.sp,
-                            color = Color(0xFFFBBF24)
+                            "${formatUsd(totalAmount / travelerCount.coerceAtLeast(1))} por viajero",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                     Text(
-                        text = "$$totalAmount USD",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color(0xFFFBBF24)
+                        formatUsd(totalAmount),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SummaryRow(label: String, value: String, emphasized: Boolean = false) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.titleSmall,
+            color = if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+private fun formatUsd(value: Double): String {
+    val number = NumberFormat.getNumberInstance(Locale.US).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }.format(value)
+    return "\$$number USD"
 }

@@ -81,7 +81,7 @@ class ProfileViewModel(
                         profile = fallbackProfile,
                         preferences = preferences,
                         message =
-                            "No se pudieron cargar los datos del perfil desde Firestore."
+                            "No pudimos cargar todos los datos de tu perfil."
                     )
 
                 } catch (e: Exception) {
@@ -90,7 +90,7 @@ class ProfileViewModel(
                         _uiState.value.copy(
                             isLoadingInitialData = false,
                             message =
-                                "No se pudieron cargar las preferencias desde Firestore."
+                                "No pudimos cargar tus preferencias de viaje."
                         )
                 }
             }
@@ -276,7 +276,7 @@ class ProfileViewModel(
                     _uiState.value.copy(
                         isSaving = false,
                         message =
-                            "Error al guardar en Firestore: ${e.localizedMessage}"
+                            "No pudimos guardar los cambios. Inténtalo nuevamente."
                     )
             }
         }
@@ -322,7 +322,7 @@ class ProfileViewModel(
                         isUploadingPhoto = false,
                         pendingPhotoUri = null,
                         message =
-                            "Foto de perfil guardada en Firebase Storage"
+                            "Foto de perfil actualizada."
                     )
 
             } catch (e: Exception) {
@@ -332,7 +332,7 @@ class ProfileViewModel(
                         isUploadingPhoto = false,
                         pendingPhotoUri = null,
                         message =
-                            "Error al subir la foto: ${e.localizedMessage}"
+                            "No pudimos actualizar la foto. Inténtalo nuevamente."
                     )
             }
         }

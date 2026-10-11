@@ -1,257 +1,316 @@
 package com.example.perutours.ui.screens.signup
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.perutours.ui.theme.BackgroundLight
-import com.example.perutours.ui.theme.PeruGold40
+import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.ScreenHorizontalPadding
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
     navigateToLogin: () -> Unit,
+    navigateBack: () -> Unit = {},
     viewModel: SignUpViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val emailFocus = remember { FocusRequester() }
+    val phoneFocus = remember { FocusRequester() }
+    val passwordFocus = remember { FocusRequester() }
+    val confirmFocus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
-    // Diálogo informativo Criterio 2: Verificación de correo
     if (uiState.showVerificationDialog) {
         AlertDialog(
-            onDismissRequest = { },
-            title = { Text("¡Verifica tu correo!", fontWeight = FontWeight.Bold) },
+            onDismissRequest = {},
+            title = { Text("Revisa tu correo") },
             text = {
-                Text("Hemos enviado un correo a ${uiState.email}. Por favor valida tu cuenta en tu bandeja de entrada o spam antes de iniciar sesión.")
+                Text("Enviamos un enlace de verificación a ${uiState.email}. Verifica también la carpeta de spam antes de iniciar sesión.")
             },
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.dismissVerificationDialog()
                         navigateToLogin()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+                    }
                 ) {
-                    Text("Ir a Iniciar Sesión", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Ir a iniciar sesión")
                 }
             }
         )
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = BackgroundLight) {
+    Scaffold(
+        topBar = { PeruToursTopBar(title = "Crear cuenta", onBack = navigateBack) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp)
+                .imePadding()
+                .padding(horizontal = ScreenHorizontalPadding, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Crear tu cuenta",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Únete a PeruTours y empieza a viajar",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
-            )
-
-            // Nombre completo con restricción de solo texto y mayúscula inicial por palabra
-            OutlinedTextField(
-                value = uiState.name,
-                onValueChange = viewModel::onNameChange,
-                label = { Text("Nombre completo") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = PeruGold40) },
-                isError = uiState.nameError != null,
-                supportingText = uiState.nameError?.let { { Text(it) } },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    capitalization = KeyboardCapitalization.Words
-                )
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Correo con validación de formato
-            OutlinedTextField(
-                value = uiState.email,
-                onValueChange = viewModel::onEmailChange,
-                label = { Text("Correo electrónico") },
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = PeruGold40) },
-                isError = uiState.emailError != null,
-                supportingText = uiState.emailError?.let { { Text(it) } },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Teléfono (exactamente 9 dígitos numéricos)
-            OutlinedTextField(
-                value = uiState.phone,
-                onValueChange = viewModel::onPhoneChange,
-                label = { Text("Teléfono celular (9 dígitos)") },
-                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = PeruGold40) },
-                isError = uiState.phoneError != null,
-                supportingText = uiState.phoneError?.let { { Text(it) } },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Contraseña (mínimo 6 caracteres, mayúscula, número y símbolo)
-            OutlinedTextField(
-                value = uiState.password,
-                onValueChange = viewModel::onPasswordChange,
-                label = { Text("Contraseña") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PeruGold40) },
-                trailingIcon = {
-                    IconButton(onClick = viewModel::togglePasswordVisibility) {
-                        Icon(
-                            imageVector = if (uiState.passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (uiState.passwordVisible) "Ocultar" else "Mostrar"
-                        )
-                    }
-                },
-                visualTransformation = if (uiState.passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                isError = uiState.passwordError != null,
-                supportingText = uiState.passwordError?.let { { Text(it) } },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Confirmar Contraseña
-            OutlinedTextField(
-                value = uiState.confirmPassword,
-                onValueChange = viewModel::onConfirmPasswordChange,
-                label = { Text("Confirmar contraseña") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PeruGold40) },
-                trailingIcon = {
-                    IconButton(onClick = viewModel::toggleConfirmPasswordVisibility) {
-                        Icon(
-                            imageVector = if (uiState.confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (uiState.confirmPasswordVisible) "Ocultar" else "Mostrar"
-                        )
-                    }
-                },
-                visualTransformation = if (uiState.confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                isError = uiState.confirmPasswordError != null,
-                supportingText = uiState.confirmPasswordError?.let { { Text(it) } },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Las cuentas públicas siempre se registran como clientes
-            Text(
-                text = "Tipo de cuenta",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Cliente / Turista",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-
-            // Error general de Firebase si ocurre
-            if (uiState.generalError != null) {
-                Text(
-                    text = uiState.generalError ?: "",
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 10.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Botón de Registro
-            Button(
-                onClick = viewModel::register,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp),
-                enabled = !uiState.isLoading,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+                    .widthIn(max = 520.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                } else {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Registrarse y Comenzar",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        text = "Empecemos con tus datos",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Los usaremos para preparar tus solicitudes y mantenerte informado.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                OutlinedTextField(
+                    value = uiState.name,
+                    onValueChange = viewModel::onNameChange,
+                    label = { Text("Nombre completo") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    isError = uiState.nameError != null,
+                    supportingText = uiState.nameError?.let { error -> { Text(error) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(onNext = { emailFocus.requestFocus() })
+                )
+
+                OutlinedTextField(
+                    value = uiState.email,
+                    onValueChange = viewModel::onEmailChange,
+                    label = { Text("Correo electrónico") },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    isError = uiState.emailError != null,
+                    supportingText = uiState.emailError?.let { error -> { Text(error) } },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(emailFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(onNext = { phoneFocus.requestFocus() })
+                )
+
+                OutlinedTextField(
+                    value = uiState.phone,
+                    onValueChange = viewModel::onPhoneChange,
+                    label = { Text("Celular") },
+                    placeholder = { Text("9 dígitos") },
+                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                    isError = uiState.phoneError != null,
+                    supportingText = uiState.phoneError?.let { error -> { Text(error) } },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(phoneFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(onNext = { passwordFocus.requestFocus() })
+                )
+
+                OutlinedTextField(
+                    value = uiState.password,
+                    onValueChange = viewModel::onPasswordChange,
+                    label = { Text("Contraseña") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = viewModel::togglePasswordVisibility) {
+                            Icon(
+                                imageVector = if (uiState.passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (uiState.passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                            )
+                        }
+                    },
+                    visualTransformation = if (uiState.passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    isError = uiState.passwordError != null,
+                    supportingText = uiState.passwordError?.let { error -> { Text(error) } },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(passwordFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(onNext = { confirmFocus.requestFocus() })
+                )
+
+                PasswordRules(password = uiState.password)
+
+                OutlinedTextField(
+                    value = uiState.confirmPassword,
+                    onValueChange = viewModel::onConfirmPasswordChange,
+                    label = { Text("Confirmar contraseña") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = viewModel::toggleConfirmPasswordVisibility) {
+                            Icon(
+                                imageVector = if (uiState.confirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (uiState.confirmPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                            )
+                        }
+                    },
+                    visualTransformation = if (uiState.confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    isError = uiState.confirmPasswordError != null,
+                    supportingText = uiState.confirmPasswordError?.let { error -> { Text(error) } },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(confirmFocus),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            viewModel.register()
+                        }
+                    )
+                )
+
+                if (uiState.generalError != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(
+                            text = uiState.generalError.orEmpty(),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp)
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = viewModel::register,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    enabled = !uiState.isLoading
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.height(22.dp)
+                        )
+                    } else {
+                        Text("Crear cuenta")
+                    }
+                }
+
+                TextButton(
+                    onClick = navigateToLogin,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text("¿Ya tienes cuenta? Inicia sesión")
+                }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(18.dp))
+@Composable
+private fun PasswordRules(password: String) {
+    val rules = listOf(
+        "6 caracteres" to (password.length >= 6),
+        "Una mayúscula" to password.any(Char::isUpperCase),
+        "Un número" to password.any(Char::isDigit),
+        "Un símbolo" to password.any { !it.isLetterOrDigit() }
+    )
 
-            // Enlace a Login
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        rules.chunked(2).forEach { rowRules ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "¿Ya tienes cuenta? ",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp
-                )
-                TextButton(onClick = navigateToLogin) {
-                    Text(
-                        text = "Inicia sesión",
-                        color = PeruGold40,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
+                rowRules.forEach { (label, met) ->
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (met) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (met) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

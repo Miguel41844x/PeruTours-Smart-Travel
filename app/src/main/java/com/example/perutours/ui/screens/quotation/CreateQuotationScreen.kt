@@ -1,24 +1,53 @@
 package com.example.perutours.ui.screens.quotation
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.SectionHeading
 import com.example.perutours.ui.screens.quotation.components.AddCustomServiceDialog
 import com.example.perutours.ui.screens.quotation.components.FinancialSummaryCard
 import com.example.perutours.ui.screens.quotation.components.ServiceCatalogItemCard
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateQuotationScreen(
     viewModel: QuotationViewModel,
@@ -29,203 +58,206 @@ fun CreateQuotationScreen(
     val uiState by viewModel.uiState.collectAsState()
     val catalogServices by viewModel.catalogServices.collectAsState()
     val catalogLoading by viewModel.catalogLoading.collectAsState()
-
-    LaunchedEffect(Unit) {
-        viewModel.loadCatalogServices()
-    }
-
     var showCustomDialog by remember { mutableStateOf(false) }
-
     val baseCost = formState.selectedServices.sumOf { it.unitCost * it.quantity }
-    val totalAmount = Math.round(baseCost * (1.0 + formState.marginPercent / 100.0) * 100.0) / 100.0
+    val totalAmount = Math.round(
+        baseCost * (1.0 + formState.marginPercent / 100.0) * 100.0
+    ) / 100.0
 
+    LaunchedEffect(Unit) { viewModel.loadCatalogServices() }
     LaunchedEffect(uiState) {
         if (uiState is QuotationUiState.Success) {
-            val quot = (uiState as QuotationUiState.Success).quotation
-            onQuotationCreated(quot.id)
+            onQuotationCreated((uiState as QuotationUiState.Success).quotation.id)
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Elaborar Cotización", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
+            PeruToursTopBar(
+                title = "Crear cotización",
+                onBack = onNavigateBack,
                 actions = {
                     IconButton(onClick = { showCustomDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Servicio Libre")
+                        Icon(Icons.Default.Add, contentDescription = "Añadir servicio personalizado")
                     }
                 }
             )
         },
         bottomBar = {
-            Surface(shadowElevation = 8.dp) {
-                Button(
-                    onClick = { viewModel.saveQuotation() },
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 6.dp,
+                modifier = Modifier.navigationBarsPadding()
+            ) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .navigationBarsPadding()
-                        .height(52.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFD97706)
-                    ),
-                    enabled = uiState !is QuotationUiState.Loading
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (uiState is QuotationUiState.Loading) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = null
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text(
-                            "Registrar cotización y Notificar",
-                            fontWeight = FontWeight.Bold
-                        )
+                    Button(
+                        onClick = viewModel::saveQuotation,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 900.dp)
+                            .height(52.dp),
+                        enabled = uiState !is QuotationUiState.Loading
+                    ) {
+                        if (uiState is QuotationUiState.Loading) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text("Guardando...", modifier = Modifier.padding(start = 10.dp))
+                        } else {
+                            Icon(Icons.Default.Check, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Guardar y notificar al cliente")
+                        }
                     }
                 }
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                if (uiState is QuotationUiState.Loading) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
+            if (uiState is QuotationUiState.Error) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 900.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = MaterialTheme.shapes.medium
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp)
+                        Text(
+                            text = (uiState as QuotationUiState.Error).message,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(14.dp)
                         )
                     }
-                }
-
-                if (uiState is QuotationUiState.Error) {
-                    Text(
-                        text = (uiState as QuotationUiState.Error).message,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
+
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-
-                        Text(
-                            text = "Datos de la solicitud",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = "Cliente: ${formState.clientName}",
-                            fontSize = 14.sp
-                        )
-
-                        Text(
-                            text = "Correo: ${formState.clientEmail}",
-                            fontSize = 14.sp
-                        )
-
-                        Text(
-                            text = "Destino: ${formState.destination}",
-                            fontSize = 14.sp
-                        )
-
-                        Text(
-                            text = "Viajeros: ${formState.travelerCount}",
-                            fontSize = 14.sp
-                        )
-                    }
-                }
+                RequestSummary(
+                    clientName = formState.clientName,
+                    clientEmail = formState.clientEmail,
+                    destination = formState.destination,
+                    travelerCount = formState.travelerCount,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 900.dp)
+                )
             }
 
             item {
                 FinancialSummaryCard(
                     baseCost = baseCost,
                     marginPercent = formState.marginPercent,
-                    onMarginChange = { viewModel.setMarginPercent(it) },
+                    onMarginChange = viewModel::setMarginPercent,
                     totalAmount = totalAmount,
-                    travelerCount = formState.travelerCount
+                    travelerCount = formState.travelerCount,
+                    modifier = Modifier.widthIn(max = 900.dp)
                 )
             }
 
             item {
-                Text(
-                    text = "Servicios Disponibles en Catálogo (Toca para incluir):",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1F2937)
-                )
-            }
-
-            if (catalogLoading) {
-
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-            } else {
-
-                items(catalogServices) { service ->
-
-                    val isSelected =
-                        formState.selectedServices.any {
-                            it.id == service.id
-                        }
-
-                    ServiceCatalogItemCard(
-                        catalogService = service,
-                        isSelected = isSelected,
-                        onToggle = {
-                            viewModel.addServiceFromCatalog(service)
-                        }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 900.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    SectionHeading(
+                        title = "Servicios",
+                        supportingText = "Toca un servicio para incluirlo o quitarlo."
+                    )
+                    Text(
+                        text = "${formState.selectedServices.size} seleccionados",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            item {
-                Spacer(modifier = Modifier.height(20.dp))
+            if (catalogLoading) {
+                item {
+                    CircularProgressIndicator(modifier = Modifier.padding(28.dp))
+                }
+            } else {
+                items(items = catalogServices, key = { service -> service.id }) { service ->
+                    val isSelected = formState.selectedServices.any { it.id == service.id }
+                    ServiceCatalogItemCard(
+                        catalogService = service,
+                        isSelected = isSelected,
+                        onToggle = { viewModel.addServiceFromCatalog(service) },
+                        modifier = Modifier.widthIn(max = 900.dp)
+                    )
+                }
             }
         }
 
         if (showCustomDialog) {
             AddCustomServiceDialog(
                 onDismiss = { showCustomDialog = false },
-                onConfirm = { name, cat, cost, qty ->
-                    viewModel.addCustomService(name, cat, cost, qty)
+                onConfirm = { name, category, cost, quantity ->
+                    viewModel.addCustomService(name, category, cost, quantity)
                     showCustomDialog = false
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun RequestSummary(
+    clientName: String,
+    clientEmail: String,
+    destination: String,
+    travelerCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Solicitud del cliente", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = clientName,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = clientEmail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(destination, style = MaterialTheme.typography.bodyMedium)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Group, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("$travelerCount viajeros", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
         }
     }
 }

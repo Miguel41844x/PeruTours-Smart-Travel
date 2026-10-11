@@ -1,47 +1,84 @@
 package com.example.perutours.ui.screens.home
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.AddLocationAlt
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
-import com.example.perutours.ui.theme.BackgroundLight
-import com.example.perutours.ui.theme.PeruGold40
-import com.example.perutours.ui.theme.SurfaceLight
+import com.example.perutours.R
+import com.example.perutours.ui.components.PeruToursBrand
+import com.example.perutours.ui.components.ScreenHorizontalPadding
+import com.example.perutours.ui.components.SectionHeading
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("InlinedApi")
 @Composable
 fun HomeScreen(
     auth: FirebaseAuth,
@@ -52,93 +89,97 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    RequestNotificationPermission()
-
     val currentUser = auth.currentUser
-    val uid = currentUser?.uid ?: ""
-    val rawName = currentUser?.displayName ?: "Turista"
-    var userName by remember {
-        mutableStateOf(rawName.split("|").firstOrNull()?.trim() ?: "Turista")
-    }
-    var photoUrl by remember {
-        mutableStateOf(currentUser?.photoUrl?.toString() ?: "")
-    }
-    var userPreferences by remember {
-        mutableStateOf(listOf<String>())
-    }
-
-    var userPreferenceNames by remember {
-        mutableStateOf(listOf<String>())
-    }
-    val userEmail = currentUser?.email ?: ""
+    val uid = currentUser?.uid.orEmpty()
+    val rawName = currentUser?.displayName ?: "viajero"
+    var userName by remember { mutableStateOf(rawName.substringBefore("|").trim()) }
+    var photoUrl by remember { mutableStateOf(currentUser?.photoUrl?.toString().orEmpty()) }
+    var preferenceNames by remember { mutableStateOf(emptyList<String>()) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showNotificationPrompt by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { navigateToQuotations() }
+    )
 
-    // Mantener sincronizado el perfil desde Firestore
+    fun openQuotations() {
+        val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+
+        if (needsPermission) showNotificationPrompt = true else navigateToQuotations()
+    }
+
     DisposableEffect(uid) {
-        val registration = if (uid.isNotEmpty()) {
-            FirebaseFirestore.getInstance().collection("users").document(uid)
+        val registration = uid.takeIf(String::isNotEmpty)?.let { userId ->
+            FirebaseFirestore.getInstance().collection("users").document(userId)
                 .addSnapshotListener { snapshot, _ ->
-                    if (snapshot != null && snapshot.exists()) {
-                        snapshot.getString("name")?.takeIf { it.isNotBlank() }?.let { userName = it }
+                    if (snapshot?.exists() == true) {
+                        snapshot.getString("name")?.takeIf(String::isNotBlank)?.let { userName = it }
                         snapshot.getString("photoUrl")?.let { photoUrl = it }
-                        val prefs = snapshot.get("preferences") as? List<*>
-
-                        if (prefs != null) {
-
-                            userPreferences =
-                                prefs.filterIsInstance<String>()
-
-                            FirebaseFirestore
-                                .getInstance()
-                                .collection("preferences")
-                                .get()
+                        val preferenceIds = (snapshot.get("preferences") as? List<*>)
+                            ?.filterIsInstance<String>()
+                            .orEmpty()
+                        if (preferenceIds.isNotEmpty()) {
+                            FirebaseFirestore.getInstance().collection("preferences").get()
                                 .addOnSuccessListener { preferencesSnapshot ->
-
-                                    val namesById =
-                                        preferencesSnapshot.documents.associate { document ->
-                                            document.id to (
-                                                    document.getString("name")
-                                                        ?: ""
-                                                    )
-                                        }
-
-                                    userPreferenceNames =
-                                        userPreferences
-                                            .mapNotNull { preferenceId ->
-                                                namesById[preferenceId]
-                                                    ?.takeIf { it.isNotBlank() }
-                                            }
+                                    val namesById = preferencesSnapshot.documents.associate { document ->
+                                        document.id to document.getString("name").orEmpty()
+                                    }
+                                    preferenceNames = preferenceIds.mapNotNull { id ->
+                                        namesById[id]?.takeIf(String::isNotBlank)
+                                    }
                                 }
                         }
                     }
                 }
-        } else {
-            null
         }
         onDispose { registration?.remove() }
+    }
+
+    if (showNotificationPrompt) {
+        AlertDialog(
+            onDismissRequest = { showNotificationPrompt = false },
+            title = { Text("Avisos sobre tus cotizaciones") },
+            text = { Text("Activa las notificaciones para saber cuando recibas una propuesta o cambie su estado.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showNotificationPrompt = false
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                ) { Text("Activar") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showNotificationPrompt = false
+                        navigateToQuotations()
+                    }
+                ) { Text("Ahora no") }
+            }
+        )
     }
 
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Cerrar Sesión", fontWeight = FontWeight.Bold) },
-            text = { Text("¿Estás seguro de que deseas cerrar tu sesión en PeruTours?") },
+            title = { Text("Cerrar sesión") },
+            text = { Text("Tendrás que ingresar nuevamente para ver tus viajes y cotizaciones.") },
             confirmButton = {
                 Button(
                     onClick = {
                         showLogoutDialog = false
                         auth.signOut()
                         navigateToInitial()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Cerrar Sesión", color = Color.White, fontWeight = FontWeight.Bold)
-                }
+                    }
+                ) { Text("Cerrar sesión") }
             },
             dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancelar")
-                }
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
             }
         )
     }
@@ -146,314 +187,251 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (photoUrl.isNotEmpty()) {
-                            AsyncImage(
-                                model = photoUrl,
-                                contentDescription = "Foto de perfil",
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Surface(
-                                modifier = Modifier.size(40.dp),
-                                shape = CircleShape,
-                                color = PeruGold40.copy(alpha = 0.15f)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = userName.take(1).uppercase(),
-                                        fontWeight = FontWeight.Bold,
-                                        color = PeruGold40
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "¡Hola, $userName!",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (userPreferenceNames.isNotEmpty()) {
-                                    "Intereses: ${userPreferenceNames.joinToString(" • ")}"
-                                } else {
-                                    userEmail
-                                },
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                },
+                title = { PeruToursBrand(compact = true) },
                 actions = {
-                    IconButton(onClick = navigateToProfile) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Mi Perfil",
-                            tint = PeruGold40
-                        )
-                    }
                     IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Cerrar sesión",
-                            tint = MaterialTheme.colorScheme.error
+                            Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "Cerrar sesión"
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceLight)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         },
-        containerColor = BackgroundLight
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = true,
+                    onClick = {},
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    label = { Text("Inicio") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = ::openQuotations,
+                    icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null) },
+                    label = { Text("Cotizaciones") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = navigateToProfile,
+                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    label = { Text("Perfil") }
+                )
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp)
+                .padding(horizontal = ScreenHorizontalPadding, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Tarjeta Personalización de Perfil
-            Card(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { navigateToProfile() },
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = PeruGold40)
+                    .widthIn(max = 720.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "Descubre el Perú a tu medida",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = "Toca aquí para personalizar tu foto de perfil, datos y preferencias de viaje.",
-                        color = Color.White.copy(alpha = 0.92f),
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Botón Solicitar viaje (HU03)
-            Button(
-                onClick = navigateToTravelRequest,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AddLocationAlt,
-                    contentDescription = null
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Solicitar un viaje",
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            OutlinedButton(
-                onClick = navigateToQuotations,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, PeruGold40)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
-                    contentDescription = null,
-                    tint = PeruGold40
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Mis cotizaciones",
-                    color = PeruGold40,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Paquetes Turísticos Disponibles",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                IconButton(onClick = viewModel::fetchDestinations) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Recargar destinos",
-                        tint = PeruGold40
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // CRITERIO 2: Manejo reactivo de estados (Loading, Success, Error con Sealed Class)
-            when (val state = uiState.destinationsState) {
-                is HomeDestinationsState.Loading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = PeruGold40)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Cargando destinos desde la API...",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                is HomeDestinationsState.Error -> {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (photoUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = photoUrl,
+                            contentDescription = "Foto de perfil",
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = navigateToProfile),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clickable(onClick = navigateToProfile),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer
                         ) {
-                            Text(
-                                text = "No se pudieron cargar los destinos",
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Text(
-                                text = state.message,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-                            )
-                            Button(
-                                onClick = viewModel::fetchDestinations,
-                                colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
-                            ) {
-                                Text("Reintentar")
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = userName.take(1).uppercase(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
                         }
                     }
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Hola, ${userName.ifBlank { "viajero" }}",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = preferenceNames.take(2).joinToString(" · ")
+                                .ifBlank { "¿A dónde te gustaría ir?" },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
-                is HomeDestinationsState.Success -> {
-                    state.destinations.forEach { item ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(248.dp)
+                        .clip(MaterialTheme.shapes.large)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.peru_welcome),
+                        contentDescription = "Vista de Machu Picchu",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Surface(
+                        modifier = Modifier.matchParentSize(),
+                        color = Color.Black.copy(alpha = 0.46f)
+                    ) {}
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(22.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Tu siguiente historia empieza aquí",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Cuéntanos tu ruta ideal y recibe una propuesta hecha para ti.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White
+                        )
+                        Button(
+                            onClick = navigateToTravelRequest,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("Empezar solicitud")
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionHeading(
+                        title = "Destinos para inspirarte",
+                        supportingText = "Ideas para tu siguiente aventura"
+                    )
+                    IconButton(onClick = viewModel::fetchDestinations) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar destinos")
+                    }
+                }
+
+                when (val state = uiState.destinationsState) {
+                    is HomeDestinationsState.Loading -> DestinationLoadingState()
+                    is HomeDestinationsState.Error -> DestinationErrorState(
+                        message = state.message,
+                        onRetry = viewModel::fetchDestinations
+                    )
+                    is HomeDestinationsState.Success -> state.destinations.forEach { destination ->
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = SurfaceLight),
-                            border = BorderStroke(1.dp, Color(0xFFE7E5E4))
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Column {
                                 AsyncImage(
-                                    model = item.imageUrl,
-                                    contentDescription = item.title,
+                                    model = destination.imageUrl,
+                                    contentDescription = destination.title,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(150.dp),
+                                        .height(180.dp),
                                     contentScale = ContentScale.Crop
                                 )
-                                Column(modifier = Modifier.padding(16.dp)) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = item.title,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold
+                                            text = destination.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.weight(1f)
                                         )
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
-                                                imageVector = Icons.Default.Star,
+                                                Icons.Default.Star,
                                                 contentDescription = null,
-                                                tint = PeruGold40,
-                                                modifier = Modifier.size(16.dp)
+                                                tint = MaterialTheme.colorScheme.secondary,
+                                                modifier = Modifier.size(18.dp)
                                             )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = item.rating,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(destination.rating, style = MaterialTheme.typography.labelLarge)
                                         }
                                     }
-                                    Row(
-                                        modifier = Modifier.padding(top = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            imageVector = Icons.Default.LocationOn,
+                                            Icons.Default.LocationOn,
                                             contentDescription = null,
-                                            tint = Color(0xFF78716C),
-                                            modifier = Modifier.size(14.dp)
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp)
                                         )
-                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Spacer(Modifier.width(4.dp))
                                         Text(
-                                            text = "${item.location} • ${item.duration}",
-                                            fontSize = 12.sp,
-                                            color = Color(0xFF78716C)
+                                            text = "${destination.location} · ${destination.duration}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                    item.description?.let { desc ->
+                                    destination.description?.let { description ->
                                         Text(
-                                            text = desc,
-                                            fontSize = 12.sp,
+                                            text = description,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,
-                                            modifier = Modifier.padding(top = 6.dp)
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(12.dp))
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = item.price,
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = PeruGold40
+                                            text = destination.price,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
-                                        Button(
-                                            onClick = navigateToTravelRequest,
-                                            shape = RoundedCornerShape(10.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
-                                        ) {
-                                            Text("Solicitar viaje", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        TextButton(onClick = navigateToTravelRequest) {
+                                            Text("Solicitar")
                                         }
                                     }
                                 }
@@ -467,22 +445,46 @@ fun HomeScreen(
 }
 
 @Composable
-private fun RequestNotificationPermission() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+private fun DestinationLoadingState() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        CircularProgressIndicator()
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "Buscando destinos...",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
 
-    val context = LocalContext.current
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { }
-    )
-
-    LaunchedEffect(Unit) {
-        if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
+@Composable
+private fun DestinationErrorState(message: String, onRetry: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            Text(
+                text = "No pudimos cargar los destinos",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            TextButton(onClick = onRetry) { Text("Intentar de nuevo") }
         }
     }
 }

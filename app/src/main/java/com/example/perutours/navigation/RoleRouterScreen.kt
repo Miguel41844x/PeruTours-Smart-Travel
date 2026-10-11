@@ -1,8 +1,15 @@
 package com.example.perutours.navigation
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -12,8 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.perutours.data.repository.ProfileRepository
+import com.example.perutours.ui.components.PeruToursBrand
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
@@ -79,11 +88,10 @@ fun RoleRouterScreen(
                 }
             }
 
-        } catch (e: Exception) {
+        } catch (_: Exception) {
 
             errorMessage =
-                e.localizedMessage
-                    ?: "No se pudo obtener el rol del usuario."
+                "No pudimos abrir tu cuenta. Revisa tu conexión e inténtalo nuevamente."
 
         } finally {
 
@@ -91,20 +99,37 @@ fun RoleRouterScreen(
         }
     }
 
-    Box(
+    Surface(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        color = MaterialTheme.colorScheme.background
     ) {
-
-        if (isLoading) {
-
-            CircularProgressIndicator()
-
-        } else if (errorMessage != null) {
-
-            Text(
-                text = errorMessage!!
-            )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            if (isLoading) {
+                PeruToursBrand()
+                Spacer(Modifier.height(32.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 3.dp
+                )
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "Estamos preparando tu espacio de viaje...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
         }
     }
 }

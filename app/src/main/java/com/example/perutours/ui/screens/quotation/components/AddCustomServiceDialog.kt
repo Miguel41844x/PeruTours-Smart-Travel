@@ -1,14 +1,25 @@
 package com.example.perutours.ui.screens.quotation.components
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun AddCustomServiceDialog(
@@ -17,63 +28,87 @@ fun AddCustomServiceDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Tours") }
-    var costStr by remember { mutableStateOf("50") }
-    var qtyStr by remember { mutableStateOf("1") }
+    var costText by remember { mutableStateOf("") }
+    var quantityText by remember { mutableStateOf("1") }
+    var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
+        modifier = Modifier.imePadding(),
         onDismissRequest = onDismiss,
-        title = { Text("Añadir Servicio Personalizado", fontSize = 16.sp) },
+        title = { Text("Añadir servicio") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Úsalo cuando el servicio no esté disponible en el catálogo.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nombre del Servicio") },
-                    placeholder = { Text("Ej. Vuelo sobre Líneas de Nazca") },
-                    modifier = Modifier.fillMaxWidth()
+                    onValueChange = {
+                        name = it
+                        error = null
+                    },
+                    label = { Text("Nombre del servicio") },
+                    placeholder = { Text("Ej. Vuelo sobre las Líneas de Nazca") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
                 OutlinedTextField(
                     value = category,
-                    onValueChange = { category = it },
-                    label = { Text("Categoría (Alojamiento, Tours, etc.)") },
-                    modifier = Modifier.fillMaxWidth()
+                    onValueChange = {
+                        category = it
+                        error = null
+                    },
+                    label = { Text("Categoría") },
+                    placeholder = { Text("Tours, alojamiento, transporte...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = costStr,
-                        onValueChange = { costStr = it },
-                        label = { Text("Costo (USD)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
+                        value = costText,
+                        onValueChange = {
+                            costText = it.filter { character -> character.isDigit() || character == '.' }
+                            error = null
+                        },
+                        label = { Text("Costo USD") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
                     )
                     OutlinedTextField(
-                        value = qtyStr,
-                        onValueChange = { qtyStr = it },
-                        label = { Text("Cant.") },
+                        value = quantityText,
+                        onValueChange = {
+                            quantityText = it.filter(Char::isDigit).take(2)
+                            error = null
+                        },
+                        label = { Text("Cantidad") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(0.7f)
+                        modifier = Modifier.weight(0.8f),
+                        singleLine = true
                     )
+                }
+                error?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val cost = costStr.toDoubleOrNull() ?: 0.0
-                    val qty = qtyStr.toIntOrNull() ?: 1
-                    if (name.isNotBlank() && cost > 0) {
-                        onConfirm(name.trim(), category.trim(), cost, qty)
+                    val cost = costText.toDoubleOrNull()
+                    val quantity = quantityText.toIntOrNull()
+                    when {
+                        name.isBlank() -> error = "Ingresa el nombre del servicio."
+                        category.isBlank() -> error = "Ingresa una categoría."
+                        cost == null || cost <= 0 -> error = "Ingresa un costo mayor que cero."
+                        quantity == null || quantity !in 1..99 -> error = "Ingresa una cantidad válida."
+                        else -> onConfirm(name.trim(), category.trim(), cost, quantity)
                     }
                 }
-            ) {
-                Text("Añadir")
-            }
+            ) { Text("Añadir") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        },
-        shape = RoundedCornerShape(20.dp)
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
 }

@@ -1,6 +1,6 @@
 package com.example.perutours.ui.screens.quotation
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,24 +9,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -34,7 +34,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,14 +41,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.QuotationObservation
+import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.SectionHeading
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuotationDetailScreen(
     quotation: Quotation,
@@ -71,7 +69,7 @@ fun QuotationDetailScreen(
     if (showAcceptConfirmation) {
         ConfirmationDialog(
             title = "Aceptar cotización",
-            message = "Se confirmará el paquete y se generará tu reserva.",
+            message = "Confirmaremos esta propuesta y crearemos tu reserva.",
             confirmLabel = "Aceptar y reservar",
             onDismiss = { showAcceptConfirmation = false },
             onConfirm = {
@@ -84,7 +82,7 @@ fun QuotationDetailScreen(
     if (showCancelConfirmation) {
         ConfirmationDialog(
             title = "Cancelar cotización",
-            message = "La propuesta quedará cancelada y ya no podrá aceptarse.",
+            message = "La propuesta quedará cancelada y ya no podrás aceptarla.",
             confirmLabel = "Cancelar cotización",
             destructive = true,
             onDismiss = { showCancelConfirmation = false },
@@ -106,209 +104,225 @@ fun QuotationDetailScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Cotización #${quotation.id.takeLast(6)}",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar"
-                        )
-                    }
-                }
-            )
-        },
+        topBar = { PeruToursTopBar(title = "Detalle de cotización", onBack = onNavigateBack) },
         bottomBar = {
             if (showCustomerActions && canRespond) {
                 CustomerResponseBar(
                     enabled = !isSavingResponse,
                     onAccept = { showAcceptConfirmation = true },
-                    onObserve = { showObservationDialog = true },
+                    onRequestChanges = { showObservationDialog = true },
                     onCancel = { showCancelConfirmation = true }
                 )
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = 20.dp,
+                vertical = 18.dp
+            )
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 720.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.large
                 ) {
-                    Text(
-                        text = quotation.destination,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color(0xFF1F2937),
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuotationStatus(status = quotation.status)
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = quotation.destination,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Text(
+                                    text = "Cotización #${quotation.id.takeLast(6).uppercase()}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            QuotationStatusPill(status = quotation.status)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Groups,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "${quotation.travelerCount} ${if (quotation.travelerCount == 1) "viajero" else "viajeros"}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Text(
+                            text = formatQuotationAmount(quotation.totalAmount, quotation.currency),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Preparada por ${quotation.agentName} · Válida hasta ${quotation.validityDate}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
-            }
-
-            item {
-                Text(
-                    text = "Asesor turístico: ${quotation.agentName} • Vigencia: ${quotation.validityDate}",
-                    fontSize = 12.sp,
-                    color = Color(0xFF6B7280)
-                )
             }
 
             if (responseMessage != null) {
                 item {
                     Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
                         color = if (responseIsError) {
                             MaterialTheme.colorScheme.errorContainer
                         } else {
-                            Color(0xFFDCFCE7)
+                            MaterialTheme.colorScheme.tertiaryContainer
                         },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        shape = MaterialTheme.shapes.medium
                     ) {
                         Text(
                             text = responseMessage,
                             color = if (responseIsError) {
                                 MaterialTheme.colorScheme.onErrorContainer
                             } else {
-                                Color(0xFF166534)
+                                MaterialTheme.colorScheme.onTertiaryContainer
                             },
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(12.dp)
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(14.dp)
                         )
                     }
                 }
             }
 
             item {
-                Text(
-                    text = "Servicios incluidos (${quotation.services.size})",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                SectionHeading(
+                    title = "Servicios incluidos",
+                    supportingText = "${quotation.services.size} elementos en la propuesta",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 720.dp)
                 )
             }
 
-            items(
-                items = quotation.services,
-                key = { service -> service.id }
-            ) { service ->
+            items(items = quotation.services, key = { service -> service.id }) { service ->
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 720.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = service.name,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Cantidad: ${service.quantity} • ${service.category}",
-                                fontSize = 11.sp,
-                                color = Color(0xFF6B7280)
-                            )
-                        }
-                        Text(
-                            text = "$${"%.2f".format(service.subtotal)} ${quotation.currency}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF1C1917), RoundedCornerShape(8.dp))
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
+                            .padding(14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(service.name, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                text = "${service.category} · Cantidad ${service.quantity}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(
-                            text = "TOTAL DEL PAQUETE",
-                            color = Color(0xFF9CA3AF),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            text = "$${"%.2f".format(quotation.totalAmount)} ${quotation.currency}",
-                            color = Color(0xFFFBBF24),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black
+                            text = formatQuotationAmount(service.subtotal, quotation.currency),
+                            style = MaterialTheme.typography.titleSmall
                         )
                     }
                 }
             }
 
             item {
-                Text(
-                    text = "Condiciones comerciales",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = quotation.conditions,
-                    fontSize = 11.sp,
-                    color = Color(0xFF4B5563),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 720.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Total del paquete", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = formatQuotationAmount(quotation.totalAmount, quotation.currency),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 720.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("Condiciones", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = quotation.conditions.ifBlank { "No se indicaron condiciones adicionales." },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             if (observations.isNotEmpty()) {
                 item {
-                    Text(
-                        text = "Historial de observaciones",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 8.dp)
+                    SectionHeading(
+                        title = "Cambios solicitados",
+                        supportingText = "Historial de mensajes sobre esta propuesta",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp)
                     )
                 }
-                items(
-                    items = observations,
-                    key = { observation -> observation.id }
-                ) { observation ->
+                items(items = observations, key = { observation -> observation.id }) { observation ->
                     Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        shape = MaterialTheme.shapes.medium
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Text(
-                                text = observation.authorName.ifBlank { "Cliente" },
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp
+                                observation.authorName.ifBlank { "Cliente" },
+                                style = MaterialTheme.typography.labelLarge
                             )
                             Text(
-                                text = observation.message,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(top = 4.dp)
+                                observation.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -322,53 +336,64 @@ fun QuotationDetailScreen(
 private fun CustomerResponseBar(
     enabled: Boolean,
     onAccept: () -> Unit,
-    onObserve: () -> Unit,
+    onRequestChanges: () -> Unit,
     onCancel: () -> Unit
 ) {
     Surface(
         shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier.navigationBarsPadding()
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Button(
-                onClick = onAccept,
-                enabled = enabled,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+                    .widthIn(max = 720.dp)
             ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null)
-                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                Text("Aceptar y reservar", fontWeight = FontWeight.Bold)
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onObserve,
+                Button(
+                    onClick = onAccept,
                     enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary
+                    )
                 ) {
-                    Icon(Icons.Default.EditNote, contentDescription = null)
-                    Text("Observar", modifier = Modifier.padding(start = 6.dp))
+                    Icon(Icons.Default.CheckCircle, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Aceptar y reservar")
                 }
-                TextButton(
-                    onClick = onCancel,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.EventBusy, contentDescription = null)
-                    Text("Cancelar", modifier = Modifier.padding(start = 6.dp))
+                    OutlinedButton(
+                        onClick = onRequestChanges,
+                        enabled = enabled,
+                        modifier = Modifier.weight(1.4f)
+                    ) {
+                        Icon(Icons.Default.EditNote, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Solicitar cambios")
+                    }
+                    TextButton(
+                        onClick = onCancel,
+                        enabled = enabled,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.EventBusy, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Cancelar")
+                    }
                 }
             }
         }
@@ -376,22 +401,20 @@ private fun CustomerResponseBar(
 }
 
 @Composable
-private fun ObservationDialog(
-    onDismiss: () -> Unit,
-    onSubmit: (String) -> Unit
-) {
+private fun ObservationDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
     var message by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
+        modifier = Modifier.imePadding(),
         onDismissRequest = onDismiss,
-        title = { Text("Observar cotización") },
+        title = { Text("Solicitar cambios") },
         text = {
             Column {
                 Text(
-                    text = "Indica al agente qué debe revisar o modificar.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 13.sp
+                    text = "Explica qué debería revisar o modificar el agente.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = message,
@@ -401,7 +424,7 @@ private fun ObservationDialog(
                             error = null
                         }
                     },
-                    label = { Text("Observación") },
+                    label = { Text("Cambios solicitados") },
                     supportingText = {
                         Text(error ?: "${message.length}/${QuotationResponseValidator.MAX_OBSERVATION_LENGTH}")
                     },
@@ -419,15 +442,9 @@ private fun ObservationDialog(
                     val validationError = QuotationResponseValidator.validateObservation(message)
                     if (validationError == null) onSubmit(message.trim()) else error = validationError
                 }
-            ) {
-                Text("Enviar")
-            }
+            ) { Text("Enviar solicitud") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Volver")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Volver") } }
     )
 }
 
@@ -448,37 +465,14 @@ private fun ConfirmationDialog(
             TextButton(onClick = onConfirm) {
                 Text(
                     text = confirmLabel,
-                    color = if (destructive) MaterialTheme.colorScheme.error else Color(0xFF047857)
+                    color = if (destructive) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.tertiary
+                    }
                 )
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Volver")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Volver") } }
     )
-}
-
-@Composable
-private fun QuotationStatus(status: String) {
-    val colors = when (status) {
-        Quotation.STATUS_ACCEPTED -> Color(0xFFDCFCE7) to Color(0xFF166534)
-        Quotation.STATUS_OBSERVED -> Color(0xFFDBEAFE) to Color(0xFF1D4ED8)
-        Quotation.STATUS_CANCELLED -> Color(0xFFFEE2E2) to Color(0xFFB91C1C)
-        else -> Color(0xFFFEF3C7) to Color(0xFFB45309)
-    }
-
-    Surface(
-        color = colors.first,
-        contentColor = colors.second,
-        shape = RoundedCornerShape(6.dp)
-    ) {
-        Text(
-            text = status,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        )
-    }
 }

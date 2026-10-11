@@ -30,9 +30,9 @@ class CustomerQuotationViewModel(
             _quotationsState.value = CustomerQuotationsUiState.Loading
             _quotationsState.value = try {
                 CustomerQuotationsUiState.Success(repository.getCurrentClientQuotations())
-            } catch (exception: Exception) {
+            } catch (_: Exception) {
                 CustomerQuotationsUiState.Error(
-                    exception.localizedMessage ?: "No se pudieron cargar tus cotizaciones."
+                    "No pudimos cargar tus cotizaciones. Revisa tu conexión."
                 )
             }
         }
@@ -56,10 +56,9 @@ class CustomerQuotationViewModel(
                     quotation = quotation,
                     observations = observations
                 )
-            } catch (exception: Exception) {
+            } catch (_: Exception) {
                 CustomerQuotationDetailUiState(
-                    errorMessage = exception.localizedMessage
-                        ?: "No se pudo cargar la cotización."
+                    errorMessage = "No pudimos cargar esta cotización. Inténtalo nuevamente."
                 )
             }
         }
@@ -126,9 +125,9 @@ class CustomerQuotationViewModel(
                     quotation = updatedQuotation,
                     message = successMessage
                 )
-            } catch (exception: Exception) {
+            } catch (_: Exception) {
                 _responseState.value = QuotationResponseUiState.Error(
-                    exception.localizedMessage ?: "No se pudo actualizar la cotización."
+                    "No pudimos actualizar la cotización. Inténtalo nuevamente."
                 )
             }
         }

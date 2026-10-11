@@ -13,45 +13,54 @@ import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
     primary = PeruGold80,
-    onPrimary = Color(0xFF451A03),
+    onPrimary = Color(0xFF56110C),
     primaryContainer = PeruGoldContainerDark,
-    onPrimaryContainer = Color(0xFFFEF3C7),
+    onPrimaryContainer = Color(0xFFFFDAD5),
 
     secondary = PeruTerracotta80,
-    onSecondary = Color(0xFF431407),
+    onSecondary = Color(0xFF482900),
     secondaryContainer = PeruTerracottaContainerDark,
-    onSecondaryContainer = Color(0xFFFFEDD5),
+    onSecondaryContainer = Color(0xFFFFDEA4),
 
     tertiary = PeruEmerald80,
-    onTertiary = Color(0xFF022C22),
+    onTertiary = Color(0xFF00382E),
+    tertiaryContainer = PeruEmeraldContainerDark,
+    onTertiaryContainer = Color(0xFFA8F2DD),
 
     background = BackgroundDark,
     surface = SurfaceDark,
     surfaceVariant = SurfaceVariantDark,
     onBackground = OnSurfaceDark,
     onSurface = OnSurfaceDark,
-    onSurfaceVariant = OnSurfaceVariantDark
+    onSurfaceVariant = OnSurfaceVariantDark,
+    outline = OutlineDark,
+    outlineVariant = OutlineVariantDark
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = PeruGold40,
+    primary = PeruBrick,
     onPrimary = Color.White,
-    primaryContainer = PeruGoldContainerLight,
-    onPrimaryContainer = OnPeruGoldContainerLight,
+    primaryContainer = PeruBrickContainer,
+    onPrimaryContainer = OnPeruBrickContainer,
 
-    secondary = PeruTerracotta40,
+    secondary = PeruMaizeDark,
     onSecondary = Color.White,
-    secondaryContainer = PeruTerracottaContainerLight,
+    secondaryContainer = PeruMaizeContainer,
+    onSecondaryContainer = OnPeruMaizeContainer,
 
-    tertiary = PeruEmerald40,
+    tertiary = PeruValley,
     onTertiary = Color.White,
+    tertiaryContainer = PeruValleyContainer,
+    onTertiaryContainer = OnPeruValleyContainer,
 
     background = BackgroundLight,
     surface = SurfaceLight,
     surfaceVariant = SurfaceVariantLight,
     onBackground = OnSurfaceLight,
     onSurface = OnSurfaceLight,
-    onSurfaceVariant = OnSurfaceVariantLight
+    onSurfaceVariant = OnSurfaceVariantLight,
+    outline = OutlineLight,
+    outlineVariant = OutlineVariantLight
 )
 
 @Composable
@@ -73,7 +82,8 @@ fun PeruToursTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography, // Asegúrate de vincular tu Typography existente
+        typography = Typography,
+        shapes = Shapes,
         content = content
     )
 }
