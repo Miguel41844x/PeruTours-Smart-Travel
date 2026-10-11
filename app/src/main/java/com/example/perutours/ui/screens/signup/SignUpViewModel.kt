@@ -15,8 +15,12 @@ class SignUpViewModel(
     private val _uiState = MutableStateFlow(SignUpUiState())
     val uiState: StateFlow<SignUpUiState> = _uiState.asStateFlow()
 
+    // Solo permite letras en español, tildes, ñ y espacios (máximo 60 caracteres)
     fun onNameChange(name: String) {
-        _uiState.update { it.copy(name = name, nameError = null, generalError = null) }
+        val isOnlyLettersAndSpaces = name.all { it.isLetter() || it.isWhitespace() }
+        if (isOnlyLettersAndSpaces && name.length <= 60) {
+            _uiState.update { it.copy(name = name, nameError = null, generalError = null) }
+        }
     }
 
     fun onEmailChange(email: String) {

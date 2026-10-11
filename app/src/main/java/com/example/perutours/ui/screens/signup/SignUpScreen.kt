@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -81,7 +82,7 @@ fun SignUpScreen(
                 modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
             )
 
-            // Nombre completo
+            // Nombre completo con restricción de solo texto y mayúscula inicial por palabra
             OutlinedTextField(
                 value = uiState.name,
                 onValueChange = viewModel::onNameChange,
@@ -91,7 +92,11 @@ fun SignUpScreen(
                 supportingText = uiState.nameError?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    capitalization = KeyboardCapitalization.Words
+                )
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -128,7 +133,7 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Contraseña (mínimo 6 caracteres, mayúscula, minúscula y número)
+            // Contraseña (mínimo 6 caracteres, mayúscula, número y símbolo)
             OutlinedTextField(
                 value = uiState.password,
                 onValueChange = viewModel::onPasswordChange,
@@ -178,7 +183,7 @@ fun SignUpScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Las cuentas públicas siempre se registran como clientes (como estaba antes)
+            // Las cuentas públicas siempre se registran como clientes
             Text(
                 text = "Tipo de cuenta",
                 fontSize = 15.sp,

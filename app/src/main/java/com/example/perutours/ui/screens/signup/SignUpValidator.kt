@@ -32,9 +32,13 @@ object SignUpValidator {
         val cleanPass = password.trim()
         val cleanConfirm = confirmPassword.trim()
 
+        // Expresión regular: solo letras en español (con tildes, ñ, diéresis) y espacios
+        val nameRegex = Regex("^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ ]+$")
+
         val nameError = when {
             cleanName.isBlank() -> "El nombre completo es obligatorio."
             cleanName.length < 3 -> "Ingresa un nombre válido (mínimo 3 caracteres)."
+            !nameRegex.matches(cleanName) -> "El nombre solo puede contener letras y espacios."
             else -> null
         }
 
