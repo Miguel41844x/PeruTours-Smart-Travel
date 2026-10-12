@@ -40,7 +40,8 @@ service cloud.firestore {
     //
     // reservations/{reservationId}
     //   id, quotationId, requestId, clientId, agentId, destination,
-    //   travelerCount, totalAmount, currency, status, createdAtMillis.
+    //   travelerCount, services, totalAmount, currency, validityDate,
+    //   conditions, status, createdAtMillis.
     //   HU06 uses the quotation ID as the reservation document ID.
     //
     // fcm_push_logs/{logId}
@@ -482,13 +483,15 @@ service cloud.firestore {
     function isValidReservation(data) {
       return hasRequiredFields(data, [
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
-          'destination', 'travelerCount', 'totalAmount', 'currency',
-          'status', 'createdAtMillis'
+          'destination', 'travelerCount', 'services', 'totalAmount',
+          'currency', 'validityDate', 'conditions', 'status',
+          'createdAtMillis'
         ])
         && hasOnlyAllowedFields(data, [
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
-          'destination', 'travelerCount', 'totalAmount', 'currency',
-          'status', 'createdAtMillis'
+          'destination', 'travelerCount', 'services', 'totalAmount',
+          'currency', 'validityDate', 'conditions', 'status',
+          'createdAtMillis'
         ])
         && validString(data.id, 1, 128)
         && validString(data.quotationId, 1, 128)
@@ -499,8 +502,13 @@ service cloud.firestore {
         && data.travelerCount is int
         && data.travelerCount >= 1
         && data.travelerCount <= 20
+        && isValidQuotationServices(data.services)
         && isPositiveBoundedNumber(data.totalAmount, 200000000)
         && data.currency in ['USD', 'PEN']
+        && data.validityDate is string
+        && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.conditions is string
+        && data.conditions.size() <= 2000
         && data.status == 'Confirmada'
         && isRecentMillis(data.createdAtMillis);
     }
@@ -769,10 +777,16 @@ service cloud.firestore {
           == request.resource.data.destination
         && getAfter(quotationPath(reservationId)).data.travelerCount
           == request.resource.data.travelerCount
+        && getAfter(quotationPath(reservationId)).data.services
+          == request.resource.data.services
         && getAfter(quotationPath(reservationId)).data.totalAmount
           == request.resource.data.totalAmount
         && getAfter(quotationPath(reservationId)).data.currency
-          == request.resource.data.currency;
+          == request.resource.data.currency
+        && getAfter(quotationPath(reservationId)).data.validityDate
+          == request.resource.data.validityDate
+        && getAfter(quotationPath(reservationId)).data.conditions
+          == request.resource.data.conditions;
 
       allow update, delete: if false;
     }

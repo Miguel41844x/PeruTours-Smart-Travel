@@ -163,8 +163,11 @@ class QuotationRepository(
                 agentId = quotation.agentId,
                 destination = quotation.destination,
                 travelerCount = quotation.travelerCount,
+                services = quotation.services,
                 totalAmount = quotation.totalAmount,
                 currency = quotation.currency,
+                validityDate = quotation.validityDate,
+                conditions = quotation.conditions,
                 createdAtMillis = respondedAt
             )
 
