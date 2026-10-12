@@ -16,6 +16,8 @@ data class TravelRequestValidationResult(
 }
 
 object TravelRequestValidator {
+    const val MAX_PLACE_LENGTH = 120
+
     fun validate(
         destination: String,
         originCity: String,

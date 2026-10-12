@@ -18,6 +18,7 @@ class TravelRequestViewModel(
 ) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(TravelRequestUiState())
     val uiState: StateFlow<TravelRequestUiState> = _uiState.asStateFlow()
+    private val placeResolver = TravelRequestPlaceResolver(locationRepository)
 
     fun onDestinationChanged(value: String) {
         _uiState.value = _uiState.value.copy(
@@ -140,19 +141,23 @@ class TravelRequestViewModel(
 
             try {
                 var state = _uiState.value
-                val destinationLocation = locationRepository.findPlace(state.destination)
-                if (destinationLocation == null) {
-                    _uiState.value = state.copy(
-                        destinationError = "No encontramos ese destino. Selecciona un lugar real.",
-                        isSaving = false,
-                        message = "Revisa el destino ingresado."
+                val places = when (
+                    val result = placeResolver.resolve(
+                        destinationQuery = state.destination,
+                        originCity = state.originCity,
+                        originLatitude = state.originLatitude,
+                        originLongitude = state.originLongitude
                     )
-                    return@launch
-                }
-
-                if (state.originLatitude == null || state.originLongitude == null) {
-                    val originLocation = locationRepository.findPlace(state.originCity)
-                    if (originLocation == null) {
+                ) {
+                    PlaceResolutionResult.InvalidDestination -> {
+                        _uiState.value = state.copy(
+                            destinationError = "No encontramos ese destino. Selecciona un lugar real.",
+                            isSaving = false,
+                            message = "Revisa el destino ingresado."
+                        )
+                        return@launch
+                    }
+                    PlaceResolutionResult.InvalidOrigin -> {
                         _uiState.value = state.copy(
                             originCityError = "No encontramos esa ciudad de origen.",
                             isSaving = false,
@@ -160,18 +165,24 @@ class TravelRequestViewModel(
                         )
                         return@launch
                     }
-
-                    state = state.copy(
-                        originCity = originLocation.city,
-                        originLatitude = originLocation.latitude,
-                        originLongitude = originLocation.longitude
-                    )
-                    _uiState.value = state.copy(isSaving = true)
+                    is PlaceResolutionResult.Success -> result
                 }
+
+                state = state.copy(
+                    destination = places.destination.city
+                        .take(TravelRequestValidator.MAX_PLACE_LENGTH),
+                    originCity = places.origin.city
+                        .take(TravelRequestValidator.MAX_PLACE_LENGTH),
+                    originLatitude = places.origin.latitude,
+                    originLongitude = places.origin.longitude
+                )
+                _uiState.value = state.copy(isSaving = true)
 
                 val savedRequest = requestRepository.save(
                     TravelRequest(
                         destination = state.destination.trim(),
+                        destinationLatitude = places.destination.latitude,
+                        destinationLongitude = places.destination.longitude,
                         originCity = state.originCity.trim(),
                         originLatitude = state.originLatitude,
                         originLongitude = state.originLongitude,
