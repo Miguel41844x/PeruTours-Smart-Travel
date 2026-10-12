@@ -12,17 +12,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class HomeViewModel(application: Application) : AndroidViewModel(application) {
-
+class HomeViewModel(
+    application: Application,
     private val repository: DestinationRepository
+) : AndroidViewModel(application) {
+
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        val database = AppDatabase.getInstance(application)
-        val apiService = NetworkClient.getApiService(application)
-        repository = DestinationRepository(apiService, database.destinationDao())
-
         // 1. Escuchar Room SQLite en tiempo real (Single Source of Truth)
         observeLocalDatabase()
 

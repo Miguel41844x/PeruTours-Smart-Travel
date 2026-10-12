@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AgentRequestsViewModel(
-    private val repository: TravelRequestRepository = TravelRequestRepository()
+    private val repository: TravelRequestRepository
 ) : ViewModel() {
 
     private val _requests = MutableStateFlow<List<TravelRequest>>(emptyList())

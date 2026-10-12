@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
-    private val authRepository: AuthRepository = AuthRepository(),
-    private val fcmTokenManager: FCMTokenManager = FCMTokenManager()
+    private val authRepository: AuthRepository,
+    private val fcmTokenManager: FCMTokenManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())

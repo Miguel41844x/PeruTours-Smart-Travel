@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CustomerQuotationViewModel(
-    private val repository: QuotationRepository = QuotationRepository()
+    private val repository: QuotationRepository
 ) : ViewModel() {
 
     private val _quotationsState =

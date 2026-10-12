@@ -15,10 +15,6 @@ class TravelRequestViewModel(
     application: Application,
     private val requestRepository: TravelRequestRepository
 ) : AndroidViewModel(application) {
-    constructor(application: Application) : this(
-        application = application,
-        requestRepository = TravelRequestRepository()
-    )
 
     private val locationRepository = LocationRepository(application)
     private val _uiState = MutableStateFlow(TravelRequestUiState())

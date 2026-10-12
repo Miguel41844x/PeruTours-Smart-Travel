@@ -17,11 +17,6 @@ class ProfileViewModel(
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
-    constructor() : this(
-        repository = ProfileRepository(),
-        auth = FirebaseAuth.getInstance()
-    )
-
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> =
         _uiState.asStateFlow()

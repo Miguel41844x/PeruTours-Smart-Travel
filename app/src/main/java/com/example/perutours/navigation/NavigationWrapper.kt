@@ -10,7 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -199,7 +199,7 @@ fun NavigationWrapper(
                 backStackEntry.arguments?.getString("requestId")
                     ?: ""
 
-            val quotationViewModel: QuotationViewModel = viewModel()
+            val quotationViewModel: QuotationViewModel = koinViewModel()
 
             LaunchedEffect(requestId) {
                 quotationViewModel.loadRequestForQuotation(requestId)
@@ -226,7 +226,7 @@ fun NavigationWrapper(
 
         composable(route = "agent_quotation_detail/{quotationId}") { backStackEntry ->
             val quotationId = backStackEntry.arguments?.getString("quotationId") ?: ""
-            val quotationViewModel: QuotationViewModel = viewModel()
+            val quotationViewModel: QuotationViewModel = koinViewModel()
             val uiState by quotationViewModel.uiState.collectAsState()
 
             LaunchedEffect(quotationId) {
@@ -279,7 +279,7 @@ fun NavigationWrapper(
 
         composable(route = "customer_quotation/{quotationId}") { backStackEntry ->
             val quotationId = backStackEntry.arguments?.getString("quotationId").orEmpty()
-            val customerViewModel: CustomerQuotationViewModel = viewModel()
+            val customerViewModel: CustomerQuotationViewModel = koinViewModel()
             val detailState by customerViewModel.detailState.collectAsState()
             val responseState by customerViewModel.responseState.collectAsState()
 

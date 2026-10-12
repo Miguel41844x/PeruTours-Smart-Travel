@@ -43,7 +43,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.ui.components.PeruToursBrand
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.ScreenHorizontalPadding
@@ -53,7 +53,7 @@ fun LoginScreen(
     navigateToSignUp: () -> Unit,
     navigateToHome: () -> Unit,
     navigateBack: () -> Unit = {},
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val passwordFocus = remember { FocusRequester() }

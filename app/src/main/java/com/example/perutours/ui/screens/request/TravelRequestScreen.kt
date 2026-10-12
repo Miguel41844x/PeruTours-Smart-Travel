@@ -58,7 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit
 fun TravelRequestScreen(
     onBack: () -> Unit = {},
     onSaved: () -> Unit = {},
-    viewModel: TravelRequestViewModel = viewModel()
+    viewModel: TravelRequestViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }

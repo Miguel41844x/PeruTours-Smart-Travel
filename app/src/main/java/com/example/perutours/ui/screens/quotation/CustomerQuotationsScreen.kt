@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.ui.components.PeruToursTopBar
 import java.text.NumberFormat
@@ -63,7 +63,7 @@ private enum class QuotationFilter(val label: String) {
 fun CustomerQuotationsScreen(
     onNavigateBack: () -> Unit,
     onQuotationSelected: (String) -> Unit,
-    viewModel: CustomerQuotationViewModel = viewModel()
+    viewModel: CustomerQuotationViewModel = koinViewModel()
 ) {
     val state by viewModel.quotationsState.collectAsStateWithLifecycle()
     var selectedFilter by remember { mutableStateOf(QuotationFilter.ALL) }

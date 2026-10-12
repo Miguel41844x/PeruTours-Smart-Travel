@@ -49,7 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.data.model.TravelRequest
 import com.example.perutours.ui.components.PeruToursTopBar
 import java.text.SimpleDateFormat
@@ -66,7 +66,7 @@ private enum class RequestFilter(val label: String) {
 fun AgentRequestsScreen(
     onNavigateBack: () -> Unit,
     onRequestSelected: (String) -> Unit,
-    viewModel: AgentRequestsViewModel = viewModel()
+    viewModel: AgentRequestsViewModel = koinViewModel()
 ) {
     val requests by viewModel.requests.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()

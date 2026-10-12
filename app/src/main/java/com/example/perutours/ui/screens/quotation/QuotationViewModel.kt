@@ -18,11 +18,10 @@ import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestRepository
 
 class QuotationViewModel(
-    private val repository: QuotationRepository = QuotationRepository(),
-    private val catalogRepository: ServiceCatalogRepository =
-        ServiceCatalogRepository(),
-    private val travelRequestRepository: TravelRequestRepository = TravelRequestRepository(),
-    private val profileRepository: ProfileRepository = ProfileRepository()
+    private val repository: QuotationRepository,
+    private val catalogRepository: ServiceCatalogRepository,
+    private val travelRequestRepository: TravelRequestRepository,
+    private val profileRepository: ProfileRepository
 ) : ViewModel() {
 
     private val _formState = MutableStateFlow(QuotationFormState())
