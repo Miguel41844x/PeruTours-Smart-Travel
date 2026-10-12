@@ -7,15 +7,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,12 +32,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.SectionHeading
+import com.example.perutours.ui.screens.quotation.ConfirmedStatusPill
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.screens.quotation.formatQuotationCreatedAt
+import com.example.perutours.ui.theme.PeruGold40
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,7 +50,8 @@ import java.util.Locale
 @Composable
 fun ReservationDetailScreen(
     reservation: Reservation,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToPayment: () -> Unit = {}
 ) {
     Scaffold(
         topBar = { PeruToursTopBar(title = "Detalle de reserva", onBack = onNavigateBack) },
@@ -228,6 +240,50 @@ fun ReservationDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
                     )
+                }
+            }
+
+            // HU07: Botón para Registrar Comprobante de Pago
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                if (reservation.status.equals("Pagado", ignoreCase = true)) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFECFDF5)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("Pago Registrado y Confirmado", fontWeight = FontWeight.Bold, color = Color(0xFF065F46))
+                                Text("Tu comprobante ya ha sido procesado.", fontSize = 12.sp, color = Color(0xFF047857))
+                            }
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = onNavigateToPayment,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+                    ) {
+                        Icon(Icons.Default.Payment, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Registrar Comprobante de Pago (HU07)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
                 }
             }
         }

@@ -30,6 +30,7 @@ import com.example.perutours.ui.screens.reservation.CustomerReservationsScreen
 import com.example.perutours.ui.screens.reservation.ReservationDetailScreen
 import com.example.perutours.ui.screens.request.TravelRequestScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
+import com.example.perutours.ui.screens.payment.PaymentScreen
 import com.example.perutours.service.MyFirebaseMessagingService
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
@@ -111,7 +112,6 @@ fun NavigationWrapper(
         }
 
         composable(route = "role_router") {
-
             RoleRouterScreen(
                 navController = navHostController,
                 auth = auth
@@ -119,19 +119,13 @@ fun NavigationWrapper(
         }
 
         composable(route = "agent_home") {
-
             AgentHomeScreen(
-
                 auth = auth,
-
                 onViewRequests = {
                     navHostController.navigate("agent_requests")
                 },
-
                 onLogout = {
-
                     auth.signOut()
-
                     navHostController.navigate("initial") {
                         popUpTo(0) {
                             inclusive = true
@@ -204,7 +198,6 @@ fun NavigationWrapper(
         }
 
         composable(route = "create_quotation/{requestId}") { backStackEntry ->
-
             val requestId =
                 backStackEntry.arguments?.getString("requestId")
                     ?: ""
@@ -342,7 +335,12 @@ fun NavigationWrapper(
             if (reservation != null) {
                 ReservationDetailScreen(
                     reservation = reservation,
-                    onNavigateBack = { navHostController.popBackStack() }
+                    onNavigateBack = { navHostController.popBackStack() },
+                    onNavigateToPayment = {
+                        navHostController.navigate(
+                            "payment/${reservation.quotationId}/${reservation.id}/${reservation.totalAmount}/${reservation.currency}"
+                        )
+                    }
                 )
             } else {
                 Box(
@@ -407,6 +405,27 @@ fun NavigationWrapper(
                     }
                 }
             }
+        }
+
+        // HU07: Ruta del Registro de Pago con CameraX y WorkManager
+        composable(route = "payment/{quotationId}/{reservationId}/{amount}/{currency}") { backStackEntry ->
+            val quotationId = backStackEntry.arguments?.getString("quotationId").orEmpty()
+            val reservationId = backStackEntry.arguments?.getString("reservationId").orEmpty()
+            val amount = backStackEntry.arguments?.getString("amount")?.toDoubleOrNull() ?: 0.0
+            val currency = backStackEntry.arguments?.getString("currency") ?: "USD"
+
+            PaymentScreen(
+                quotationId = quotationId,
+                reservationId = reservationId,
+                totalAmount = amount,
+                currency = currency,
+                onNavigateBack = { navHostController.popBackStack() },
+                onPaymentSuccess = {
+                    navHostController.navigate("customer_reservations") {
+                        popUpTo("home") { inclusive = false }
+                    }
+                }
+            )
         }
     }
 }
