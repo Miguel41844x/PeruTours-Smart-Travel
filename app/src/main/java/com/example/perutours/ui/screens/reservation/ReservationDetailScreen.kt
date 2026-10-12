@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.sp
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.SectionHeading
-import com.example.perutours.ui.screens.quotation.ConfirmedStatusPill
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.screens.quotation.formatQuotationCreatedAt
 import com.example.perutours.ui.theme.PeruGold40
