@@ -3,14 +3,14 @@ package com.example.perutours.ui.screens.agent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.TravelRequest
-import com.example.perutours.data.repository.TravelRequestRepository
+import com.example.perutours.data.repository.TravelRequestDataSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class AgentRequestsViewModel(
-    private val repository: TravelRequestRepository
+    private val repository: TravelRequestDataSource
 ) : ViewModel() {
 
     private val _requests = MutableStateFlow<List<TravelRequest>>(emptyList())

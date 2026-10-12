@@ -46,7 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "perutours_db"
                 )
                     .addMigrations(MIGRATION_1_2)
-                    .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance
                 instance

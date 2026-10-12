@@ -38,7 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
@@ -48,7 +48,7 @@ import com.example.perutours.ui.screens.quotation.formatQuotationCreatedAt
 fun CustomerReservationsScreen(
     onNavigateBack: () -> Unit,
     onReservationSelected: (String) -> Unit,
-    viewModel: CustomerReservationViewModel = viewModel()
+    viewModel: CustomerReservationViewModel = koinViewModel()
 ) {
     val state by viewModel.reservationsState.collectAsStateWithLifecycle()
 

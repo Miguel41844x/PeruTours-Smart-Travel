@@ -109,6 +109,60 @@ class QuotationRepository(
         return snapshot.toObject(Quotation::class.java)
     }
 
+    suspend fun reviseObservedQuotation(revision: Quotation): Quotation {
+        val currentAgentId = auth.currentUser?.uid
+            ?: throw IllegalStateException("Debes iniciar sesión para revisar la cotización.")
+        require(revision.id.isNotBlank()) { "No se recibió el ID de la cotización." }
+        require(revision.services.isNotEmpty()) { "La cotización debe incluir servicios." }
+        require(revision.validUntilMillis > System.currentTimeMillis()) {
+            "La nueva vigencia debe ser futura."
+        }
+
+        val quotationRef = firestore.collection(COLLECTION_QUOTATIONS).document(revision.id)
+
+        return firestore.runTransaction { transaction ->
+            val current = transaction.get(quotationRef)
+                .toObject(Quotation::class.java)
+                ?: throw IllegalStateException("No se encontró la cotización.")
+
+            if (current.agentId != currentAgentId) {
+                throw IllegalAccessException("La cotización pertenece a otro agente.")
+            }
+            if (current.status != Quotation.STATUS_OBSERVED) {
+                throw IllegalStateException("La cotización no tiene cambios pendientes.")
+            }
+
+            val updated = current.copy(
+                services = revision.services,
+                baseCost = revision.baseCost,
+                marginPercent = revision.marginPercent,
+                totalAmount = revision.totalAmount,
+                validityDate = revision.validityDate,
+                validUntilMillis = revision.validUntilMillis,
+                conditions = revision.conditions,
+                status = Quotation.STATUS_QUOTED
+            )
+            transaction.update(
+                quotationRef,
+                mapOf(
+                    "services" to updated.services,
+                    "baseCost" to updated.baseCost,
+                    "marginPercent" to updated.marginPercent,
+                    "totalAmount" to updated.totalAmount,
+                    "validityDate" to updated.validityDate,
+                    "validUntilMillis" to updated.validUntilMillis,
+                    "conditions" to updated.conditions,
+                    "status" to updated.status
+                )
+            )
+
+            val requestRef = firestore.collection(COLLECTION_REQUESTS)
+                .document(current.requestId)
+            transaction.update(requestRef, "status", Quotation.STATUS_QUOTED)
+            updated
+        }.await()
+    }
+
     suspend fun getCurrentClientQuotationById(quotationId: String): Quotation? {
         val clientId = auth.currentUser?.uid
             ?: throw IllegalStateException("Debes iniciar sesión para consultar la cotización.")

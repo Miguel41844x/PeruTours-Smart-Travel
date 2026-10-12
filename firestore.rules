@@ -449,8 +449,7 @@ service cloud.firestore {
         && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && (!('validUntilMillis' in data)
           || (data.validUntilMillis is int
-            && data.validUntilMillis > data.createdAtMillis
-            && data.validUntilMillis <= data.createdAtMillis + 2764800000))
+            && data.validUntilMillis > data.createdAtMillis))
         && data.conditions is string
         && data.conditions.size() <= 2000
         && data.status in ['Cotizado', 'Aceptada', 'Observada', 'Cancelada']
@@ -582,6 +581,7 @@ service cloud.firestore {
         && data.status == 'Cotizado'
         && data.validUntilMillis is int
         && data.validUntilMillis > request.time.toMillis()
+        && data.validUntilMillis <= request.time.toMillis() + 2678400000
         && data.respondedAtMillis == null
         && data.latestObservation == ''
         && data.reservationId == ''
@@ -621,13 +621,19 @@ service cloud.firestore {
     }
 
     function isValidAgentQuotationUpdate() {
+      let data = request.resource.data;
       return isAgent()
         && resource.data.agentId == request.auth.uid
-        && isValidQuotation(request.resource.data)
+        && isValidQuotation(data)
         && resource.data.status == 'Observada'
-        && request.resource.data.status == 'Cotizado'
-        && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['status']);
+        && data.status == 'Cotizado'
+        && data.validUntilMillis is int
+        && data.validUntilMillis > request.time.toMillis()
+        && data.validUntilMillis <= request.time.toMillis() + 2678400000
+        && data.diff(resource.data).affectedKeys().hasOnly([
+          'services', 'baseCost', 'marginPercent', 'totalAmount',
+          'validityDate', 'validUntilMillis', 'conditions', 'status'
+        ]);
     }
 
     function isValidAgentRequestQuotationUpdate(requestId) {

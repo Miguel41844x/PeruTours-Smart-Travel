@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Luggage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -57,14 +58,18 @@ fun QuotationDetailScreen(
     onCancelQuotation: (String) -> Unit = {},
     observations: List<QuotationObservation> = emptyList(),
     showCustomerActions: Boolean = true,
+    showAgentRevisionAction: Boolean = false,
     isSavingResponse: Boolean = false,
     responseMessage: String? = null,
-    responseIsError: Boolean = false
+    responseIsError: Boolean = false,
+    onViewReservation: (String) -> Unit = {},
+    onReviseQuotation: (String) -> Unit = {}
 ) {
     var showAcceptConfirmation by remember { mutableStateOf(false) }
     var showCancelConfirmation by remember { mutableStateOf(false) }
     var showObservationDialog by remember { mutableStateOf(false) }
     val canRespond = Quotation.canClientRespond(quotation.status)
+    val acceptanceError = QuotationResponseValidator.validateAcceptance(quotation)
 
     if (showAcceptConfirmation) {
         ConfirmationDialog(
@@ -109,9 +114,17 @@ fun QuotationDetailScreen(
             if (showCustomerActions && canRespond) {
                 CustomerResponseBar(
                     enabled = !isSavingResponse,
+                    acceptEnabled = !isSavingResponse && acceptanceError == null,
+                    acceptanceError = acceptanceError,
                     onAccept = { showAcceptConfirmation = true },
                     onRequestChanges = { showObservationDialog = true },
                     onCancel = { showCancelConfirmation = true }
+                )
+            } else if (
+                showAgentRevisionAction && quotation.status == Quotation.STATUS_OBSERVED
+            ) {
+                AgentRevisionBar(
+                    onRevise = { onReviseQuotation(quotation.id) }
                 )
             }
         },
@@ -209,6 +222,49 @@ fun QuotationDetailScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(14.dp)
                         )
+                    }
+                }
+            }
+
+            if (
+                showCustomerActions &&
+                quotation.status == Quotation.STATUS_ACCEPTED &&
+                quotation.reservationId.isNotBlank()
+            ) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Reserva confirmada",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Text(
+                                    text = "El paquete aceptado ya está disponible en tus reservas.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { onViewReservation(quotation.reservationId) },
+                                modifier = Modifier.padding(start = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Luggage, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Ver reserva")
+                            }
+                        }
                     }
                 }
             }
@@ -333,8 +389,38 @@ fun QuotationDetailScreen(
 }
 
 @Composable
+private fun AgentRevisionBar(onRevise: () -> Unit) {
+    Surface(
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.navigationBarsPadding()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Button(
+                onClick = onRevise,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 720.dp)
+                    .height(48.dp)
+            ) {
+                Icon(Icons.Default.EditNote, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Revisar y reenviar")
+            }
+        }
+    }
+}
+
+@Composable
 private fun CustomerResponseBar(
     enabled: Boolean,
+    acceptEnabled: Boolean,
+    acceptanceError: String?,
     onAccept: () -> Unit,
     onRequestChanges: () -> Unit,
     onCancel: () -> Unit
@@ -357,7 +443,7 @@ private fun CustomerResponseBar(
             ) {
                 Button(
                     onClick = onAccept,
-                    enabled = enabled,
+                    enabled = acceptEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -369,6 +455,14 @@ private fun CustomerResponseBar(
                     Icon(Icons.Default.CheckCircle, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Aceptar y reservar")
+                }
+                acceptanceError?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
                 }
                 Row(
                     modifier = Modifier

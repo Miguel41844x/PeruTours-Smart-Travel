@@ -4,6 +4,7 @@ import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.QuotationServiceItem
 
 data class QuotationFormState(
+    val quotationId: String = "",
     val requestId: String = "",
     val clientId: String = "",
     val clientName: String = "",

@@ -3,6 +3,7 @@ package com.example.perutours.ui.screens.quotation
 import com.example.perutours.data.model.QuotationServiceItem
 
 object QuotationValidator {
+    const val MAX_CONDITIONS_LENGTH = 2000
 
     fun validateDestination(destination: String): String? {
         if (destination.trim().isEmpty()) {
@@ -44,5 +45,13 @@ object QuotationValidator {
             return "La vigencia debe encontrarse entre 1 y 30 días."
         }
         return null
+    }
+
+    fun validateConditions(conditions: String): String? {
+        return if (conditions.length > MAX_CONDITIONS_LENGTH) {
+            "Las condiciones no pueden superar $MAX_CONDITIONS_LENGTH caracteres."
+        } else {
+            null
+        }
     }
 }

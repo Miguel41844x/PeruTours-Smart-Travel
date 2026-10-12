@@ -29,7 +29,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,12 +49,14 @@ import com.example.perutours.ui.components.SectionHeading
 import com.example.perutours.ui.screens.quotation.components.AddCustomServiceDialog
 import com.example.perutours.ui.screens.quotation.components.FinancialSummaryCard
 import com.example.perutours.ui.screens.quotation.components.ServiceCatalogItemCard
+import kotlin.math.roundToInt
 
 @Composable
 fun CreateQuotationScreen(
     viewModel: QuotationViewModel,
     onNavigateBack: () -> Unit,
-    onQuotationCreated: (String) -> Unit
+    onQuotationCreated: (String) -> Unit,
+    isRevision: Boolean = false
 ) {
     val formState by viewModel.formState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -74,7 +78,7 @@ fun CreateQuotationScreen(
     Scaffold(
         topBar = {
             PeruToursTopBar(
-                title = "Crear cotización",
+                title = if (isRevision) "Revisar cotización" else "Crear cotización",
                 onBack = onNavigateBack,
                 actions = {
                     IconButton(onClick = { showCustomDialog = true }) {
@@ -112,7 +116,13 @@ fun CreateQuotationScreen(
                         } else {
                             Icon(Icons.Default.Check, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Guardar y notificar al cliente")
+                            Text(
+                                if (isRevision) {
+                                    "Actualizar y reenviar"
+                                } else {
+                                    "Guardar y notificar al cliente"
+                                }
+                            )
                         }
                     }
                 }
@@ -168,6 +178,44 @@ fun CreateQuotationScreen(
                     travelerCount = formState.travelerCount,
                     modifier = Modifier.widthIn(max = 900.dp)
                 )
+            }
+
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 900.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SectionHeading(
+                        title = "Vigencia y condiciones",
+                        supportingText = "Define hasta cuándo puede responder el cliente."
+                    )
+                    Text(
+                        text = "Vigencia: ${formState.validityDays} días",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    Slider(
+                        value = formState.validityDays.toFloat(),
+                        onValueChange = { value ->
+                            viewModel.setValidityDays(value.roundToInt())
+                        },
+                        valueRange = 1f..30f,
+                        steps = 28
+                    )
+                    OutlinedTextField(
+                        value = formState.conditions,
+                        onValueChange = viewModel::setConditions,
+                        label = { Text("Condiciones de la propuesta") },
+                        supportingText = {
+                            Text(
+                                "${formState.conditions.length}/${QuotationValidator.MAX_CONDITIONS_LENGTH}"
+                            )
+                        },
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             item {

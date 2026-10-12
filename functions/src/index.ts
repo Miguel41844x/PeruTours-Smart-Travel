@@ -93,6 +93,42 @@ export const enviarRespuestaCotizacion = onDocumentUpdated(
       return;
     }
 
+    if (
+      before.status === "Observada" &&
+      after.status === "Cotizado" &&
+      after.clientId
+    ) {
+      const clientDocument = await db
+        .collection("users")
+        .doc(after.clientId)
+        .get();
+      const clientToken = clientDocument.data()?.fcmToken;
+
+      if (!clientToken) {
+        console.log(`El cliente ${after.clientId} no tiene fcmToken.`);
+        return;
+      }
+
+      const destination = after.destination || "el viaje solicitado";
+      const quotationId = event.params.quotationId;
+
+      await messaging.send({
+        token: clientToken,
+        notification: {
+          title: "Tu cotización fue actualizada",
+          body: `Revisa la nueva propuesta para ${destination}.`,
+        },
+        data: {
+          quotationId: quotationId,
+          type: "quotation",
+          status: "Cotizado",
+        },
+      });
+
+      console.log("Cotización revisada notificada al cliente.");
+      return;
+    }
+
     const responseStatuses = ["Aceptada", "Observada", "Cancelada"];
     if (!responseStatuses.includes(after.status) || !after.agentId) {
       return;

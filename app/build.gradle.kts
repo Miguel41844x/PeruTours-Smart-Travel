@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.perutours"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.perutours"
@@ -70,7 +70,9 @@ dependencies {
 
     // Tests
     testImplementation(libs.junit)
-    testImplementation("androidx.room:room-testing:2.6.1")
+    testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -85,9 +87,9 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Room SQLite (Criterio 3: Persistencia offline sin duplicados)
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // Koin: Inyección de dependencias
     implementation(libs.koin.android)

@@ -6,13 +6,15 @@ import com.example.perutours.data.location.LocationRepository
 import com.example.perutours.data.repository.AuthRepository
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.data.repository.QuotationRepository
+import com.example.perutours.data.repository.ReservationDataSource
+import com.example.perutours.data.repository.ReservationRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
-import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 import com.example.perutours.ui.screens.login.LoginViewModel
@@ -21,6 +23,7 @@ import com.example.perutours.ui.screens.profile.ProfileViewModel
 import com.example.perutours.ui.screens.agent.AgentRequestsViewModel
 import com.example.perutours.ui.screens.quotation.QuotationViewModel
 import com.example.perutours.ui.screens.quotation.CustomerQuotationViewModel
+import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
 
 import android.app.Application
 import com.example.perutours.data.local.AppDatabase
@@ -67,6 +70,13 @@ val appModule = module {
 
     single {
         QuotationRepository(
+            auth = get(),
+            firestore = get()
+        )
+    }
+
+    single<ReservationDataSource> {
+        ReservationRepository(
             auth = get(),
             firestore = get()
         )
@@ -145,6 +155,12 @@ val appModule = module {
 
     viewModel {
         CustomerQuotationViewModel(
+            repository = get()
+        )
+    }
+
+    viewModel {
+        CustomerReservationViewModel(
             repository = get()
         )
     }

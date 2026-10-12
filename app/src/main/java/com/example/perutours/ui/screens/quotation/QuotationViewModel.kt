@@ -16,12 +16,12 @@ import java.text.SimpleDateFormat
 import java.util.*
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
-import com.example.perutours.data.repository.TravelRequestRepository
+import com.example.perutours.data.repository.TravelRequestDataSource
 
 class QuotationViewModel(
     private val repository: QuotationRepository,
     private val catalogRepository: ServiceCatalogRepository,
-    private val travelRequestRepository: TravelRequestRepository,
+    private val travelRequestRepository: TravelRequestDataSource,
     private val profileRepository: ProfileRepository
 ) : ViewModel() {
 
@@ -126,6 +126,48 @@ class QuotationViewModel(
         }
     }
 
+    fun loadQuotationForRevision(quotationId: String) {
+        if (quotationId.isBlank()) {
+            _uiState.value = QuotationUiState.Error("No se recibió el ID de la cotización.")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = QuotationUiState.Loading
+            try {
+                val quotation = repository.getQuotationById(quotationId)
+                    ?: throw IllegalStateException("No se encontró la cotización.")
+                if (quotation.status != Quotation.STATUS_OBSERVED) {
+                    throw IllegalStateException("La cotización no tiene cambios pendientes.")
+                }
+
+                _formState.value = QuotationFormState(
+                    quotationId = quotation.id,
+                    requestId = quotation.requestId,
+                    clientId = quotation.clientId,
+                    clientName = quotation.clientName,
+                    clientEmail = quotation.clientEmail,
+                    destination = quotation.destination,
+                    travelerCount = quotation.travelerCount,
+                    selectedServices = quotation.services,
+                    marginPercent = quotation.marginPercent,
+                    validityDays = DEFAULT_REVISION_VALIDITY_DAYS,
+                    conditions = quotation.conditions,
+                    clientFcmToken = quotation.clientFcmToken
+                )
+                _uiState.value = QuotationUiState.Idle
+            } catch (exception: IllegalStateException) {
+                _uiState.value = QuotationUiState.Error(
+                    exception.message ?: "No pudimos cargar la cotización."
+                )
+            } catch (_: Exception) {
+                _uiState.value = QuotationUiState.Error(
+                    "No pudimos cargar la cotización para revisión."
+                )
+            }
+        }
+    }
+
     fun addServiceFromCatalog(catalog: CatalogService) {
         val newItem = QuotationServiceItem(
             id = catalog.id,
@@ -182,15 +224,24 @@ class QuotationViewModel(
     }
 
     fun setConditions(text: String) {
-        _formState.update { it.copy(conditions = text) }
+        _formState.update {
+            it.copy(conditions = text.take(QuotationValidator.MAX_CONDITIONS_LENGTH))
+        }
     }
 
     fun saveQuotation() {
         val form = _formState.value
 
-        val servicesError = QuotationValidator.validateServices(form.selectedServices)
-        if (servicesError != null) {
-            _uiState.value = QuotationUiState.Error(servicesError)
+        val validationError = listOfNotNull(
+            QuotationValidator.validateDestination(form.destination),
+            QuotationValidator.validateClientName(form.clientName),
+            QuotationValidator.validateServices(form.selectedServices),
+            QuotationValidator.validateMargin(form.marginPercent),
+            QuotationValidator.validateValidityDays(form.validityDays),
+            QuotationValidator.validateConditions(form.conditions)
+        ).firstOrNull()
+        if (validationError != null) {
+            _uiState.value = QuotationUiState.Error(validationError)
             return
         }
 
@@ -202,6 +253,7 @@ class QuotationViewModel(
         val validityStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
 
         val quotation = Quotation(
+            id = form.quotationId,
             requestId = form.requestId,
             clientId = form.clientId,
             clientName = form.clientName,
@@ -224,7 +276,11 @@ class QuotationViewModel(
         viewModelScope.launch {
             _uiState.value = QuotationUiState.Loading
             try {
-                val saved = repository.saveQuotation(quotation)
+                val saved = if (form.quotationId.isBlank()) {
+                    repository.saveQuotation(quotation)
+                } else {
+                    repository.reviseObservedQuotation(quotation)
+                }
                 _uiState.value = QuotationUiState.Success(saved)
             } catch (_: Exception) {
                 _uiState.value = QuotationUiState.Error(
@@ -232,5 +288,9 @@ class QuotationViewModel(
                 )
             }
         }
+    }
+
+    companion object {
+        private const val DEFAULT_REVISION_VALIDITY_DAYS = 5
     }
 }
