@@ -201,6 +201,38 @@ fun QuotationDetailScreen(
                 }
             }
 
+            if (
+                showAgentRevisionAction &&
+                quotation.status == Quotation.STATUS_OBSERVED &&
+                quotation.latestObservation.isNotBlank()
+            ) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Indicación del turista",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = quotation.latestObservation,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
             if (responseMessage != null) {
                 item {
                     Surface(
