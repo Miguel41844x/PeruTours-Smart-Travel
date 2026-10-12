@@ -194,6 +194,11 @@ fun NavigationWrapper(
                     navHostController.navigate(
                         "create_quotation/$requestId"
                     )
+                },
+                onQuotationSelected = { quotationId ->
+                    navHostController.navigate(
+                        "agent_quotation_detail/$quotationId"
+                    )
                 }
             )
         }
@@ -219,10 +224,8 @@ fun NavigationWrapper(
                     navHostController.navigate(
                         "agent_quotation_detail/$quotationId"
                     ) {
-                        popUpTo(
-                            "create_quotation/{requestId}"
-                        ) {
-                            inclusive = true
+                        popUpTo("agent_home") {
+                            inclusive = false
                         }
                     }
                 }
@@ -238,13 +241,20 @@ fun NavigationWrapper(
                 quotationViewModel.loadQuotationById(quotationId)
             }
 
+            val returnToAgentMenu = {
+                navHostController.navigate("agent_home") {
+                    popUpTo("agent_home") { inclusive = true }
+                }
+            }
+
             when (val state = uiState) {
                 is QuotationUiState.Success -> {
                     QuotationDetailScreen(
                         quotation = state.quotation,
-                        onNavigateBack = { navHostController.popBackStack() },
+                        onNavigateBack = returnToAgentMenu,
                         showCustomerActions = false,
                         showAgentRevisionAction = true,
+                        onAgentMenu = returnToAgentMenu,
                         onReviseQuotation = { id ->
                             navHostController.navigate("revise_quotation/$id")
                         }
@@ -293,8 +303,8 @@ fun NavigationWrapper(
                     navHostController.navigate(
                         "agent_quotation_detail/$revisedQuotationId"
                     ) {
-                        popUpTo("revise_quotation/{quotationId}") {
-                            inclusive = true
+                        popUpTo("agent_home") {
+                            inclusive = false
                         }
                     }
                 }

@@ -8,6 +8,7 @@ import com.example.perutours.data.model.TravelRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import java.util.Locale
 
 class QuotationRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -24,6 +25,21 @@ class QuotationRepository(
             ?: throw IllegalStateException(
                 "No hay un agente autenticado."
             )
+
+        // Validación financiera y de moneda/vigencia
+        require(quotation.currency.equals("USD", ignoreCase = true)) {
+            "La moneda de la cotización debe ser USD."
+        }
+        require(quotation.validUntilMillis > System.currentTimeMillis()) {
+            "La fecha de vigencia debe ser futura."
+        }
+        require(quotation.services.isNotEmpty()) {
+            "La cotización debe incluir al menos un servicio."
+        }
+
+        // Redondeo estricto a 2 decimales
+        val roundedTotal = String.format(Locale.US, "%.2f", quotation.totalAmount).toDouble()
+        val roundedBase = String.format(Locale.US, "%.2f", quotation.baseCost).toDouble()
 
         val agentUid = currentAgent.uid
         val agentEmail = currentAgent.email ?: ""
@@ -46,16 +62,26 @@ class QuotationRepository(
             id = quotationId,
             agentId = agentUid,
             agentName = agentName,
+            baseCost = roundedBase,
+            totalAmount = roundedTotal,
             status = Quotation.STATUS_QUOTED,
             createdAtMillis = System.currentTimeMillis()
         )
 
         val batch = firestore.batch()
 
-        // 1. Guardar documento de cotización
+        // 1. Guardar documento principal de cotización
         batch.set(docRef, quotationToSave)
 
-        // 2. Actualizar estado de la solicitud en 'travel_requests'
+        // 2. Guardar ítems como relación lógica QUOTATION_ITEM (subcolección items)
+        for (item in quotationToSave.services) {
+            val itemRef = docRef.collection("items").document(item.id.ifBlank { firestore.collection("temp").document().id })
+            val roundedSubtotal = String.format(Locale.US, "%.2f", item.subtotal).toDouble()
+            val itemToSave = item.copy(subtotal = roundedSubtotal)
+            batch.set(itemRef, itemToSave)
+        }
+
+        // 3. Actualizar estado de la solicitud en 'travel_requests'
         if (quotation.requestId.isNotBlank()) {
             val requestRef = firestore.collection(COLLECTION_REQUESTS).document(quotation.requestId)
             batch.update(
@@ -67,14 +93,14 @@ class QuotationRepository(
             )
         }
 
-        // 3. Registrar log de evento de Notificación Push FCM
+        // 4. Registrar log de evento de Notificación Push FCM (sin clientFcmToken en cotización, Cloud Functions obtiene el token del usuario)
         val fcmLogRef = firestore.collection(COLLECTION_FCM_LOGS).document()
         batch.set(
             fcmLogRef,
             mapOf(
-                "toToken" to quotation.clientFcmToken,
+                "clientId" to quotation.clientId,
                 "title" to "¡Tu cotización para ${quotation.destination} está lista! ✈️",
-                "body" to "El agente preparó tu propuesta por $${quotation.totalAmount} USD.",
+                "body" to "El agente preparó tu propuesta por $${quotationToSave.totalAmount} USD.",
                 "quotationId" to quotationId,
                 "status" to Quotation.STATUS_QUOTED,
                 "timestamp" to System.currentTimeMillis()
@@ -109,6 +135,15 @@ class QuotationRepository(
         return snapshot.toObject(Quotation::class.java)
     }
 
+    suspend fun getQuotationByRequestId(requestId: String): Quotation? {
+        if (requestId.isBlank()) return null
+        val snapshot = firestore.collection(COLLECTION_QUOTATIONS)
+            .whereEqualTo("requestId", requestId)
+            .get()
+            .await()
+        return snapshot.documents.firstOrNull()?.toObject(Quotation::class.java)
+    }
+
     suspend fun reviseObservedQuotation(revision: Quotation): Quotation {
         val currentAgentId = auth.currentUser?.uid
             ?: throw IllegalStateException("Debes iniciar sesión para revisar la cotización.")
@@ -132,16 +167,25 @@ class QuotationRepository(
                 throw IllegalStateException("La cotización no tiene cambios pendientes.")
             }
 
+            val roundedTotal = String.format(Locale.US, "%.2f", revision.totalAmount).toDouble()
+            val roundedBase = String.format(Locale.US, "%.2f", revision.baseCost).toDouble()
+
+            // Manejo de versiones al corregir una cotización observada
+            val newVersion = current.version + 1
+
             val updated = current.copy(
                 services = revision.services,
-                baseCost = revision.baseCost,
+                baseCost = roundedBase,
                 marginPercent = revision.marginPercent,
-                totalAmount = revision.totalAmount,
+                totalAmount = roundedTotal,
                 validityDate = revision.validityDate,
                 validUntilMillis = revision.validUntilMillis,
                 conditions = revision.conditions,
-                status = Quotation.STATUS_QUOTED
+                status = Quotation.STATUS_QUOTED,
+                version = newVersion,
+                parentQuotationId = current.id
             )
+
             transaction.update(
                 quotationRef,
                 mapOf(
@@ -152,7 +196,9 @@ class QuotationRepository(
                     "validityDate" to updated.validityDate,
                     "validUntilMillis" to updated.validUntilMillis,
                     "conditions" to updated.conditions,
-                    "status" to updated.status
+                    "status" to updated.status,
+                    "version" to updated.version,
+                    "parentQuotationId" to updated.parentQuotationId
                 )
             )
 

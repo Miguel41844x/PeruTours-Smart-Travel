@@ -5,6 +5,8 @@ data class QuotationServiceItem(
     val name: String = "",
     val category: String = "", // Alojamiento, Transporte, Tours, Guía, Seguro, Alimentación
     val unitCost: Double = 0.0,
+    val commercialCost: Double = 0.0,
+    val supplierName: String = "",
     val quantity: Int = 1,
     val subtotal: Double = unitCost * quantity
 )
@@ -28,7 +30,8 @@ data class Quotation(
     val status: String = STATUS_QUOTED,    // ESTADO OBLIGATORIO: 'Cotizado'
     val agentId: String = "",
     val agentName: String = "Nataly Chávez",
-    val clientFcmToken: String = "",
+    val version: Int = 1,
+    val parentQuotationId: String = "",
     val createdAtMillis: Long = System.currentTimeMillis(),
     val respondedAtMillis: Long? = null,
     val latestObservation: String = "",

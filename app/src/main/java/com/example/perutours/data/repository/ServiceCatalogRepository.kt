@@ -364,6 +364,91 @@ class ServiceCatalogRepository(
                 unitCost = 30.0,
                 description = "Servicio de transporte turístico para recorridos en Ica.",
                 defaultQuantity = 1
+            ),
+
+
+            // =========================
+            // JUNÍN
+            // =========================
+
+            CatalogService(
+                id = "junin_city_tour",
+                name = "City Tour Huancayo y Junín",
+                city = "Junín",
+                category = "Tours",
+                unitCost = 40.0,
+                description = "Recorrido por la Plaza Constitución, la Catedral y principales atractivos de la ciudad.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "junin_huaytapallana",
+                name = "Excursión al Nevado Huaytapallana",
+                city = "Junín",
+                category = "Aventura",
+                unitCost = 85.0,
+                description = "Caminata de alta montaña y vistas panorámicas del majestuoso nevado Huaytapallana.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "junin_wariwillka",
+                name = "Complejo Arqueológico Wariwillka",
+                city = "Junín",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Visita guiada al santuario preincaico y museo de sitio Wariwillka.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "junin_cochas",
+                name = "Tour Artesanal Cochas Chico y Grande",
+                city = "Junín",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Conoce el arte de los mates burilados y la labor de los artesanos locales.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "junin_shucto",
+                name = "Aventura en el Cañón de Shucto",
+                city = "Junín",
+                category = "Aventura",
+                unitCost = 65.0,
+                description = "Exploración y trekking por las formaciones rocosas del impresionante cañón de Shucto.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "junin_gastronomia",
+                name = "Ruta Gastronómica Huancaína",
+                city = "Junín",
+                category = "Experiencias",
+                unitCost = 55.0,
+                description = "Experiencia culinaria para degustar la auténtica pachamanca, papa a la huancaína y platos típicos.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "junin_hotel",
+                name = "Hotel en Junín / Huancayo",
+                city = "Junín",
+                category = "Alojamiento",
+                unitCost = 75.0,
+                description = "Alojamiento turístico por noche en la región Junín.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "junin_transporte",
+                name = "Transporte Turístico Junín",
+                city = "Junín",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de transporte turístico para traslados y excursiones en Junín.",
+                defaultQuantity = 1
             )
         )
 

@@ -48,10 +48,10 @@ class QuotationViewModel(
         viewModelScope.launch {
             _catalogLoading.value = true
             try {
+                // Para actualizar/subir los servicios a Firestore
                 catalogRepository.syncCatalog()
-                _catalogServices.value =
-                    catalogRepository.getServices()
 
+                _catalogServices.value = catalogRepository.getServices()
             } catch (_: Exception) {
                 _uiState.value =
                     QuotationUiState.Error(
@@ -93,8 +93,7 @@ class QuotationViewModel(
                         clientName = clientProfile.name,
                         clientEmail = clientProfile.email,
                         destination = request.destination,
-                        travelerCount = request.travelerCount,
-                        clientFcmToken = ""
+                        travelerCount = request.travelerCount
                     )
                 }
 
@@ -152,8 +151,7 @@ class QuotationViewModel(
                     selectedServices = quotation.services,
                     marginPercent = quotation.marginPercent,
                     validityDays = DEFAULT_REVISION_VALIDITY_DAYS,
-                    conditions = quotation.conditions,
-                    clientFcmToken = quotation.clientFcmToken
+                    conditions = quotation.conditions
                 )
                 _uiState.value = QuotationUiState.Idle
             } catch (exception: IllegalStateException) {
@@ -269,8 +267,7 @@ class QuotationViewModel(
                 .validUntilExclusiveMillis(validityStr)
                 ?: 0L,
             conditions = form.conditions,
-            status = Quotation.STATUS_QUOTED, // 'Cotizado'
-            clientFcmToken = form.clientFcmToken
+            status = Quotation.STATUS_QUOTED // 'Cotizado'
         )
 
         viewModelScope.launch {

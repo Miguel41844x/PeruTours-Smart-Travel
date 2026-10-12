@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Luggage
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,7 +64,8 @@ fun QuotationDetailScreen(
     responseMessage: String? = null,
     responseIsError: Boolean = false,
     onViewReservation: (String) -> Unit = {},
-    onReviseQuotation: (String) -> Unit = {}
+    onReviseQuotation: (String) -> Unit = {},
+    onAgentMenu: () -> Unit = {}
 ) {
     var showAcceptConfirmation by remember { mutableStateOf(false) }
     var showCancelConfirmation by remember { mutableStateOf(false) }
@@ -120,11 +122,11 @@ fun QuotationDetailScreen(
                     onRequestChanges = { showObservationDialog = true },
                     onCancel = { showCancelConfirmation = true }
                 )
-            } else if (
-                showAgentRevisionAction && quotation.status == Quotation.STATUS_OBSERVED
-            ) {
+            } else if (showAgentRevisionAction) {
                 AgentRevisionBar(
-                    onRevise = { onReviseQuotation(quotation.id) }
+                    isObserved = quotation.status == Quotation.STATUS_OBSERVED,
+                    onRevise = { onReviseQuotation(quotation.id) },
+                    onAgentMenu = onAgentMenu
                 )
             }
         },
@@ -389,7 +391,11 @@ fun QuotationDetailScreen(
 }
 
 @Composable
-private fun AgentRevisionBar(onRevise: () -> Unit) {
+private fun AgentRevisionBar(
+    isObserved: Boolean,
+    onRevise: () -> Unit,
+    onAgentMenu: () -> Unit
+) {
     Surface(
         shadowElevation = 8.dp,
         color = MaterialTheme.colorScheme.surface,
@@ -401,16 +407,34 @@ private fun AgentRevisionBar(onRevise: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             contentAlignment = Alignment.Center
         ) {
-            Button(
-                onClick = onRevise,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .widthIn(max = 720.dp)
-                    .height(48.dp)
+                    .widthIn(max = 720.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.EditNote, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Revisar y reenviar")
+                if (isObserved) {
+                    Button(
+                        onClick = onRevise,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Icon(Icons.Default.EditNote, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Revisar y reenviar")
+                    }
+                }
+                OutlinedButton(
+                    onClick = onAgentMenu,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Icon(Icons.Default.Store, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Ir al menú")
+                }
             }
         }
     }

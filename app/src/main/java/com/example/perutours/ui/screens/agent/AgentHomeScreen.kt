@@ -38,9 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,63 +49,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgentHomeScreen(
     auth: FirebaseAuth,
     onViewRequests: () -> Unit,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    viewModel: AgentHomeViewModel = koinViewModel()
 ) {
-    val currentUser = auth.currentUser
-    val uid = currentUser?.uid.orEmpty()
-    val rawName = currentUser?.displayName.orEmpty()
-    var agentName by remember {
-        mutableStateOf(
-            rawName.substringBefore("|").trim().takeIf(String::isNotBlank)
-                ?: currentUser?.email?.substringBefore("@")
-                ?: "Agente"
-        )
-    }
-    var photoUrl by remember { mutableStateOf(currentUser?.photoUrl?.toString().orEmpty()) }
-    var pendingCount by remember { mutableIntStateOf(0) }
-    var quotedCount by remember { mutableIntStateOf(0) }
-    var isLoadingCounts by remember { mutableStateOf(true) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showLogoutDialog by remember { mutableStateOf(false) }
-
-    DisposableEffect(uid) {
-        val firestore = FirebaseFirestore.getInstance()
-        val userListener = uid.takeIf(String::isNotEmpty)?.let { userId ->
-            firestore.collection("users").document(userId)
-                .addSnapshotListener { snapshot, _ ->
-                    if (snapshot?.exists() == true) {
-                        snapshot.getString("name")?.takeIf(String::isNotBlank)?.let { agentName = it }
-                        snapshot.getString("photoUrl")?.let { photoUrl = it }
-                    }
-                }
-        }
-        val requestsListener = firestore.collection("travel_requests")
-            .addSnapshotListener { snapshot, _ ->
-                if (snapshot != null) {
-                    pendingCount = snapshot.documents.count { document ->
-                        document.getString("status").orEmpty().contains("Pendiente", ignoreCase = true)
-                    }
-                    quotedCount = snapshot.documents.count { document ->
-                        document.getString("status").orEmpty().equals("Cotizado", ignoreCase = true)
-                    }
-                    isLoadingCounts = false
-                }
-            }
-        onDispose {
-            userListener?.remove()
-            requestsListener.remove()
-        }
-    }
 
     if (showLogoutDialog) {
         AlertDialog(
@@ -133,11 +91,11 @@ fun AgentHomeScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AgentAvatar(name = agentName, photoUrl = photoUrl)
+                        AgentAvatar(name = uiState.agentName, photoUrl = uiState.photoUrl)
                         Spacer(Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = agentName,
+                                text = uiState.agentName,
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -198,7 +156,7 @@ fun AgentHomeScreen(
                 ) {
                     MetricCard(
                         label = "Pendientes",
-                        value = if (isLoadingCounts) "—" else pendingCount.toString(),
+                        value = if (uiState.isLoadingCounts) "—" else uiState.pendingCount.toString(),
                         icon = { Icon(Icons.Default.HourglassEmpty, contentDescription = null) },
                         emphasized = true,
                         onClick = onViewRequests,
@@ -206,7 +164,7 @@ fun AgentHomeScreen(
                     )
                     MetricCard(
                         label = "Cotizadas",
-                        value = if (isLoadingCounts) "—" else quotedCount.toString(),
+                        value = if (uiState.isLoadingCounts) "—" else uiState.quotedCount.toString(),
                         icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
                         emphasized = false,
                         onClick = onViewRequests,
@@ -216,8 +174,8 @@ fun AgentHomeScreen(
 
                 SectionHeading(
                     title = "Solicitudes de viaje",
-                    supportingText = if (pendingCount > 0) {
-                        "$pendingCount ${if (pendingCount == 1) "solicitud necesita" else "solicitudes necesitan"} una cotización."
+                    supportingText = if (uiState.pendingCount > 0) {
+                        "${uiState.pendingCount} ${if (uiState.pendingCount == 1) "solicitud necesita" else "solicitudes necesitan"} una cotización."
                     } else {
                         "No hay solicitudes pendientes por ahora."
                     }

@@ -33,6 +33,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
+import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.TravelRequest
 import com.example.perutours.ui.components.PeruToursTopBar
 import java.text.SimpleDateFormat
@@ -59,6 +63,8 @@ import java.util.Locale
 private enum class RequestFilter(val label: String) {
     PENDING("Pendientes"),
     QUOTED("Cotizadas"),
+    ACCEPTED("Aceptadas"),
+    OBSERVED("Observadas"),
     ALL("Todas")
 }
 
@@ -66,6 +72,7 @@ private enum class RequestFilter(val label: String) {
 fun AgentRequestsScreen(
     onNavigateBack: () -> Unit,
     onRequestSelected: (String) -> Unit,
+    onQuotationSelected: (String) -> Unit,
     viewModel: AgentRequestsViewModel = koinViewModel()
 ) {
     val requests by viewModel.requests.collectAsState()
@@ -76,7 +83,13 @@ fun AgentRequestsScreen(
         requests.count { it.status.contains("Pendiente", ignoreCase = true) }
     }
     val quotedCount = remember(requests) {
-        requests.count { it.status.equals("Cotizado", ignoreCase = true) }
+        requests.count { it.status.equals("Cotizado", ignoreCase = true) || it.status.equals(Quotation.STATUS_QUOTED, ignoreCase = true) }
+    }
+    val acceptedCount = remember(requests) {
+        requests.count { it.status.equals("Aceptada", ignoreCase = true) || it.status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || it.status.contains("Aceptad", ignoreCase = true) }
+    }
+    val observedCount = remember(requests) {
+        requests.count { it.status.equals("Observada", ignoreCase = true) || it.status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || it.status.contains("Observad", ignoreCase = true) || it.status.contains("Cambios", ignoreCase = true) }
     }
     val filteredRequests = remember(requests, selectedFilter) {
         when (selectedFilter) {
@@ -84,7 +97,13 @@ fun AgentRequestsScreen(
                 it.status.contains("Pendiente", ignoreCase = true)
             }
             RequestFilter.QUOTED -> requests.filter {
-                it.status.equals("Cotizado", ignoreCase = true)
+                it.status.equals("Cotizado", ignoreCase = true) || it.status.equals(Quotation.STATUS_QUOTED, ignoreCase = true)
+            }
+            RequestFilter.ACCEPTED -> requests.filter {
+                it.status.equals("Aceptada", ignoreCase = true) || it.status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || it.status.contains("Aceptad", ignoreCase = true)
+            }
+            RequestFilter.OBSERVED -> requests.filter {
+                it.status.equals("Observada", ignoreCase = true) || it.status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || it.status.contains("Observad", ignoreCase = true) || it.status.contains("Cambios", ignoreCase = true)
             }
             RequestFilter.ALL -> requests
         }
@@ -120,12 +139,15 @@ fun AgentRequestsScreen(
                     val count = when (filter) {
                         RequestFilter.PENDING -> pendingCount
                         RequestFilter.QUOTED -> quotedCount
+                        RequestFilter.ACCEPTED -> acceptedCount
+                        RequestFilter.OBSERVED -> observedCount
                         RequestFilter.ALL -> requests.size
                     }
                     FilterChip(
                         selected = selectedFilter == filter,
                         onClick = { selectedFilter = filter },
                         label = { Text("${filter.label} ($count)") },
+                        colors = getFilterColors(filter, selectedFilter == filter),
                         leadingIcon = if (selectedFilter == filter) {
                             { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
                         } else null
@@ -149,7 +171,13 @@ fun AgentRequestsScreen(
                     items(items = filteredRequests, key = TravelRequest::id) { request ->
                         TravelRequestCard(
                             request = request,
-                            onClick = { onRequestSelected(request.id) },
+                            onClick = {
+                                viewModel.openRequest(
+                                    request = request,
+                                    onNavigateToCreate = onRequestSelected,
+                                    onNavigateToDetail = onQuotationSelected
+                                )
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .widthIn(max = 900.dp)
@@ -363,23 +391,55 @@ private fun RequestFact(icon: @Composable () -> Unit, text: String) {
 }
 
 @Composable
+private fun getFilterColors(filter: RequestFilter, selected: Boolean) = run {
+    val (container, content) = when (filter) {
+        RequestFilter.PENDING -> Color(0xFFFEF3C7) to Color(0xFFB45309) // Ámbar
+        RequestFilter.QUOTED -> Color(0xFFE0F2FE) to Color(0xFF0369A1) // Azul
+        RequestFilter.ACCEPTED -> Color(0xFFD1FAE5) to Color(0xFF047857) // Verde
+        RequestFilter.OBSERVED -> Color(0xFFFFEDD5) to Color(0xFFC2410C) // Naranja
+        RequestFilter.ALL -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    FilterChipDefaults.filterChipColors(
+        containerColor = container.copy(alpha = if (selected) 1f else 0.4f),
+        labelColor = content,
+        selectedContainerColor = container,
+        selectedLabelColor = content,
+        selectedLeadingIconColor = content
+    )
+}
+
+@Composable
 private fun RequestStatus(status: String, isPending: Boolean) {
+    val (container, content) = when {
+        isPending || status.contains("Pendiente", ignoreCase = true) ->
+            Color(0xFFFEF3C7) to Color(0xFFB45309) // Ámbar
+        status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || status.contains("Aceptad", ignoreCase = true) ->
+            Color(0xFFD1FAE5) to Color(0xFF047857) // Verde
+        status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || status.contains("Observad", ignoreCase = true) || status.contains("Cambios", ignoreCase = true) ->
+            Color(0xFFFFEDD5) to Color(0xFFC2410C) // Naranja
+        status.equals(Quotation.STATUS_CANCELLED, ignoreCase = true) || status.contains("Cancelad", ignoreCase = true) ->
+            Color(0xFFF1F5F9) to Color(0xFF64748B) // Gris
+        else ->
+            Color(0xFFE0F2FE) to Color(0xFF0369A1) // Azul
+    }
+    val label = when {
+        isPending || status.contains("Pendiente", ignoreCase = true) -> "Pendiente"
+        status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || status.contains("Observad", ignoreCase = true) -> "Observada"
+        status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || status.contains("Aceptad", ignoreCase = true) -> "Aceptada"
+        status.equals(Quotation.STATUS_QUOTED, ignoreCase = true) || status.equals("Cotizado", ignoreCase = true) -> "Cotizado"
+        else -> status
+    }
+
     Surface(
-        color = if (isPending) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.tertiaryContainer
-        },
-        contentColor = if (isPending) {
-            MaterialTheme.colorScheme.onSecondaryContainer
-        } else {
-            MaterialTheme.colorScheme.onTertiaryContainer
-        },
+        color = container,
+        contentColor = content,
         shape = MaterialTheme.shapes.small
     ) {
         Text(
-            text = if (isPending) "Pendiente" else status,
+            text = label,
             style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
         )
     }

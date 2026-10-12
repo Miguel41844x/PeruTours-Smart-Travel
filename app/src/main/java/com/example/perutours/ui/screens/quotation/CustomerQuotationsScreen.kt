@@ -28,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -296,14 +297,22 @@ private fun CustomerQuotationCard(
 @Composable
 internal fun QuotationStatusPill(status: String) {
     val (container, content) = when (status) {
-        Quotation.STATUS_ACCEPTED -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
-        Quotation.STATUS_OBSERVED -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-        Quotation.STATUS_CANCELLED -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+        Quotation.STATUS_ACCEPTED -> Color(0xFFD1FAE5) to Color(0xFF047857) // Verde
+        Quotation.STATUS_OBSERVED -> Color(0xFFFFEDD5) to Color(0xFFC2410C) // Naranja
+        Quotation.STATUS_CANCELLED -> Color(0xFFF1F5F9) to Color(0xFF64748B) // Gris
+        Quotation.STATUS_QUOTED -> Color(0xFFE0F2FE) to Color(0xFF0369A1) // Azul
+        else -> {
+            when {
+                status.contains("Aceptad", ignoreCase = true) -> Color(0xFFD1FAE5) to Color(0xFF047857)
+                status.contains("Observad", ignoreCase = true) || status.contains("Cambios", ignoreCase = true) -> Color(0xFFFFEDD5) to Color(0xFFC2410C)
+                status.contains("Cancelad", ignoreCase = true) -> Color(0xFFF1F5F9) to Color(0xFF64748B)
+                else -> Color(0xFFE0F2FE) to Color(0xFF0369A1)
+            }
+        }
     }
-    val label = when (status) {
-        Quotation.STATUS_OBSERVED -> "Cambios solicitados"
-        Quotation.STATUS_QUOTED -> "Por responder"
+    val label = when {
+        status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || status.contains("Observad", ignoreCase = true) -> "Cambios solicitados"
+        status.equals(Quotation.STATUS_QUOTED, ignoreCase = true) || status.equals("Cotizado", ignoreCase = true) -> "Cotizado"
         else -> status
     }
 

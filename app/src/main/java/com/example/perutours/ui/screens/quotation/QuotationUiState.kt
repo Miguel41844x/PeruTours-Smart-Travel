@@ -14,8 +14,7 @@ data class QuotationFormState(
     val selectedServices: List<QuotationServiceItem> = emptyList(),
     val marginPercent: Int = 15,
     val validityDays: Int = 5,
-    val conditions: String = "Tarifa garantizada hasta fecha de validez. Modificaciones de fecha permitidas con 72h de anticipación.",
-    val clientFcmToken: String = ""
+    val conditions: String = "Tarifa garantizada hasta fecha de validez. Modificaciones de fecha permitidas con 72h de anticipación."
 )
 
 sealed interface QuotationUiState {

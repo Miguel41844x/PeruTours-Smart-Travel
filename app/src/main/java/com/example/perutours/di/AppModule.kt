@@ -21,6 +21,7 @@ import com.example.perutours.ui.screens.login.LoginViewModel
 import com.example.perutours.ui.screens.signup.SignUpViewModel
 import com.example.perutours.ui.screens.profile.ProfileViewModel
 import com.example.perutours.ui.screens.agent.AgentRequestsViewModel
+import com.example.perutours.ui.screens.agent.AgentHomeViewModel
 import com.example.perutours.ui.screens.quotation.QuotationViewModel
 import com.example.perutours.ui.screens.quotation.CustomerQuotationViewModel
 import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
@@ -141,7 +142,15 @@ val appModule = module {
 
     viewModel {
         AgentRequestsViewModel(
-            repository = get()
+            repository = get(),
+            quotationRepository = get()
+        )
+    }
+
+    viewModel {
+        AgentHomeViewModel(
+            auth = get(),
+            firestore = get()
         )
     }
 
