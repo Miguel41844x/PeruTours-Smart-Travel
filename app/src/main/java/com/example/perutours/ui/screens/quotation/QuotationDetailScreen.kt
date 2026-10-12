@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Luggage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -59,7 +60,8 @@ fun QuotationDetailScreen(
     showCustomerActions: Boolean = true,
     isSavingResponse: Boolean = false,
     responseMessage: String? = null,
-    responseIsError: Boolean = false
+    responseIsError: Boolean = false,
+    onViewReservation: (String) -> Unit = {}
 ) {
     var showAcceptConfirmation by remember { mutableStateOf(false) }
     var showCancelConfirmation by remember { mutableStateOf(false) }
@@ -212,6 +214,49 @@ fun QuotationDetailScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(14.dp)
                         )
+                    }
+                }
+            }
+
+            if (
+                showCustomerActions &&
+                quotation.status == Quotation.STATUS_ACCEPTED &&
+                quotation.reservationId.isNotBlank()
+            ) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Reserva confirmada",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Text(
+                                    text = "El paquete aceptado ya está disponible en tus reservas.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { onViewReservation(quotation.reservationId) },
+                                modifier = Modifier.padding(start = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Luggage, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Ver reserva")
+                            }
+                        }
                     }
                 }
             }

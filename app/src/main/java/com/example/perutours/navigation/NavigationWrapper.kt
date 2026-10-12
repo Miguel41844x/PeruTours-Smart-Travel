@@ -25,13 +25,15 @@ import com.example.perutours.ui.screens.quotation.QuotationDetailScreen
 import com.example.perutours.ui.screens.quotation.QuotationResponseUiState
 import com.example.perutours.ui.screens.quotation.QuotationUiState
 import com.example.perutours.ui.screens.quotation.QuotationViewModel
+import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
+import com.example.perutours.ui.screens.reservation.CustomerReservationsScreen
+import com.example.perutours.ui.screens.reservation.ReservationDetailScreen
 import com.example.perutours.ui.screens.request.TravelRequestScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
 import com.example.perutours.service.MyFirebaseMessagingService
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
-import com.example.perutours.ui.screens.agent.AgentHomeScreen
 
 @Composable
 fun NavigationWrapper(
@@ -147,6 +149,9 @@ fun NavigationWrapper(
                 },
                 navigateToQuotations = {
                     navHostController.navigate(route = "customer_quotations")
+                },
+                navigateToReservations = {
+                    navHostController.navigate(route = "customer_reservations")
                 },
                 navigateToProfile = {
                     navHostController.navigate(route = "profile")
@@ -277,6 +282,47 @@ fun NavigationWrapper(
             )
         }
 
+        composable(route = "customer_reservations") {
+            CustomerReservationsScreen(
+                onNavigateBack = { navHostController.popBackStack() },
+                onReservationSelected = { reservationId ->
+                    navHostController.navigate("customer_reservation/$reservationId")
+                }
+            )
+        }
+
+        composable(route = "customer_reservation/{reservationId}") { backStackEntry ->
+            val reservationId = backStackEntry.arguments?.getString("reservationId").orEmpty()
+            val reservationViewModel: CustomerReservationViewModel = viewModel()
+            val detailState by reservationViewModel.detailState.collectAsState()
+
+            LaunchedEffect(reservationId) {
+                reservationViewModel.loadReservation(reservationId)
+            }
+
+            val reservation = detailState.reservation
+            if (reservation != null) {
+                ReservationDetailScreen(
+                    reservation = reservation,
+                    onNavigateBack = { navHostController.popBackStack() }
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (detailState.isLoading) {
+                        CircularProgressIndicator()
+                    } else {
+                        Text(
+                            text = detailState.errorMessage
+                                ?: "No se pudo mostrar la reserva."
+                        )
+                    }
+                }
+            }
+        }
+
         composable(route = "customer_quotation/{quotationId}") { backStackEntry ->
             val quotationId = backStackEntry.arguments?.getString("quotationId").orEmpty()
             val customerViewModel: CustomerQuotationViewModel = viewModel()
@@ -303,7 +349,10 @@ fun NavigationWrapper(
                     onNavigateBack = { navHostController.popBackStack() },
                     onAcceptQuotation = customerViewModel::acceptQuotation,
                     onObserveQuotation = customerViewModel::observeQuotation,
-                    onCancelQuotation = customerViewModel::cancelQuotation
+                    onCancelQuotation = customerViewModel::cancelQuotation,
+                    onViewReservation = { reservationId ->
+                        navHostController.navigate("customer_reservation/$reservationId")
+                    }
                 )
             } else {
                 Box(
