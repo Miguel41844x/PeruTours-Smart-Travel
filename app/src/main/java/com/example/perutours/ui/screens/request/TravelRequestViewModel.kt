@@ -3,9 +3,9 @@ package com.example.perutours.ui.screens.request
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.perutours.data.location.LocationRepository
+import com.example.perutours.data.location.LocationDataSource
 import com.example.perutours.data.model.TravelRequest
-import com.example.perutours.data.repository.TravelRequestRepository
+import com.example.perutours.data.repository.TravelRequestDataSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,10 +13,9 @@ import kotlinx.coroutines.launch
 
 class TravelRequestViewModel(
     application: Application,
-    private val requestRepository: TravelRequestRepository
+    private val requestRepository: TravelRequestDataSource,
+    private val locationRepository: LocationDataSource
 ) : AndroidViewModel(application) {
-
-    private val locationRepository = LocationRepository(application)
     private val _uiState = MutableStateFlow(TravelRequestUiState())
     val uiState: StateFlow<TravelRequestUiState> = _uiState.asStateFlow()
 

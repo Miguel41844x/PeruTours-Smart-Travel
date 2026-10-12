@@ -5,11 +5,18 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
+interface TravelRequestDataSource {
+    suspend fun save(request: TravelRequest): TravelRequest
+    suspend fun getPendingRequests(): List<TravelRequest>
+    suspend fun getAllRequests(): List<TravelRequest>
+    suspend fun getRequestById(requestId: String): TravelRequest?
+}
+
 class TravelRequestRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
-) {
-    suspend fun save(request: TravelRequest): TravelRequest {
+) : TravelRequestDataSource {
+    override suspend fun save(request: TravelRequest): TravelRequest {
         val uid = auth.currentUser?.uid
             ?: throw IllegalStateException("No hay un usuario autenticado.")
         val document = firestore.collection(COLLECTION_NAME).document()
@@ -24,7 +31,7 @@ class TravelRequestRepository(
         return savedRequest
     }
 
-    suspend fun getPendingRequests(): List<TravelRequest> {
+    override suspend fun getPendingRequests(): List<TravelRequest> {
         return firestore
             .collection(COLLECTION_NAME)
             .whereEqualTo(
@@ -39,7 +46,7 @@ class TravelRequestRepository(
             }
     }
 
-    suspend fun getAllRequests(): List<TravelRequest> {
+    override suspend fun getAllRequests(): List<TravelRequest> {
         return firestore
             .collection(COLLECTION_NAME)
             .get()
@@ -50,7 +57,7 @@ class TravelRequestRepository(
             }
     }
 
-    suspend fun getRequestById(requestId: String): TravelRequest? {
+    override suspend fun getRequestById(requestId: String): TravelRequest? {
         if (requestId.isBlank()) return null
 
         val document = firestore

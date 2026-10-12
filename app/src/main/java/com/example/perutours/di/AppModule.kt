@@ -1,11 +1,14 @@
 package com.example.perutours.di
 
 import com.example.perutours.data.messaging.FCMTokenManager
+import com.example.perutours.data.location.LocationDataSource
+import com.example.perutours.data.location.LocationRepository
 import com.example.perutours.data.repository.AuthRepository
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.data.repository.QuotationRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestRepository
+import com.example.perutours.data.repository.TravelRequestDataSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -51,11 +54,15 @@ val appModule = module {
         )
     }
 
-    single {
+    single<TravelRequestDataSource> {
         TravelRequestRepository(
             auth = get(),
             firestore = get()
         )
+    }
+
+    single<LocationDataSource> {
+        LocationRepository(androidContext())
     }
 
     single {
@@ -152,7 +159,8 @@ val appModule = module {
     viewModel {
         TravelRequestViewModel(
             application = androidApplication(),
-            requestRepository = get()
+            requestRepository = get(),
+            locationRepository = get()
         )
     }
 }
