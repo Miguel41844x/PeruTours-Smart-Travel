@@ -19,11 +19,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.perutours.navigation.NavigationWrapper
 import com.example.perutours.service.MyFirebaseMessagingService
 import com.example.perutours.ui.theme.PeruToursTheme
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
-
+import com.google.firebase.auth.FirebaseAuth
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
+    private val auth: FirebaseAuth by inject()
     private val pendingQuotationId = mutableStateOf<String?>(null)
     private val pendingNotificationType = mutableStateOf<String?>(null)
 
@@ -33,8 +33,6 @@ class MainActivity : ComponentActivity() {
 
         pendingQuotationId.value = intent.quotationId()
         pendingNotificationType.value = intent.notificationType()
-
-        val auth=Firebase.auth
 
         setContent {
             val navHostController= rememberNavController()

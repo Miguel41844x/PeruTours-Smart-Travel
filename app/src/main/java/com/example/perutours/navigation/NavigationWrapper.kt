@@ -35,11 +35,12 @@ import com.example.perutours.service.MyFirebaseMessagingService
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
+import org.koin.compose.koinInject
 
 @Composable
 fun NavigationWrapper(
     navHostController: NavHostController,
-    auth: FirebaseAuth,
+    auth: FirebaseAuth = koinInject(),
     pendingQuotationId: String? = null,
     pendingNotificationType: String? = null,
     onPendingQuotationConsumed: () -> Unit = {}

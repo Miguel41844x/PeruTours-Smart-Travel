@@ -16,13 +16,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
+
+    private val fcmTokenManager: FCMTokenManager by inject()
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            runCatching { FCMTokenManager().saveToken(token) }
+            runCatching { fcmTokenManager.saveToken(token) }
         }
     }
 

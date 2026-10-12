@@ -24,11 +24,13 @@ import androidx.navigation.NavHostController
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.ui.components.PeruToursBrand
 import com.google.firebase.auth.FirebaseAuth
+import org.koin.compose.koinInject
 
 @Composable
 fun RoleRouterScreen(
     navController: NavHostController,
-    auth: FirebaseAuth
+    auth: FirebaseAuth,
+    profileRepository: ProfileRepository = koinInject()
 ) {
 
     var isLoading by remember {
@@ -56,10 +58,7 @@ fun RoleRouterScreen(
 
         try {
 
-            val repository = ProfileRepository()
-
-            val profile =
-                repository.getProfile(currentUser.uid)
+            val profile = profileRepository.getProfile(currentUser.uid)
 
             when (profile.role.lowercase()) {
 

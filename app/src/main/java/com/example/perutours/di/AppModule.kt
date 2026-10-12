@@ -29,10 +29,12 @@ import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
 import com.example.perutours.ui.screens.payment.PaymentViewModel
 
 import android.app.Application
+import androidx.work.WorkManager
 import com.example.perutours.data.local.AppDatabase
 import com.example.perutours.data.remote.NetworkClient
 import com.example.perutours.data.repository.DestinationRepository
 import com.example.perutours.ui.screens.home.HomeViewModel
+import com.example.perutours.ui.screens.request.TravelRequestPlaceResolver
 import com.example.perutours.ui.screens.request.TravelRequestViewModel
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
@@ -101,8 +103,13 @@ val appModule = module {
 
     // HU07: Repositorio de Pagos y WorkManager
     single {
+        WorkManager.getInstance(androidContext())
+    }
+
+    single {
         PaymentRepository(
-            context = androidContext()
+            context = androidContext(),
+            workManager = get()
         )
     }
 
@@ -193,11 +200,18 @@ val appModule = module {
         )
     }
 
+    factory {
+        TravelRequestPlaceResolver(
+            locationDataSource = get()
+        )
+    }
+
     viewModel {
         TravelRequestViewModel(
             application = androidApplication(),
             requestRepository = get(),
-            locationRepository = get()
+            locationRepository = get(),
+            placeResolver = get()
         )
     }
 

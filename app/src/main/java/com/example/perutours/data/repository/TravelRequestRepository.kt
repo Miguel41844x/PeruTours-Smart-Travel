@@ -13,8 +13,8 @@ interface TravelRequestDataSource {
 }
 
 class TravelRequestRepository(
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) : TravelRequestDataSource {
     override suspend fun save(request: TravelRequest): TravelRequest {
         val uid = auth.currentUser?.uid

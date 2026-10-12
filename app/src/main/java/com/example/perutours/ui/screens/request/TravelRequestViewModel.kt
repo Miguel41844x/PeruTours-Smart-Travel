@@ -14,11 +14,11 @@ import kotlinx.coroutines.launch
 class TravelRequestViewModel(
     application: Application,
     private val requestRepository: TravelRequestDataSource,
-    private val locationRepository: LocationDataSource
+    private val locationRepository: LocationDataSource,
+    private val placeResolver: TravelRequestPlaceResolver
 ) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(TravelRequestUiState())
     val uiState: StateFlow<TravelRequestUiState> = _uiState.asStateFlow()
-    private val placeResolver = TravelRequestPlaceResolver(locationRepository)
 
     fun onDestinationChanged(value: String) {
         _uiState.value = _uiState.value.copy(

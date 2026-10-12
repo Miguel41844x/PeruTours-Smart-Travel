@@ -14,9 +14,10 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
 
-class PaymentRepository(private val context: Context) {
-
-    private val workManager = WorkManager.getInstance(context)
+class PaymentRepository(
+    private val context: Context,
+    private val workManager: WorkManager
+) {
 
     /**
      * Guarda la foto capturada o seleccionada en la caché local para que sobreviva

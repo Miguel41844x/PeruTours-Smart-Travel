@@ -7,8 +7,8 @@ import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.tasks.await
 
 class FCMTokenManager(
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) {
     suspend fun saveToken(refreshedToken: String? = null) {
         val user = auth.currentUser ?: return

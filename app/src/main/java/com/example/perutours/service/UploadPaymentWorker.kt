@@ -9,12 +9,17 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.io.File
 
 class UploadPaymentWorker(
     appContext: Context,
     workerParams: WorkerParameters
-) : CoroutineWorker(appContext, workerParams) {
+) : CoroutineWorker(appContext, workerParams), KoinComponent {
+
+    private val storage: FirebaseStorage by inject()
+    private val firestore: FirebaseFirestore by inject()
 
     companion object {
         const val KEY_QUOTATION_ID = "quotation_id"
@@ -40,9 +45,6 @@ class UploadPaymentWorker(
         }
 
         return try {
-            val storage = FirebaseStorage.getInstance()
-            val firestore = FirebaseFirestore.getInstance()
-
             val fileName = "voucher_${System.currentTimeMillis()}_${file.name}"
             val storageRef = storage.reference.child("payment_vouchers/$fileName")
 

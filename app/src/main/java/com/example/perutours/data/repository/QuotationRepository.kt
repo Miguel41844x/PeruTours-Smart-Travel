@@ -11,8 +11,8 @@ import kotlinx.coroutines.tasks.await
 import java.util.Locale
 
 class QuotationRepository(
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) {
 
     /**

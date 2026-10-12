@@ -11,8 +11,8 @@ interface ReservationDataSource {
 }
 
 class ReservationRepository(
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore
 ) : ReservationDataSource {
 
     override suspend fun getCurrentClientReservations(): List<Reservation> {
