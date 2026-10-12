@@ -11,6 +11,7 @@ import com.example.perutours.data.repository.ReservationRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
+import com.example.perutours.data.repository.PaymentRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -25,6 +26,7 @@ import com.example.perutours.ui.screens.agent.AgentHomeViewModel
 import com.example.perutours.ui.screens.quotation.QuotationViewModel
 import com.example.perutours.ui.screens.quotation.CustomerQuotationViewModel
 import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
+import com.example.perutours.ui.screens.payment.PaymentViewModel
 
 import android.app.Application
 import com.example.perutours.data.local.AppDatabase
@@ -37,12 +39,12 @@ import org.koin.android.ext.koin.androidContext
 
 val appModule = module {
 
-    // Servicios de Firebase compartidos
+    // 1. Servicios de Firebase compartidos (Singletons)
     single { FirebaseAuth.getInstance() }
     single { FirebaseFirestore.getInstance() }
     single { FirebaseStorage.getInstance() }
 
-    // Repositorios
+    // 2. Repositorios de datos
     single {
         AuthRepository(
             auth = get(),
@@ -97,7 +99,14 @@ val appModule = module {
         )
     }
 
-    // Room
+    // HU07: Repositorio de Pagos y WorkManager
+    single {
+        PaymentRepository(
+            context = androidContext()
+        )
+    }
+
+    // 3. Room SQLite
     single {
         AppDatabase.getInstance(androidContext())
     }
@@ -106,7 +115,7 @@ val appModule = module {
         get<AppDatabase>().destinationDao()
     }
 
-    // Retrofit
+    // 4. Retrofit API
     single {
         NetworkClient.getApiService(androidContext())
     }
@@ -119,7 +128,7 @@ val appModule = module {
         )
     }
 
-    // ViewModels
+    // 5. ViewModels Inyectados con Koin
     viewModel {
         LoginViewModel(
             authRepository = get(),
@@ -189,6 +198,13 @@ val appModule = module {
             application = androidApplication(),
             requestRepository = get(),
             locationRepository = get()
+        )
+    }
+
+    // HU07: ViewModel de Pago del Viaje
+    viewModel {
+        PaymentViewModel(
+            paymentRepository = get()
         )
     }
 }
