@@ -18,6 +18,7 @@ class TravelRequestValidatorTest {
             departureAtMillis = now + 10_000L,
             returnAtMillis = now + 20_000L,
             travelerCount = 2,
+            notes = "Habitación accesible",
             nowMillis = now
         )
 
@@ -27,6 +28,7 @@ class TravelRequestValidatorTest {
         assertNull(result.departureError)
         assertNull(result.returnError)
         assertNull(result.travelerCountError)
+        assertNull(result.notesError)
     }
 
     @Test
@@ -53,6 +55,22 @@ class TravelRequestValidatorTest {
             originCity = "Lima",
             departureAtMillis = now + 20_000L,
             returnAtMillis = now + 10_000L,
+            travelerCount = 1,
+            nowMillis = now
+        )
+
+        assertFalse(result.isValid)
+        assertEquals("El retorno debe ser posterior a la salida.", result.returnError)
+    }
+
+    @Test
+    fun returnMustBeStrictlyAfterDeparture() {
+        val departure = now + 20_000L
+        val result = TravelRequestValidator.validate(
+            destination = "Arequipa",
+            originCity = "Lima",
+            departureAtMillis = departure,
+            returnAtMillis = departure,
             travelerCount = 1,
             nowMillis = now
         )
@@ -109,6 +127,37 @@ class TravelRequestValidatorTest {
     }
 
     @Test
+    fun placeNamesAcceptConfiguredLengthLimit() {
+        val result = TravelRequestValidator.validate(
+            destination = "a".repeat(TravelRequestValidator.MAX_PLACE_LENGTH),
+            originCity = "b".repeat(TravelRequestValidator.MAX_PLACE_LENGTH),
+            departureAtMillis = now + 10_000L,
+            returnAtMillis = now + 20_000L,
+            travelerCount = 1,
+            nowMillis = now
+        )
+
+        assertTrue(result.isValid)
+    }
+
+    @Test
+    fun notesRespectConfiguredLengthLimit() {
+        val accepted = validResultForNotes(
+            "a".repeat(TravelRequestValidator.MAX_NOTES_LENGTH)
+        )
+        val rejected = validResultForNotes(
+            "a".repeat(TravelRequestValidator.MAX_NOTES_LENGTH + 1)
+        )
+
+        assertTrue(accepted.isValid)
+        assertFalse(rejected.isValid)
+        assertEquals(
+            "Las notas no pueden superar ${TravelRequestValidator.MAX_NOTES_LENGTH} caracteres.",
+            rejected.notesError
+        )
+    }
+
+    @Test
     fun travelerCountAcceptsConfiguredLimits() {
         val minimum = validResultForTravelerCount(1)
         val maximum = validResultForTravelerCount(20)
@@ -138,6 +187,18 @@ class TravelRequestValidatorTest {
             departureAtMillis = now + 10_000L,
             returnAtMillis = now + 20_000L,
             travelerCount = count,
+            nowMillis = now
+        )
+    }
+
+    private fun validResultForNotes(notes: String): TravelRequestValidationResult {
+        return TravelRequestValidator.validate(
+            destination = "Cusco",
+            originCity = "Lima",
+            departureAtMillis = now + 10_000L,
+            returnAtMillis = now + 20_000L,
+            travelerCount = 1,
+            notes = notes,
             nowMillis = now
         )
     }
