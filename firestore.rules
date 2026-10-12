@@ -14,7 +14,8 @@ service cloud.firestore {
     //   while preparing and managing a travel quotation.
     //
     // travel_requests/{requestId}
-    //   id, userId, destination, originCity, originLatitude,
+    //   id, userId, destination, destinationLatitude,
+    //   destinationLongitude, originCity, originLatitude,
     //   originLongitude, departureAtMillis, returnAtMillis,
     //   travelerCount, notes, status, createdAtMillis;
     //   optional quotationId after an agent creates a quotation.
@@ -265,6 +266,20 @@ service cloud.firestore {
         );
     }
 
+    function isValidDestinationCoordinates(data) {
+      return (
+          !('destinationLatitude' in data)
+          && !('destinationLongitude' in data)
+        ) || (
+          data.destinationLatitude is number
+          && data.destinationLatitude >= -90
+          && data.destinationLatitude <= 90
+          && data.destinationLongitude is number
+          && data.destinationLongitude >= -180
+          && data.destinationLongitude <= 180
+        );
+    }
+
     function isValidTravelRequest(data) {
       return hasRequiredFields(data, [
           'id', 'userId', 'destination', 'originCity',
@@ -273,7 +288,8 @@ service cloud.firestore {
           'createdAtMillis'
         ])
         && hasOnlyAllowedFields(data, [
-          'id', 'userId', 'destination', 'originCity',
+          'id', 'userId', 'destination', 'destinationLatitude',
+          'destinationLongitude', 'originCity',
           'originLatitude', 'originLongitude', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'notes', 'status',
           'createdAtMillis', 'quotationId'
@@ -282,6 +298,7 @@ service cloud.firestore {
         && validString(data.userId, 1, 128)
         && validString(data.destination, 3, 120)
         && validString(data.originCity, 2, 120)
+        && isValidDestinationCoordinates(data)
         && isValidCoordinates(data)
         && data.departureAtMillis is int
         && data.returnAtMillis is int
@@ -291,7 +308,7 @@ service cloud.firestore {
         && data.travelerCount >= 1
         && data.travelerCount <= 20
         && data.notes is string
-        && data.notes.size() <= 1000
+        && data.notes.size() <= 500
         && data.status in [
           'Pendiente de cotizacion', 'Cotizado', 'Aceptada',
           'Observada', 'Cancelada'
@@ -653,12 +670,15 @@ service cloud.firestore {
         && request.resource.data.id == requestId
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.status == 'Pendiente de cotizacion'
+        && request.resource.data.destinationLatitude is number
+        && request.resource.data.destinationLongitude is number
         && !('quotationId' in request.resource.data)
         && isRecentMillis(request.resource.data.createdAtMillis);
 
       allow update: if isValidTravelRequest(request.resource.data)
         && areImmutableFieldsUnchanged([
-          'id', 'userId', 'destination', 'originCity',
+          'id', 'userId', 'destination', 'destinationLatitude',
+          'destinationLongitude', 'originCity',
           'originLatitude', 'originLongitude', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'notes', 'createdAtMillis'
         ])
