@@ -10,7 +10,9 @@ sealed class HomeDestinationsState {
 }
 
 data class HomeUiState(
-    val userName: String = "Viajero",
+    val userName: String = "",
+    val photoUrl: String = "",
+    val preferenceNames: List<String> = emptyList(),
     val destinationsState: HomeDestinationsState = HomeDestinationsState.Loading,
     val selectedCategory: String = "Todos"
 )

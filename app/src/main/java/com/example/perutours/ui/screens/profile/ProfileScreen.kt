@@ -316,7 +316,8 @@ fun ProfileScreen(
                 ) {
                     ProfilePhoto(
                         state = uiState,
-                        onEditPhoto = { showPhotoSourceSheet = true }
+                        onEditPhoto = { showPhotoSourceSheet = true },
+                        onRetryPhoto = viewModel::retryPhotoUpload
                     )
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -451,14 +452,18 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfilePhoto(state: ProfileUiState, onEditPhoto: () -> Unit) {
+private fun ProfilePhoto(
+    state: ProfileUiState,
+    onEditPhoto: () -> Unit,
+    onRetryPhoto: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(contentAlignment = Alignment.BottomEnd) {
-            val imageModel: Any? = state.pendingPhotoUri ?: state.photoUrl.takeIf(String::isNotBlank)
+            val imageModel: Any? = state.localPhotoUri ?: state.photoUrl.takeIf(String::isNotBlank)
             if (imageModel != null) {
                 AsyncImage(
                     model = imageModel,
@@ -496,6 +501,13 @@ private fun ProfilePhoto(state: ProfileUiState, onEditPhoto: () -> Unit) {
                 }
             }
         }
+
+        if (state.photoUploadState is PhotoUploadState.Error) {
+            TextButton(onClick = onRetryPhoto) {
+                Text("Reintentar subir foto", color = MaterialTheme.colorScheme.error)
+            }
+        }
+
         Text(
             text = state.name.ifBlank { "Tu perfil" },
             style = MaterialTheme.typography.titleLarge

@@ -53,7 +53,8 @@ val appModule = module {
         ProfileRepository(
             auth = get(),
             firestore = get(),
-            storage = get()
+            storage = get(),
+            context = androidContext()
         )
     }
 
@@ -168,7 +169,9 @@ val appModule = module {
     viewModel {
         HomeViewModel(
             application = androidApplication(),
-            repository = get()
+            repository = get(),
+            profileRepository = get(),
+            auth = get()
         )
     }
 

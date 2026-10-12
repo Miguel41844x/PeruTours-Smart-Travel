@@ -3,6 +3,13 @@ package com.example.perutours.ui.screens.profile
 import android.net.Uri
 import com.example.perutours.data.model.Preference
 
+sealed interface PhotoUploadState {
+    object Idle : PhotoUploadState
+    object Uploading : PhotoUploadState
+    data class Success(val remoteUrl: String) : PhotoUploadState
+    data class Error(val message: String) : PhotoUploadState
+}
+
 data class ProfileUiState(
     val name: String = "",
     val phone: String = "",
@@ -10,7 +17,11 @@ data class ProfileUiState(
     val city: String = "Lima, Perú",
     val role: String = "cliente",
     val email: String = "",
+
+    // Separación de foto local, estado de subida y URL remota
+    val localPhotoUri: Uri? = null,
     val photoUrl: String = "",
+    val photoUploadState: PhotoUploadState = PhotoUploadState.Idle,
 
     // IDs de preferencias seleccionadas
     val selectedPreferences: Set<String> = emptySet(),
@@ -28,9 +39,14 @@ data class ProfileUiState(
     // Estados de carga
     val isLoadingInitialData: Boolean = true,
     val isSaving: Boolean = false,
-    val isUploadingPhoto: Boolean = false,
-    val pendingPhotoUri: Uri? = null,
 
     // Mensaje para Snackbar
     val message: String? = null
-)
+) {
+    val isUploadingPhoto: Boolean
+        get() = photoUploadState is PhotoUploadState.Uploading
+
+    @Deprecated("Usar localPhotoUri", ReplaceWith("localPhotoUri"))
+    val pendingPhotoUri: Uri?
+        get() = localPhotoUri
+}

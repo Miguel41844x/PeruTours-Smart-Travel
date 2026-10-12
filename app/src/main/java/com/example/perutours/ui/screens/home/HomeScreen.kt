@@ -91,12 +91,6 @@ fun HomeScreen(
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val currentUser = auth.currentUser
-    val uid = currentUser?.uid.orEmpty()
-    val rawName = currentUser?.displayName ?: "viajero"
-    var userName by remember { mutableStateOf(rawName.substringBefore("|").trim()) }
-    var photoUrl by remember { mutableStateOf(currentUser?.photoUrl?.toString().orEmpty()) }
-    var preferenceNames by remember { mutableStateOf(emptyList<String>()) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showNotificationPrompt by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -113,33 +107,6 @@ fun HomeScreen(
             ) != PackageManager.PERMISSION_GRANTED
 
         if (needsPermission) showNotificationPrompt = true else navigateToQuotations()
-    }
-
-    DisposableEffect(uid) {
-        val registration = uid.takeIf(String::isNotEmpty)?.let { userId ->
-            FirebaseFirestore.getInstance().collection("users").document(userId)
-                .addSnapshotListener { snapshot, _ ->
-                    if (snapshot?.exists() == true) {
-                        snapshot.getString("name")?.takeIf(String::isNotBlank)?.let { userName = it }
-                        snapshot.getString("photoUrl")?.let { photoUrl = it }
-                        val preferenceIds = (snapshot.get("preferences") as? List<*>)
-                            ?.filterIsInstance<String>()
-                            .orEmpty()
-                        if (preferenceIds.isNotEmpty()) {
-                            FirebaseFirestore.getInstance().collection("preferences").get()
-                                .addOnSuccessListener { preferencesSnapshot ->
-                                    val namesById = preferencesSnapshot.documents.associate { document ->
-                                        document.id to document.getString("name").orEmpty()
-                                    }
-                                    preferenceNames = preferenceIds.mapNotNull { id ->
-                                        namesById[id]?.takeIf(String::isNotBlank)
-                                    }
-                                }
-                        }
-                    }
-                }
-        }
-        onDispose { registration?.remove() }
     }
 
     if (showNotificationPrompt) {
@@ -251,9 +218,9 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (photoUrl.isNotEmpty()) {
+                    if (uiState.photoUrl.isNotEmpty()) {
                         AsyncImage(
-                            model = photoUrl,
+                            model = uiState.photoUrl,
                             contentDescription = "Foto de perfil",
                             modifier = Modifier
                                 .size(48.dp)
@@ -271,7 +238,7 @@ fun HomeScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
-                                    text = userName.take(1).uppercase(),
+                                    text = uiState.userName.take(1).ifBlank { "V" }.uppercase(),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -281,14 +248,14 @@ fun HomeScreen(
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Hola, ${userName.ifBlank { "viajero" }}",
+                            text = "Hola, ${uiState.userName.ifBlank { "viajero" }}",
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onBackground,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = preferenceNames.take(2).joinToString(" · ")
+                            text = uiState.preferenceNames.take(2).joinToString(" · ")
                                 .ifBlank { "¿A dónde te gustaría ir?" },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

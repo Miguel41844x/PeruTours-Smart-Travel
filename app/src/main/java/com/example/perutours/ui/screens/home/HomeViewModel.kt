@@ -3,9 +3,9 @@ package com.example.perutours.ui.screens.home
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.perutours.data.local.AppDatabase
-import com.example.perutours.data.remote.NetworkClient
 import com.example.perutours.data.repository.DestinationRepository
+import com.example.perutours.data.repository.ProfileRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,18 +14,62 @@ import kotlinx.coroutines.launch
 
 class HomeViewModel(
     application: Application,
-    private val repository: DestinationRepository
+    private val repository: DestinationRepository,
+    private val profileRepository: ProfileRepository,
+    private val auth: FirebaseAuth
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        // 1. Escuchar Room SQLite en tiempo real (Single Source of Truth)
+        // 1. Cargar datos iniciales del usuario desde FirebaseAuth y observar cambios en Firestore
+        observeUserProfile()
+
+        // 2. Escuchar Room SQLite en tiempo real (Single Source of Truth)
         observeLocalDatabase()
 
-        // 2. Sincronizar con la API remota respetando la política de expiración
+        // 3. Sincronizar con la API remota respetando la política de expiración
         fetchDestinations(forceRefresh = false)
+    }
+
+    private fun observeUserProfile() {
+        val currentUser = auth.currentUser
+        val uid = currentUser?.uid.orEmpty()
+        val rawName = currentUser?.displayName ?: "viajero"
+        val initialName = rawName.substringBefore("|").trim()
+        val initialPhoto = currentUser?.photoUrl?.toString().orEmpty()
+
+        _uiState.update {
+            it.copy(
+                userName = initialName,
+                photoUrl = initialPhoto
+            )
+        }
+
+        if (uid.isNotBlank()) {
+            viewModelScope.launch {
+                val availablePreferences = try {
+                    profileRepository.getPreferences()
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                val prefMap = availablePreferences.associate { it.id to it.name }
+
+                profileRepository.observeUserProfile(uid).collect { userProfile ->
+                    val names = userProfile.preferences.mapNotNull { prefId ->
+                        prefMap[prefId]?.takeIf { it.isNotBlank() }
+                    }
+                    _uiState.update { state ->
+                        state.copy(
+                            userName = userProfile.name.ifBlank { initialName },
+                            photoUrl = userProfile.photoUrl.ifBlank { initialPhoto },
+                            preferenceNames = names
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private fun observeLocalDatabase() {
