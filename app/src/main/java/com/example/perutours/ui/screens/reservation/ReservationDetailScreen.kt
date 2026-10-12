@@ -278,7 +278,7 @@ fun ReservationDetailScreen(
                         Icon(Icons.Default.Payment, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Registrar Comprobante de Pago (HU07)",
+                            text = "Registrar Comprobante de Pago",
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )
