@@ -65,6 +65,7 @@ fun QuotationDetailScreen(
     var showCancelConfirmation by remember { mutableStateOf(false) }
     var showObservationDialog by remember { mutableStateOf(false) }
     val canRespond = Quotation.canClientRespond(quotation.status)
+    val acceptanceError = QuotationResponseValidator.validateAcceptance(quotation)
 
     if (showAcceptConfirmation) {
         ConfirmationDialog(
@@ -109,6 +110,8 @@ fun QuotationDetailScreen(
             if (showCustomerActions && canRespond) {
                 CustomerResponseBar(
                     enabled = !isSavingResponse,
+                    acceptEnabled = !isSavingResponse && acceptanceError == null,
+                    acceptanceError = acceptanceError,
                     onAccept = { showAcceptConfirmation = true },
                     onRequestChanges = { showObservationDialog = true },
                     onCancel = { showCancelConfirmation = true }
@@ -335,6 +338,8 @@ fun QuotationDetailScreen(
 @Composable
 private fun CustomerResponseBar(
     enabled: Boolean,
+    acceptEnabled: Boolean,
+    acceptanceError: String?,
     onAccept: () -> Unit,
     onRequestChanges: () -> Unit,
     onCancel: () -> Unit
@@ -357,7 +362,7 @@ private fun CustomerResponseBar(
             ) {
                 Button(
                     onClick = onAccept,
-                    enabled = enabled,
+                    enabled = acceptEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -369,6 +374,14 @@ private fun CustomerResponseBar(
                     Icon(Icons.Default.CheckCircle, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Aceptar y reservar")
+                }
+                acceptanceError?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
                 }
                 Row(
                     modifier = Modifier

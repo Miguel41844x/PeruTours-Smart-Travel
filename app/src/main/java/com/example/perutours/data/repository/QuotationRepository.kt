@@ -2,6 +2,7 @@ package com.example.perutours.data.repository
 
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.QuotationObservation
+import com.example.perutours.data.model.QuotationValidity
 import com.example.perutours.data.model.Reservation
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -148,6 +149,9 @@ class QuotationRepository(
             }
             if (!Quotation.canClientRespond(quotation.status)) {
                 throw IllegalStateException("La cotización ya fue respondida.")
+            }
+            if (QuotationValidity.isExpired(quotation.validityDate)) {
+                throw IllegalStateException("La cotización ya venció.")
             }
 
             val respondedAt = System.currentTimeMillis()
