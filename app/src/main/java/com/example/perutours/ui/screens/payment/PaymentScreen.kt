@@ -1,6 +1,7 @@
 package com.example.perutours.ui.screens.payment
 
-import android.content.Context
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,6 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.theme.PeruGold40
 import org.koin.androidx.compose.koinViewModel
 import java.io.File
@@ -55,6 +57,7 @@ fun PaymentScreen(
     onPaymentSuccess: () -> Unit,
     viewModel: PaymentViewModel = koinViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCameraX by remember { mutableStateOf(false) }
 
@@ -112,7 +115,7 @@ fun PaymentScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Total a Pagar", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        text = "$currency ${totalAmount.toInt()}",
+                        text = formatQuotationAmount(totalAmount, currency),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = PeruGold40
@@ -133,7 +136,16 @@ fun PaymentScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = { cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA) },
+                    onClick = {
+                        if (
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                            PackageManager.PERMISSION_GRANTED
+                        ) {
+                            showCameraX = true
+                        } else {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -224,13 +236,13 @@ fun PaymentScreen(
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669))
                         Text(
-                            text = "¡Pago registrado correctamente!",
+                            text = "Comprobante guardado",
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF065F46),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Text(
-                            text = "WorkManager subirá tu comprobante a Firebase Storage y cambiará el estado a 'Pagado' en cuanto tengas conexión.",
+                            text = "Se subirá automáticamente y tu reserva se actualizará cuando tengas conexión.",
                             fontSize = 12.sp,
                             color = Color(0xFF047857),
                             modifier = Modifier.padding(top = 4.dp)
@@ -268,9 +280,6 @@ private fun CameraXPaymentDialog(
         } else {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
             var cameraProvider: ProcessCameraProvider? = null
-            var boundPreview: Preview? = null
-            var boundImageCapture: ImageCapture? = null
-
             cameraProviderFuture.addListener({
                 try {
                     val provider = cameraProviderFuture.get()
@@ -289,8 +298,6 @@ private fun CameraXPaymentDialog(
                         capture
                     )
                     cameraProvider = provider
-                    boundPreview = preview
-                    boundImageCapture = capture
                     imageCapture = capture
                 } catch (_: Exception) { }
             }, ContextCompat.getMainExecutor(context))

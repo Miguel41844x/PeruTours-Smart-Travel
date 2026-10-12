@@ -27,7 +27,7 @@ class PaymentViewModel(
 
     fun onVoucherCaptured(uri: Uri) {
         _uiState.update {
-            it.copy(voucherUri = uri, errorMessage = null)
+            it.copy(voucherUri = uri, uploadEnqueued = false, errorMessage = null)
         }
     }
 
@@ -36,12 +36,18 @@ class PaymentViewModel(
     }
 
     fun submitPayment(quotationId: String, reservationId: String) {
+        if (quotationId.isBlank() || reservationId.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "No se pudo identificar la reserva.") }
+            return
+        }
+
         val uri = _uiState.value.voucherUri
         if (uri == null) {
             _uiState.update { it.copy(errorMessage = "Por favor toma una foto o selecciona tu comprobante.") }
             return
         }
 
+        val paymentMethod = _uiState.value.paymentMethod
         _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
 
         viewModelScope.launch {
@@ -54,7 +60,7 @@ class PaymentViewModel(
                     quotationId = quotationId,
                     reservationId = reservationId,
                     localImagePath = localPath,
-                    paymentMethod = _uiState.value.paymentMethod
+                    paymentMethod = paymentMethod
                 )
 
                 _uiState.update {
@@ -67,7 +73,9 @@ class PaymentViewModel(
                 _uiState.update {
                     it.copy(
                         isSubmitting = false,
-                        errorMessage = "Error al procesar el comprobante: ${e.localizedMessage}"
+                        errorMessage = e.localizedMessage
+                            ?.takeIf(String::isNotBlank)
+                            ?: "No se pudo preparar el comprobante. Inténtalo nuevamente."
                     )
                 }
             }

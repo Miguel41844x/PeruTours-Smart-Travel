@@ -1,10 +1,10 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /profile_pictures/{userId}.jpg {
+    match /profile_pictures/{fileName} {
       allow read: if true;
       allow write: if request.auth != null
-                   && request.auth.uid == userId
+                   && fileName == request.auth.uid + '.jpg'
                    && request.resource.size <= 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
     }
@@ -14,6 +14,20 @@ service firebase.storage {
                    && request.auth.uid == userId
                    && request.resource.size <= 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+    }
+
+    match /payment_vouchers/{userId}/{reservationId}/{fileName} {
+      allow read: if request.auth != null
+                  && request.auth.uid == userId;
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && reservationId.size() > 0
+                    && reservationId.size() <= 128
+                    && request.resource.size <= 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow update: if false;
+      allow delete: if request.auth != null
+                    && request.auth.uid == userId;
     }
   }
 }

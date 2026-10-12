@@ -34,6 +34,7 @@ service cloud.firestore {
     //   agentId, agentName,
     //   clientFcmToken, createdAtMillis, respondedAtMillis,
     //   latestObservation, reservationId.
+    //   HU07 payment fields are intentionally not stored on quotations.
     //
     // cotizaciones/{quotationId}/observations/{observationId}
     //   id, quotationId, authorId, authorName, message,
@@ -43,7 +44,9 @@ service cloud.firestore {
     //   id, quotationId, requestId, clientId, agentId, destination,
     //   originCity, departureAtMillis, returnAtMillis, travelerCount,
     //   services, totalAmount, currency, validityDate, conditions,
-    //   status, createdAtMillis.
+    //   status, createdAtMillis, paymentVoucherUrl, paymentMethod,
+    //   paidAtMillis. A new reservation starts Confirmada with empty
+    //   payment fields; its client owner may later mark it Pagado.
     //   HU06 uses the quotation ID as the reservation document ID.
     //
     // fcm_push_logs/{logId}
@@ -490,13 +493,15 @@ service cloud.firestore {
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
           'destination', 'originCity', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
-          'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis'
+          'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis',
+          'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
         ])
         && hasOnlyAllowedFields(data, [
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
           'destination', 'originCity', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
-          'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis'
+          'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis',
+          'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
         ])
         && validString(data.id, 1, 128)
         && validString(data.quotationId, 1, 128)
@@ -519,8 +524,23 @@ service cloud.firestore {
         && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && data.conditions is string
         && data.conditions.size() <= 2000
-        && data.status == 'Confirmada'
-        && isRecentMillis(data.createdAtMillis);
+        && data.createdAtMillis is int
+        && data.createdAtMillis > 0
+        && (
+          (data.status == 'Confirmada'
+            && data.paymentVoucherUrl == ''
+            && data.paymentMethod == ''
+            && data.paidAtMillis == null)
+          ||
+          (data.status == 'Pagado'
+            && data.paymentVoucherUrl is string
+            && data.paymentVoucherUrl.size() <= 2048
+            && data.paymentVoucherUrl.matches('^https://.+')
+            && validString(data.paymentMethod, 3, 80)
+            && data.paidAtMillis is int
+            && data.paidAtMillis > 0
+            && isRecentMillis(data.paidAtMillis))
+        );
     }
 
     function isValidFcmPushLog(data) {
@@ -679,6 +699,21 @@ service cloud.firestore {
         && quotationAfter.status == data.status;
     }
 
+    function isValidClientReservationPaymentUpdate() {
+      let data = request.resource.data;
+      let changed = data.diff(resource.data).affectedKeys();
+      let paymentFields = [
+        'status', 'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
+      ];
+      return isClient()
+        && resource.data.clientId == request.auth.uid
+        && resource.data.status == 'Confirmada'
+        && data.status == 'Pagado'
+        && isValidReservation(data)
+        && changed.hasOnly(paymentFields)
+        && changed.hasAll(paymentFields);
+    }
+
     // ===============================================================
     // Collection rules
     // ===============================================================
@@ -784,6 +819,11 @@ service cloud.firestore {
         && request.resource.data.id == reservationId
         && request.resource.data.quotationId == reservationId
         && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.status == 'Confirmada'
+        && request.resource.data.paymentVoucherUrl == ''
+        && request.resource.data.paymentMethod == ''
+        && request.resource.data.paidAtMillis == null
+        && isRecentMillis(request.resource.data.createdAtMillis)
         && existsAfter(quotationPath(reservationId))
         && getAfter(quotationPath(reservationId)).data.status == 'Aceptada'
         && getAfter(quotationPath(reservationId)).data.clientId
@@ -815,7 +855,8 @@ service cloud.firestore {
         && getAfter(quotationPath(reservationId)).data.conditions
           == request.resource.data.conditions;
 
-      allow update, delete: if false;
+      allow update: if isValidClientReservationPaymentUpdate();
+      allow delete: if false;
     }
 
     match /fcm_push_logs/{logId} {
