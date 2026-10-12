@@ -3,6 +3,7 @@ package com.example.perutours.ui.screens.request
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.location.LocationDataSource
 import com.example.perutours.data.location.LocationRepository
 import com.example.perutours.data.model.TravelRequest
 import com.example.perutours.data.repository.TravelRequestRepository
@@ -13,27 +14,28 @@ import kotlinx.coroutines.launch
 
 class TravelRequestViewModel(
     application: Application,
-    private val requestRepository: TravelRequestRepository
+    private val requestRepository: TravelRequestRepository,
+    private val locationRepository: LocationDataSource
 ) : AndroidViewModel(application) {
     constructor(application: Application) : this(
         application = application,
-        requestRepository = TravelRequestRepository()
+        requestRepository = TravelRequestRepository(),
+        locationRepository = LocationRepository(application)
     )
 
-    private val locationRepository = LocationRepository(application)
     private val _uiState = MutableStateFlow(TravelRequestUiState())
     val uiState: StateFlow<TravelRequestUiState> = _uiState.asStateFlow()
 
     fun onDestinationChanged(value: String) {
         _uiState.value = _uiState.value.copy(
-            destination = value.take(MAX_PLACE_LENGTH),
+            destination = value.take(TravelRequestValidator.MAX_PLACE_LENGTH),
             destinationError = null
         )
     }
 
     fun onOriginCityChanged(value: String) {
         _uiState.value = _uiState.value.copy(
-            originCity = value.take(MAX_PLACE_LENGTH),
+            originCity = value.take(TravelRequestValidator.MAX_PLACE_LENGTH),
             originLatitude = null,
             originLongitude = null,
             originCityError = null
@@ -58,7 +60,8 @@ class TravelRequestViewModel(
     }
 
     fun incrementTravelerCount() {
-        val count = (_uiState.value.travelerCount + 1).coerceAtMost(20)
+        val count = (_uiState.value.travelerCount + 1)
+            .coerceAtMost(TravelRequestValidator.MAX_TRAVELER_COUNT)
         _uiState.value = _uiState.value.copy(
             travelerCount = count,
             travelerCountError = null
@@ -66,7 +69,8 @@ class TravelRequestViewModel(
     }
 
     fun decrementTravelerCount() {
-        val count = (_uiState.value.travelerCount - 1).coerceAtLeast(1)
+        val count = (_uiState.value.travelerCount - 1)
+            .coerceAtLeast(TravelRequestValidator.MIN_TRAVELER_COUNT)
         _uiState.value = _uiState.value.copy(
             travelerCount = count,
             travelerCountError = null
@@ -74,9 +78,10 @@ class TravelRequestViewModel(
     }
 
     fun onNotesChanged(value: String) {
-        if (value.length <= 500) {
-            _uiState.value = _uiState.value.copy(notes = value)
-        }
+        _uiState.value = _uiState.value.copy(
+            notes = value.take(TravelRequestValidator.MAX_NOTES_LENGTH),
+            notesError = null
+        )
     }
 
     fun detectCurrentLocation() {
@@ -119,7 +124,8 @@ class TravelRequestViewModel(
             originCity = state.originCity,
             departureAtMillis = state.departureAtMillis,
             returnAtMillis = state.returnAtMillis,
-            travelerCount = state.travelerCount
+            travelerCount = state.travelerCount,
+            notes = state.notes
         )
 
         _uiState.value = state.copy(
@@ -128,6 +134,7 @@ class TravelRequestViewModel(
             departureError = validation.departureError,
             returnError = validation.returnError,
             travelerCountError = validation.travelerCountError,
+            notesError = validation.notesError,
             message = if (validation.isValid) {
                 null
             } else {
@@ -155,6 +162,11 @@ class TravelRequestViewModel(
                     return@launch
                 }
 
+                state = state.copy(
+                    destination = destinationLocation.city
+                        .take(TravelRequestValidator.MAX_PLACE_LENGTH)
+                )
+
                 if (state.originLatitude == null || state.originLongitude == null) {
                     val originLocation = locationRepository.findPlace(state.originCity)
                     if (originLocation == null) {
@@ -167,7 +179,8 @@ class TravelRequestViewModel(
                     }
 
                     state = state.copy(
-                        originCity = originLocation.city,
+                        originCity = originLocation.city
+                            .take(TravelRequestValidator.MAX_PLACE_LENGTH),
                         originLatitude = originLocation.latitude,
                         originLongitude = originLocation.longitude
                     )
@@ -177,6 +190,8 @@ class TravelRequestViewModel(
                 val savedRequest = requestRepository.save(
                     TravelRequest(
                         destination = state.destination.trim(),
+                        destinationLatitude = destinationLocation.latitude,
+                        destinationLongitude = destinationLocation.longitude,
                         originCity = state.originCity.trim(),
                         originLatitude = state.originLatitude,
                         originLongitude = state.originLongitude,
@@ -206,9 +221,5 @@ class TravelRequestViewModel(
 
     fun clearMessage() {
         _uiState.value = _uiState.value.copy(message = null)
-    }
-
-    companion object {
-        private const val MAX_PLACE_LENGTH = 120
     }
 }

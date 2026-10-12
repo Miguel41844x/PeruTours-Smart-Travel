@@ -18,12 +18,17 @@ data class DetectedLocation(
     val longitude: Double
 )
 
-class LocationRepository(context: Context) {
+interface LocationDataSource {
+    suspend fun getCurrentLocation(): DetectedLocation
+    suspend fun findPlace(query: String): DetectedLocation?
+}
+
+class LocationRepository(context: Context) : LocationDataSource {
     private val appContext = context.applicationContext
     private val locationClient = LocationServices.getFusedLocationProviderClient(appContext)
 
     @SuppressLint("MissingPermission")
-    suspend fun getCurrentLocation(): DetectedLocation {
+    override suspend fun getCurrentLocation(): DetectedLocation {
         val cancellationTokenSource = CancellationTokenSource()
         val location = locationClient
             .getCurrentLocation(
@@ -41,7 +46,7 @@ class LocationRepository(context: Context) {
     }
 
     @Suppress("DEPRECATION")
-    suspend fun findPlace(query: String): DetectedLocation? {
+    override suspend fun findPlace(query: String): DetectedLocation? {
         val normalizedQuery = query.trim()
         if (normalizedQuery.length < 2) return null
         if (!Geocoder.isPresent()) {
