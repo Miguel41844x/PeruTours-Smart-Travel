@@ -100,4 +100,7 @@ dependencies {
     // Koin: Inyección de dependencias
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
+
+    // WorkManager (HU07: Sincronización diferida offline de comprobantes de pago)
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }
