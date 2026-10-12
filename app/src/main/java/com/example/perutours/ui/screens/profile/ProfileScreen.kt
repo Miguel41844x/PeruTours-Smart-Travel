@@ -4,10 +4,17 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.view.Surface
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +55,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -61,6 +67,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,8 +85,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
@@ -105,14 +116,9 @@ private fun ProfileUiState.signature() = ProfileSignature(
     preferences = selectedPreferences
 )
 
-private fun createTempImageUri(context: Context): Uri {
+private fun createTempImageFile(context: Context): File {
     val imagesDir = File(context.cacheDir, "images").apply { mkdirs() }
-    val imageFile = File.createTempFile("perfil_${System.currentTimeMillis()}_", ".jpg", imagesDir)
-    return FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        imageFile
-    )
+    return File.createTempFile("perfil_${System.currentTimeMillis()}_", ".jpg", imagesDir)
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -127,7 +133,7 @@ fun ProfileScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     var showPhotoSourceSheet by remember { mutableStateOf(false) }
-    var pendingCameraUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var showCameraCapture by rememberSaveable { mutableStateOf(false) }
     var baseline by remember { mutableStateOf<ProfileSignature?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     val hasUnsavedChanges = baseline?.let { it != uiState.signature() } == true
@@ -136,18 +142,8 @@ fun ProfileScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri -> uri?.let(viewModel::uploadPhoto) }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        val capturedUri = pendingCameraUri?.let(Uri::parse)
-        pendingCameraUri = null
-        if (success && capturedUri != null) viewModel.uploadPhoto(capturedUri)
-    }
-
     fun openCamera() {
-        val newUri = createTempImageUri(context)
-        pendingCameraUri = newUri.toString()
-        cameraLauncher.launch(newUri)
+        showCameraCapture = true
     }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -206,6 +202,16 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDiscardDialog = false }) { Text("Seguir editando") }
+            }
+        )
+    }
+
+    if (showCameraCapture) {
+        CameraXCaptureDialog(
+            onDismiss = { showCameraCapture = false },
+            onPhotoCaptured = { uri ->
+                showCameraCapture = false
+                viewModel.uploadPhoto(uri)
             }
         )
     }
@@ -444,6 +450,170 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CameraXCaptureDialog(
+    onDismiss: () -> Unit,
+    onPhotoCaptured: (Uri) -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var previewView by remember { mutableStateOf<PreviewView?>(null) }
+    var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
+    var cameraError by remember { mutableStateOf<String?>(null) }
+    var isCapturing by remember { mutableStateOf(false) }
+
+    DisposableEffect(previewView, lifecycleOwner) {
+        val view = previewView
+        if (view == null) {
+            onDispose { }
+        } else {
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+            var cameraProvider: ProcessCameraProvider? = null
+            var boundPreview: Preview? = null
+            var boundImageCapture: ImageCapture? = null
+            var disposed = false
+
+            cameraProviderFuture.addListener({
+                if (!disposed) {
+                    try {
+                        val provider = cameraProviderFuture.get()
+                        val preview = Preview.Builder().build().also {
+                            it.setSurfaceProvider(view.surfaceProvider)
+                        }
+                        val capture = ImageCapture.Builder()
+                            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                            .setTargetRotation(view.display?.rotation ?: Surface.ROTATION_0)
+                            .build()
+                        val frontCamera = CameraSelector.DEFAULT_FRONT_CAMERA
+                        val selector = if (provider.hasCamera(frontCamera)) {
+                            frontCamera
+                        } else {
+                            CameraSelector.DEFAULT_BACK_CAMERA
+                        }
+
+                        provider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
+                        cameraProvider = provider
+                        boundPreview = preview
+                        boundImageCapture = capture
+                        imageCapture = capture
+                        cameraError = null
+                    } catch (exception: Exception) {
+                        cameraError = exception.localizedMessage
+                            ?: "No se pudo iniciar la cámara."
+                    }
+                }
+            }, ContextCompat.getMainExecutor(context))
+
+            onDispose {
+                disposed = true
+                imageCapture = null
+                val provider = cameraProvider
+                val preview = boundPreview
+                val capture = boundImageCapture
+                if (provider != null && preview != null && capture != null) {
+                    provider.unbind(preview, capture)
+                }
+            }
+        }
+    }
+
+    fun capturePhoto() {
+        val capture = imageCapture ?: return
+        val imageFile = try {
+            createTempImageFile(context)
+        } catch (exception: Exception) {
+            cameraError = exception.localizedMessage ?: "No se pudo preparar la foto."
+            return
+        }
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(imageFile).build()
+        isCapturing = true
+        capture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(context),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    isCapturing = false
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        imageFile
+                    )
+                    onPhotoCaptured(uri)
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    isCapturing = false
+                    imageFile.delete()
+                    cameraError = exception.localizedMessage ?: "No se pudo tomar la foto."
+                }
+            }
+        )
+    }
+
+    Dialog(
+        onDismissRequest = { if (!isCapturing) onDismiss() },
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 560.dp)
+                .padding(horizontal = 20.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Tomar foto de perfil", style = MaterialTheme.typography.titleLarge)
+                AndroidView(
+                    factory = { viewContext ->
+                        PreviewView(viewContext).apply {
+                            scaleType = PreviewView.ScaleType.FILL_CENTER
+                            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                        }.also { previewView = it }
+                    },
+                    update = { previewView = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(380.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                )
+                cameraError?.let { error ->
+                    Text(error, color = MaterialTheme.colorScheme.error)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        enabled = !isCapturing
+                    ) { Text("Cancelar") }
+                    Button(
+                        onClick = ::capturePhoto,
+                        enabled = imageCapture != null && !isCapturing,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (isCapturing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Text("Capturando...", modifier = Modifier.padding(start = 8.dp))
+                        } else {
+                            Text("Capturar foto")
+                        }
                     }
                 }
             }

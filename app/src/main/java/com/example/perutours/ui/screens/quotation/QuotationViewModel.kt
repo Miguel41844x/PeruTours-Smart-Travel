@@ -49,7 +49,7 @@ class QuotationViewModel(
             _catalogLoading.value = true
             try {
                 // Para actualizar/subir los servicios a Firestore
-                catalogRepository.syncCatalog()
+                // catalogRepository.syncCatalog()
 
                 _catalogServices.value = catalogRepository.getServices()
             } catch (_: Exception) {
