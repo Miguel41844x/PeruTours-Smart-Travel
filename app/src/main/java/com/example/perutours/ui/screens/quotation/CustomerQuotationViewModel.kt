@@ -65,20 +65,6 @@ class CustomerQuotationViewModel(
     }
 
     fun acceptQuotation(quotationId: String) {
-        val quotation = _detailState.value.quotation
-        if (quotation == null) {
-            _responseState.value = QuotationResponseUiState.Error(
-                "No se encontró la cotización."
-            )
-            return
-        }
-
-        val validationError = QuotationResponseValidator.validateAcceptance(quotation)
-        if (validationError != null) {
-            _responseState.value = QuotationResponseUiState.Error(validationError)
-            return
-        }
-
         respond(
             successMessage = "Cotización aceptada. Tu reserva fue creada.",
             action = { repository.acceptQuotation(quotationId) }

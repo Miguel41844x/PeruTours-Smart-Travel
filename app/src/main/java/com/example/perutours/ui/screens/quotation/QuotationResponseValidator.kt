@@ -1,8 +1,5 @@
 package com.example.perutours.ui.screens.quotation
 
-import com.example.perutours.data.model.Quotation
-import com.example.perutours.data.model.QuotationValidity
-
 object QuotationResponseValidator {
 
     const val MIN_OBSERVATION_LENGTH = 10
@@ -16,21 +13,6 @@ object QuotationResponseValidator {
                 "La observación debe tener al menos $MIN_OBSERVATION_LENGTH caracteres."
             cleanMessage.length > MAX_OBSERVATION_LENGTH ->
                 "La observación no puede superar los $MAX_OBSERVATION_LENGTH caracteres."
-            else -> null
-        }
-    }
-
-    fun validateAcceptance(
-        quotation: Quotation,
-        nowMillis: Long = System.currentTimeMillis()
-    ): String? {
-        return when {
-            !Quotation.canClientRespond(quotation.status) ->
-                "La cotización ya fue respondida."
-            QuotationValidity.validUntilExclusiveMillis(quotation.validityDate) == null ->
-                "La cotización no tiene una fecha de vigencia válida."
-            QuotationValidity.isExpired(quotation.validityDate, nowMillis) ->
-                "La cotización venció. Solicita una propuesta actualizada."
             else -> null
         }
     }

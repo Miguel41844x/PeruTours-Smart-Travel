@@ -10,21 +10,20 @@ class FCMTokenManager(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-
     suspend fun saveToken(refreshedToken: String? = null) {
+        val user = auth.currentUser ?: return
+        val token = refreshedToken ?: FirebaseMessaging.getInstance().token.await()
 
-        val user = auth.currentUser
-            ?: return
-
-        val token = refreshedToken ?: FirebaseMessaging
-            .getInstance()
-            .token
-            .await()
+        // Guardamos el token preservando o inicializando campos básicos para no romper reglas
+        val updateMap = hashMapOf<String, Any>(
+            "fcmToken" to token,
+            "updatedAt" to System.currentTimeMillis()
+        )
 
         firestore
             .collection("users")
             .document(user.uid)
-            .set(mapOf("fcmToken" to token), SetOptions.merge())
+            .set(updateMap, SetOptions.merge())
             .await()
     }
 }

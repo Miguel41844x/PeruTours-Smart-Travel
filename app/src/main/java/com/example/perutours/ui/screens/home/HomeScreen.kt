@@ -29,7 +29,6 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Luggage
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -85,7 +84,6 @@ fun HomeScreen(
     auth: FirebaseAuth,
     navigateToTravelRequest: () -> Unit = {},
     navigateToQuotations: () -> Unit = {},
-    navigateToReservations: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
     navigateToInitial: () -> Unit,
     viewModel: HomeViewModel = viewModel()
@@ -216,12 +214,6 @@ fun HomeScreen(
                     onClick = ::openQuotations,
                     icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null) },
                     label = { Text("Cotizaciones") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = navigateToReservations,
-                    icon = { Icon(Icons.Default.Luggage, contentDescription = null) },
-                    label = { Text("Reservas") }
                 )
                 NavigationBarItem(
                     selected = false,

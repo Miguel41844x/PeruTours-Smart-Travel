@@ -356,13 +356,7 @@ fun TravelRequestScreen(
                     onValueChange = viewModel::onNotesChanged,
                     label = { Text("Notas para el agente (opcional)") },
                     placeholder = { Text("Preferencias, restricciones o actividades de interés") },
-                    supportingText = {
-                        Text(
-                            uiState.notesError
-                                ?: "${uiState.notes.length}/${TravelRequestValidator.MAX_NOTES_LENGTH}"
-                        )
-                    },
-                    isError = uiState.notesError != null,
+                    supportingText = { Text("${uiState.notes.length}/500") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)

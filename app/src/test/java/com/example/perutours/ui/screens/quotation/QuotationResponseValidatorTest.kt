@@ -1,10 +1,8 @@
 package com.example.perutours.ui.screens.quotation
 
-import com.example.perutours.data.model.Quotation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.util.Calendar
 
 class QuotationResponseValidatorTest {
 
@@ -38,63 +36,4 @@ class QuotationResponseValidatorTest {
             QuotationResponseValidator.validateObservation(message)
         )
     }
-
-    @Test
-    fun activeQuotationCanBeAcceptedDuringItsLastValidDay() {
-        val quotation = Quotation(validityDate = "2026-10-11")
-
-        assertNull(
-            QuotationResponseValidator.validateAcceptance(
-                quotation = quotation,
-                nowMillis = localMillis(2026, Calendar.OCTOBER, 11, 23, 59)
-            )
-        )
-    }
-
-    @Test
-    fun expiredQuotationCannotBeAccepted() {
-        val quotation = Quotation(validityDate = "2026-10-11")
-
-        assertEquals(
-            "La cotización venció. Solicita una propuesta actualizada.",
-            QuotationResponseValidator.validateAcceptance(
-                quotation = quotation,
-                nowMillis = localMillis(2026, Calendar.OCTOBER, 12, 0, 0)
-            )
-        )
-    }
-
-    @Test
-    fun invalidValidityDateCannotBeAccepted() {
-        val quotation = Quotation(validityDate = "11/10/2026")
-
-        assertEquals(
-            "La cotización no tiene una fecha de vigencia válida.",
-            QuotationResponseValidator.validateAcceptance(quotation)
-        )
-    }
-
-    @Test
-    fun previouslyAnsweredQuotationCannotBeAcceptedAgain() {
-        val quotation = Quotation(
-            status = Quotation.STATUS_ACCEPTED,
-            validityDate = "2026-10-11"
-        )
-
-        assertEquals(
-            "La cotización ya fue respondida.",
-            QuotationResponseValidator.validateAcceptance(quotation)
-        )
-    }
-
-    private fun localMillis(
-        year: Int,
-        month: Int,
-        day: Int,
-        hour: Int,
-        minute: Int
-    ): Long = Calendar.getInstance().apply {
-        clear()
-        set(year, month, day, hour, minute)
-    }.timeInMillis
 }

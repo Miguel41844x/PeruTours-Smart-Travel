@@ -4,8 +4,6 @@ data class TravelRequest(
     val id: String = "",
     val userId: String = "",
     val destination: String = "",
-    val destinationLatitude: Double? = null,
-    val destinationLongitude: Double? = null,
     val originCity: String = "",
     val originLatitude: Double? = null,
     val originLongitude: Double? = null,

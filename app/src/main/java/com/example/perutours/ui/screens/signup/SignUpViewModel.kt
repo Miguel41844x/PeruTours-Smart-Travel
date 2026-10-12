@@ -1,21 +1,21 @@
 package com.example.perutours.ui.screens.signup
 
 import androidx.lifecycle.ViewModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.userProfileChangeRequest
+import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class SignUpViewModel(
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SignUpUiState())
     val uiState: StateFlow<SignUpUiState> = _uiState.asStateFlow()
 
-    // Solo permite letras en español, tildes, ñ y espacios (máximo 60 caracteres)
     fun onNameChange(name: String) {
         val isOnlyLettersAndSpaces = name.all { it.isLetter() || it.isWhitespace() }
         if (isOnlyLettersAndSpaces && name.length <= 60) {
@@ -49,10 +49,6 @@ class SignUpViewModel(
         _uiState.update { it.copy(confirmPasswordVisible = !it.confirmPasswordVisible) }
     }
 
-    fun onRoleSelect(roleId: String) {
-        _uiState.update { it.copy(selectedRoleId = roleId) }
-    }
-
     fun dismissVerificationDialog() {
         _uiState.update { it.copy(showVerificationDialog = false) }
     }
@@ -60,7 +56,6 @@ class SignUpViewModel(
     fun register() {
         val state = _uiState.value
 
-        // Ejecutar validación pura a través de SignUpValidator
         val validation = SignUpValidator.validate(
             name = state.name,
             email = state.email,
@@ -82,57 +77,28 @@ class SignUpViewModel(
             return
         }
 
-        // Si es válido, limpiar errores e invocar Firebase
-        _uiState.update {
-            it.copy(
-                isLoading = true,
-                generalError = null,
-                nameError = null,
-                emailError = null,
-                phoneError = null,
-                passwordError = null,
-                confirmPasswordError = null
+        _uiState.update { it.copy(isLoading = true, generalError = null) }
+
+        viewModelScope.launch {
+            val result = authRepository.registerClient(
+                name = state.name,
+                email = state.email,
+                password = state.password,
+                phone = state.phone
             )
-        }
 
-        val cleanEmail = state.email.trim()
-        val cleanPass = state.password.trim()
-        val cleanName = state.name.trim()
-        val cleanPhone = state.phone.trim()
-
-        auth.createUserWithEmailAndPassword(cleanEmail, cleanPass)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val user = auth.currentUser
-                    val profileUpdates = userProfileChangeRequest {
-                        displayName = "$cleanName | ${state.selectedRoleId} | $cleanPhone"
-                    }
-
-                    user?.updateProfile(profileUpdates)?.addOnCompleteListener {
-                        user.sendEmailVerification().addOnCompleteListener {
-                            auth.signOut()
-                            _uiState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    showVerificationDialog = true
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    val errorMsg = task.exception?.localizedMessage.orEmpty()
-                    val userFriendlyError = when {
-                        errorMsg.contains("already in use", ignoreCase = true) ->
-                            "Este correo electrónico ya está registrado."
-                        else -> "Error al registrarse: $errorMsg"
-                    }
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            generalError = userFriendlyError
-                        )
-                    }
+            result.onSuccess {
+                _uiState.update {
+                    it.copy(isLoading = false, showVerificationDialog = true)
                 }
+            }.onFailure { error ->
+                val errorMsg = error.localizedMessage.orEmpty()
+                val friendly = when {
+                    errorMsg.contains("already in use", true) -> "Este correo electrónico ya está registrado."
+                    else -> "Error al registrarse: $errorMsg"
+                }
+                _uiState.update { it.copy(isLoading = false, generalError = friendly) }
             }
+        }
     }
 }
