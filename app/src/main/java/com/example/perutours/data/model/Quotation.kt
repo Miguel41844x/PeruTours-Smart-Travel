@@ -23,6 +23,7 @@ data class Quotation(
     val totalAmount: Double = 0.0,
     val currency: String = "USD",
     val validityDate: String = "",         // Formato YYYY-MM-DD
+    val validUntilMillis: Long = 0L,
     val conditions: String = "",
     val status: String = STATUS_QUOTED,    // ESTADO OBLIGATORIO: 'Cotizado'
     val agentId: String = "",

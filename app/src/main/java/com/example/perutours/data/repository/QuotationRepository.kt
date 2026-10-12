@@ -2,7 +2,9 @@ package com.example.perutours.data.repository
 
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.QuotationObservation
+import com.example.perutours.data.model.QuotationValidity
 import com.example.perutours.data.model.Reservation
+import com.example.perutours.data.model.TravelRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -142,12 +144,23 @@ class QuotationRepository(
             val snapshot = transaction.get(quotationRef)
             val quotation = snapshot.toObject(Quotation::class.java)
                 ?: throw IllegalStateException("No se encontró la cotización.")
+            if (quotation.requestId.isBlank()) {
+                throw IllegalStateException("La cotización no tiene una solicitud asociada.")
+            }
+            val requestRef = firestore.collection(COLLECTION_REQUESTS)
+                .document(quotation.requestId)
+            val travelRequest = transaction.get(requestRef)
+                .toObject(TravelRequest::class.java)
+                ?: throw IllegalStateException("No se encontró la solicitud de viaje.")
 
             if (quotation.clientId != clientId) {
                 throw IllegalAccessException("Esta cotización no pertenece al usuario autenticado.")
             }
             if (!Quotation.canClientRespond(quotation.status)) {
                 throw IllegalStateException("La cotización ya fue respondida.")
+            }
+            if (QuotationValidity.isExpired(quotation)) {
+                throw IllegalStateException("La cotización ya venció.")
             }
 
             val respondedAt = System.currentTimeMillis()
@@ -158,9 +171,15 @@ class QuotationRepository(
                 clientId = quotation.clientId,
                 agentId = quotation.agentId,
                 destination = quotation.destination,
+                originCity = travelRequest.originCity,
+                departureAtMillis = travelRequest.departureAtMillis,
+                returnAtMillis = travelRequest.returnAtMillis,
                 travelerCount = quotation.travelerCount,
+                services = quotation.services,
                 totalAmount = quotation.totalAmount,
                 currency = quotation.currency,
+                validityDate = quotation.validityDate,
+                conditions = quotation.conditions,
                 createdAtMillis = respondedAt
             )
 
@@ -175,8 +194,6 @@ class QuotationRepository(
             )
 
             if (quotation.requestId.isNotBlank()) {
-                val requestRef = firestore.collection(COLLECTION_REQUESTS)
-                    .document(quotation.requestId)
                 transaction.update(requestRef, "status", Quotation.STATUS_ACCEPTED)
             }
 

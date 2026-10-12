@@ -7,9 +7,15 @@ data class Reservation(
     val clientId: String = "",
     val agentId: String = "",
     val destination: String = "",
+    val originCity: String = "",
+    val departureAtMillis: Long = 0L,
+    val returnAtMillis: Long = 0L,
     val travelerCount: Int = 1,
+    val services: List<QuotationServiceItem> = emptyList(),
     val totalAmount: Double = 0.0,
     val currency: String = "USD",
+    val validityDate: String = "",
+    val conditions: String = "",
     val status: String = STATUS_CONFIRMED,
     val createdAtMillis: Long = System.currentTimeMillis()
 ) {

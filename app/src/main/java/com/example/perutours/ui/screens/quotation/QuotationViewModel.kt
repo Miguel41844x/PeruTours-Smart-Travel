@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.CatalogService
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.QuotationServiceItem
+import com.example.perutours.data.model.QuotationValidity
 import com.example.perutours.data.repository.QuotationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -212,6 +213,9 @@ class QuotationViewModel(
             marginPercent = form.marginPercent,
             totalAmount = total,
             validityDate = validityStr,
+            validUntilMillis = QuotationValidity
+                .validUntilExclusiveMillis(validityStr)
+                ?: 0L,
             conditions = form.conditions,
             status = Quotation.STATUS_QUOTED, // 'Cotizado'
             clientFcmToken = form.clientFcmToken

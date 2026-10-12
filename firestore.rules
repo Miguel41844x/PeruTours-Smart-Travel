@@ -14,7 +14,8 @@ service cloud.firestore {
     //   while preparing and managing a travel quotation.
     //
     // travel_requests/{requestId}
-    //   id, userId, destination, originCity, originLatitude,
+    //   id, userId, destination, destinationLatitude,
+    //   destinationLongitude, originCity, originLatitude,
     //   originLongitude, departureAtMillis, returnAtMillis,
     //   travelerCount, notes, status, createdAtMillis;
     //   optional quotationId after an agent creates a quotation.
@@ -29,7 +30,8 @@ service cloud.firestore {
     // cotizaciones/{quotationId}
     //   id, requestId, clientId, clientName, clientEmail, destination,
     //   travelerCount, services, baseCost, marginPercent, totalAmount,
-    //   currency, validityDate, conditions, status, agentId, agentName,
+    //   currency, validityDate, validUntilMillis, conditions, status,
+    //   agentId, agentName,
     //   clientFcmToken, createdAtMillis, respondedAtMillis,
     //   latestObservation, reservationId.
     //
@@ -39,7 +41,9 @@ service cloud.firestore {
     //
     // reservations/{reservationId}
     //   id, quotationId, requestId, clientId, agentId, destination,
-    //   travelerCount, totalAmount, currency, status, createdAtMillis.
+    //   originCity, departureAtMillis, returnAtMillis, travelerCount,
+    //   services, totalAmount, currency, validityDate, conditions,
+    //   status, createdAtMillis.
     //   HU06 uses the quotation ID as the reservation document ID.
     //
     // fcm_push_logs/{logId}
@@ -265,6 +269,20 @@ service cloud.firestore {
         );
     }
 
+    function isValidDestinationCoordinates(data) {
+      return (
+          !('destinationLatitude' in data)
+          && !('destinationLongitude' in data)
+        ) || (
+          data.destinationLatitude is number
+          && data.destinationLatitude >= -90
+          && data.destinationLatitude <= 90
+          && data.destinationLongitude is number
+          && data.destinationLongitude >= -180
+          && data.destinationLongitude <= 180
+        );
+    }
+
     function isValidTravelRequest(data) {
       return hasRequiredFields(data, [
           'id', 'userId', 'destination', 'originCity',
@@ -273,7 +291,8 @@ service cloud.firestore {
           'createdAtMillis'
         ])
         && hasOnlyAllowedFields(data, [
-          'id', 'userId', 'destination', 'originCity',
+          'id', 'userId', 'destination', 'destinationLatitude',
+          'destinationLongitude', 'originCity',
           'originLatitude', 'originLongitude', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'notes', 'status',
           'createdAtMillis', 'quotationId'
@@ -282,6 +301,7 @@ service cloud.firestore {
         && validString(data.userId, 1, 128)
         && validString(data.destination, 3, 120)
         && validString(data.originCity, 2, 120)
+        && isValidDestinationCoordinates(data)
         && isValidCoordinates(data)
         && data.departureAtMillis is int
         && data.returnAtMillis is int
@@ -291,7 +311,7 @@ service cloud.firestore {
         && data.travelerCount >= 1
         && data.travelerCount <= 20
         && data.notes is string
-        && data.notes.size() <= 1000
+        && data.notes.size() <= 500
         && data.status in [
           'Pendiente de cotizacion', 'Cotizado', 'Aceptada',
           'Observada', 'Cancelada'
@@ -404,7 +424,7 @@ service cloud.firestore {
           'id', 'requestId', 'clientId', 'clientName', 'clientEmail',
           'destination', 'travelerCount', 'services', 'baseCost',
           'marginPercent', 'totalAmount', 'currency', 'validityDate',
-          'conditions', 'status', 'agentId', 'agentName',
+          'validUntilMillis', 'conditions', 'status', 'agentId', 'agentName',
           'clientFcmToken', 'createdAtMillis', 'respondedAtMillis',
           'latestObservation', 'reservationId'
         ])
@@ -427,6 +447,10 @@ service cloud.firestore {
         && data.currency in ['USD', 'PEN']
         && data.validityDate is string
         && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && (!('validUntilMillis' in data)
+          || (data.validUntilMillis is int
+            && data.validUntilMillis > data.createdAtMillis
+            && data.validUntilMillis <= data.createdAtMillis + 2764800000))
         && data.conditions is string
         && data.conditions.size() <= 2000
         && data.status in ['Cotizado', 'Aceptada', 'Observada', 'Cancelada']
@@ -465,13 +489,15 @@ service cloud.firestore {
     function isValidReservation(data) {
       return hasRequiredFields(data, [
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
-          'destination', 'travelerCount', 'totalAmount', 'currency',
-          'status', 'createdAtMillis'
+          'destination', 'originCity', 'departureAtMillis',
+          'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
+          'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis'
         ])
         && hasOnlyAllowedFields(data, [
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
-          'destination', 'travelerCount', 'totalAmount', 'currency',
-          'status', 'createdAtMillis'
+          'destination', 'originCity', 'departureAtMillis',
+          'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
+          'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis'
         ])
         && validString(data.id, 1, 128)
         && validString(data.quotationId, 1, 128)
@@ -479,11 +505,21 @@ service cloud.firestore {
         && validString(data.clientId, 1, 128)
         && validString(data.agentId, 1, 128)
         && validString(data.destination, 3, 120)
+        && validString(data.originCity, 2, 120)
+        && data.departureAtMillis is int
+        && data.returnAtMillis is int
+        && data.departureAtMillis > 0
+        && data.returnAtMillis > data.departureAtMillis
         && data.travelerCount is int
         && data.travelerCount >= 1
         && data.travelerCount <= 20
+        && isValidQuotationServices(data.services)
         && isPositiveBoundedNumber(data.totalAmount, 200000000)
         && data.currency in ['USD', 'PEN']
+        && data.validityDate is string
+        && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.conditions is string
+        && data.conditions.size() <= 2000
         && data.status == 'Confirmada'
         && isRecentMillis(data.createdAtMillis);
     }
@@ -544,6 +580,8 @@ service cloud.firestore {
         && data.clientEmail == client.email
         && data.clientFcmToken == ''
         && data.status == 'Cotizado'
+        && data.validUntilMillis is int
+        && data.validUntilMillis > request.time.toMillis()
         && data.respondedAtMillis == null
         && data.latestObservation == ''
         && data.reservationId == ''
@@ -559,6 +597,8 @@ service cloud.firestore {
       let changed = data.diff(resource.data).affectedKeys();
       let canRespond = resource.data.status in ['Cotizado', 'Observada'];
       let accepted = data.status == 'Aceptada'
+        && (!('validUntilMillis' in resource.data)
+          || request.time.toMillis() < resource.data.validUntilMillis)
         && data.reservationId == quotationId
         && existsAfter(reservationPath(quotationId))
         && getAfter(reservationPath(quotationId)).data.clientId == request.auth.uid
@@ -653,12 +693,15 @@ service cloud.firestore {
         && request.resource.data.id == requestId
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.status == 'Pendiente de cotizacion'
+        && request.resource.data.destinationLatitude is number
+        && request.resource.data.destinationLongitude is number
         && !('quotationId' in request.resource.data)
         && isRecentMillis(request.resource.data.createdAtMillis);
 
       allow update: if isValidTravelRequest(request.resource.data)
         && areImmutableFieldsUnchanged([
-          'id', 'userId', 'destination', 'originCity',
+          'id', 'userId', 'destination', 'destinationLatitude',
+          'destinationLongitude', 'originCity',
           'originLatitude', 'originLongitude', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'notes', 'createdAtMillis'
         ])
@@ -747,12 +790,24 @@ service cloud.firestore {
           == request.resource.data.agentId
         && getAfter(quotationPath(reservationId)).data.destination
           == request.resource.data.destination
+        && getAfter(requestPath(request.resource.data.requestId)).data.originCity
+          == request.resource.data.originCity
+        && getAfter(requestPath(request.resource.data.requestId)).data.departureAtMillis
+          == request.resource.data.departureAtMillis
+        && getAfter(requestPath(request.resource.data.requestId)).data.returnAtMillis
+          == request.resource.data.returnAtMillis
         && getAfter(quotationPath(reservationId)).data.travelerCount
           == request.resource.data.travelerCount
+        && getAfter(quotationPath(reservationId)).data.services
+          == request.resource.data.services
         && getAfter(quotationPath(reservationId)).data.totalAmount
           == request.resource.data.totalAmount
         && getAfter(quotationPath(reservationId)).data.currency
-          == request.resource.data.currency;
+          == request.resource.data.currency
+        && getAfter(quotationPath(reservationId)).data.validityDate
+          == request.resource.data.validityDate
+        && getAfter(quotationPath(reservationId)).data.conditions
+          == request.resource.data.conditions;
 
       allow update, delete: if false;
     }
