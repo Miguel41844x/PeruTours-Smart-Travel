@@ -15,7 +15,6 @@ import kotlinx.coroutines.launch
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: DestinationRepository
-
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
@@ -27,8 +26,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         // 1. Escuchar Room SQLite en tiempo real (Single Source of Truth)
         observeLocalDatabase()
 
-        // 2. Sincronizar con la API remota
-        fetchDestinations()
+        // 2. Sincronizar con la API remota respetando la política de expiración
+        fetchDestinations(forceRefresh = false)
     }
 
     private fun observeLocalDatabase() {
@@ -36,25 +35,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             repository.localDestinations.collect { entities ->
                 if (entities.isNotEmpty()) {
                     val dtos = entities.map { it.toDto() }
+                    val fromCache = repository.isCacheExpired()
                     _uiState.update {
-                        it.copy(destinationsState = HomeDestinationsState.Success(dtos))
+                        it.copy(
+                            destinationsState = HomeDestinationsState.Success(
+                                destinations = dtos,
+                                fromCache = fromCache
+                            )
+                        )
                     }
                 }
             }
         }
     }
 
-    fun fetchDestinations() {
+    fun fetchDestinations(forceRefresh: Boolean = true) {
         viewModelScope.launch {
-            // Si la base de datos aún no tiene nada en caché, mostramos Loading
             if (_uiState.value.destinationsState !is HomeDestinationsState.Success) {
                 _uiState.update { it.copy(destinationsState = HomeDestinationsState.Loading) }
             }
 
-            val result = repository.refreshDestinations()
-
+            val result = repository.refreshDestinations(forceRefresh = forceRefresh)
             result.onFailure {
-                // Si la BD local no tiene datos y falló el internet, mostramos Error
                 if (_uiState.value.destinationsState !is HomeDestinationsState.Success) {
                     _uiState.update {
                         it.copy(
