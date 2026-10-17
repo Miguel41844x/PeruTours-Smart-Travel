@@ -1,5 +1,6 @@
 package com.example.perutours.ui.screens.quotation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.CatalogService
@@ -12,8 +13,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
@@ -200,7 +204,11 @@ class QuotationViewModel(
             val updated = current.selectedServices.map { item ->
                 if (item.id == serviceId) {
                     val newQty = (item.quantity + delta).coerceAtLeast(1)
-                    item.copy(quantity = newQty, subtotal = item.unitCost * newQty)
+                    val newSubtotal = BigDecimal.valueOf(item.unitCost)
+                        .multiply(BigDecimal.valueOf(newQty.toLong()))
+                        .setScale(2, RoundingMode.HALF_UP)
+                        .toDouble()
+                    item.copy(quantity = newQty, subtotal = newSubtotal)
                 } else item
             }
             current.copy(selectedServices = updated)
@@ -243,8 +251,24 @@ class QuotationViewModel(
             return
         }
 
-        val baseCost = form.selectedServices.sumOf { it.unitCost * it.quantity }
-        val total = Math.round(baseCost * (1.0 + form.marginPercent / 100.0) * 100.0) / 100.0
+        var baseCostBD = BigDecimal.ZERO
+        for (item in form.selectedServices) {
+            val itemSubtotalBD = BigDecimal.valueOf(item.unitCost)
+                .multiply(BigDecimal.valueOf(item.quantity.toLong()))
+                .setScale(2, RoundingMode.HALF_UP)
+            baseCostBD = baseCostBD.add(itemSubtotalBD)
+        }
+        baseCostBD = baseCostBD.setScale(2, RoundingMode.HALF_UP)
+
+        val baseCost = baseCostBD.toDouble()
+
+        val marginMultiplier = BigDecimal.ONE.add(
+            BigDecimal.valueOf(form.marginPercent.toLong())
+                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+        )
+
+        val totalBD = baseCostBD.multiply(marginMultiplier).setScale(2, RoundingMode.HALF_UP)
+        val total = totalBD.toDouble()
 
         val cal = Calendar.getInstance()
         cal.add(Calendar.DAY_OF_YEAR, form.validityDays)
@@ -279,7 +303,8 @@ class QuotationViewModel(
                     repository.reviseObservedQuotation(quotation)
                 }
                 _uiState.value = QuotationUiState.Success(saved)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("HU05", "save failed", e)
                 _uiState.value = QuotationUiState.Error(
                     "No pudimos guardar la cotización. Inténtalo nuevamente."
                 )

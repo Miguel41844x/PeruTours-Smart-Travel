@@ -184,10 +184,11 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidBootstrapUser(data) {
-      return hasOnlyAllowedFields(data, ['photoUrl', 'fcmToken'])
-        && data.keys().hasAny(['photoUrl', 'fcmToken'])
+      return hasOnlyAllowedFields(data, ['photoUrl', 'fcmToken', 'updatedAt'])
+        && data.keys().hasAny(['photoUrl', 'fcmToken', 'updatedAt'])
         && validOptionalString(data, 'fcmToken', 4096)
-        && (!('photoUrl' in data) || isValidUrl(data.photoUrl));
+        && (!('photoUrl' in data) || isValidUrl(data.photoUrl))
+        && (!('updatedAt' in data) || (data.updatedAt is int && data.updatedAt > 0));
     }
 
     function isValidFullUser(data) {
@@ -369,7 +370,8 @@ service cloud.firestore {
           'id', 'name', 'category', 'unitCost', 'quantity', 'subtotal'
         ])
         && hasOnlyAllowedFields(item, [
-          'id', 'name', 'category', 'unitCost', 'quantity', 'subtotal'
+          'id', 'name', 'category', 'unitCost', 'quantity', 'subtotal',
+          'commercialCost', 'supplierName'
         ])
         && validString(item.id, 1, 128)
         && validString(item.name, 1, 120)
@@ -379,7 +381,8 @@ service cloud.firestore {
         && item.quantity >= 1
         && item.quantity <= 100
         && isPositiveBoundedNumber(item.subtotal, 100000000)
-        && item.subtotal == item.unitCost * item.quantity;
+        && (!('commercialCost' in item) || isPositiveBoundedNumber(item.commercialCost, 1000000))
+        && (!('supplierName' in item) || (item.supplierName is string && item.supplierName.size() <= 100));
     }
 
     function isValidServiceItemAt(items, index) {
@@ -420,7 +423,7 @@ service cloud.firestore {
           'destination', 'travelerCount', 'services', 'baseCost',
           'marginPercent', 'totalAmount', 'currency', 'validityDate',
           'conditions', 'status', 'agentId', 'agentName',
-          'clientFcmToken', 'createdAtMillis', 'respondedAtMillis',
+          'createdAtMillis', 'respondedAtMillis',
           'latestObservation', 'reservationId'
         ])
         && hasOnlyAllowedFields(data, [
@@ -428,8 +431,9 @@ service cloud.firestore {
           'destination', 'travelerCount', 'services', 'baseCost',
           'marginPercent', 'totalAmount', 'currency', 'validityDate',
           'validUntilMillis', 'conditions', 'status', 'agentId', 'agentName',
-          'clientFcmToken', 'createdAtMillis', 'respondedAtMillis',
-          'latestObservation', 'reservationId'
+          'createdAtMillis', 'respondedAtMillis',
+          'latestObservation', 'reservationId',
+          'version', 'parentQuotationId'
         ])
         && validString(data.id, 1, 128)
         && validString(data.requestId, 1, 128)
@@ -458,8 +462,6 @@ service cloud.firestore {
         && data.status in ['Cotizado', 'Aceptada', 'Observada', 'Cancelada']
         && validString(data.agentId, 1, 128)
         && validString(data.agentName, 1, 100)
-        && data.clientFcmToken is string
-        && data.clientFcmToken.size() <= 4096
         && data.createdAtMillis is int
         && data.createdAtMillis > 0
         && (data.respondedAtMillis == null
@@ -467,7 +469,9 @@ service cloud.firestore {
         && data.latestObservation is string
         && data.latestObservation.size() <= 500
         && data.reservationId is string
-        && data.reservationId.size() <= 128;
+        && data.reservationId.size() <= 128
+        && (!('version' in data) || (data.version is int && data.version >= 1))
+        && (!('parentQuotationId' in data) || (data.parentQuotationId is string && data.parentQuotationId.size() <= 128));
     }
 
     function isValidObservation(data) {
@@ -597,7 +601,6 @@ service cloud.firestore {
         && data.agentName == agent.name
         && data.clientName == client.name
         && data.clientEmail == client.email
-        && data.clientFcmToken == ''
         && data.status == 'Cotizado'
         && data.validUntilMillis is int
         && data.validUntilMillis > request.time.toMillis()
@@ -652,7 +655,8 @@ service cloud.firestore {
         && data.validUntilMillis <= request.time.toMillis() + 2678400000
         && data.diff(resource.data).affectedKeys().hasOnly([
           'services', 'baseCost', 'marginPercent', 'totalAmount',
-          'validityDate', 'validUntilMillis', 'conditions', 'status'
+          'validityDate', 'validUntilMillis', 'conditions', 'status',
+          'version', 'parentQuotationId'
         ]);
     }
 

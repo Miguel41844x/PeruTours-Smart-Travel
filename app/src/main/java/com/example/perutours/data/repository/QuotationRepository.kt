@@ -8,6 +8,8 @@ import com.example.perutours.data.model.TravelRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.Locale
 
 class QuotationRepository(
@@ -37,9 +39,16 @@ class QuotationRepository(
             "La cotización debe incluir al menos un servicio."
         }
 
-        // Redondeo estricto a 2 decimales
-        val roundedTotal = String.format(Locale.US, "%.2f", quotation.totalAmount).toDouble()
-        val roundedBase = String.format(Locale.US, "%.2f", quotation.baseCost).toDouble()
+        // Redondeo estricto a 2 decimales con BigDecimal
+        val roundedServices = quotation.services.map { item ->
+            val calcSubtotal = BigDecimal.valueOf(item.unitCost)
+                .multiply(BigDecimal.valueOf(item.quantity.toLong()))
+                .setScale(2, RoundingMode.HALF_UP)
+                .toDouble()
+            item.copy(subtotal = calcSubtotal)
+        }
+        val roundedTotal = BigDecimal.valueOf(quotation.totalAmount).setScale(2, RoundingMode.HALF_UP).toDouble()
+        val roundedBase = BigDecimal.valueOf(quotation.baseCost).setScale(2, RoundingMode.HALF_UP).toDouble()
 
         val agentUid = currentAgent.uid
         val agentEmail = currentAgent.email ?: ""
@@ -62,6 +71,7 @@ class QuotationRepository(
             id = quotationId,
             agentId = agentUid,
             agentName = agentName,
+            services = roundedServices,
             baseCost = roundedBase,
             totalAmount = roundedTotal,
             status = Quotation.STATUS_QUOTED,
@@ -73,15 +83,7 @@ class QuotationRepository(
         // 1. Guardar documento principal de cotización
         batch.set(docRef, quotationToSave)
 
-        // 2. Guardar ítems como relación lógica QUOTATION_ITEM (subcolección items)
-        for (item in quotationToSave.services) {
-            val itemRef = docRef.collection("items").document(item.id.ifBlank { firestore.collection("temp").document().id })
-            val roundedSubtotal = String.format(Locale.US, "%.2f", item.subtotal).toDouble()
-            val itemToSave = item.copy(subtotal = roundedSubtotal)
-            batch.set(itemRef, itemToSave)
-        }
-
-        // 3. Actualizar estado de la solicitud en 'travel_requests'
+        // 2. Actualizar estado de la solicitud en 'travel_requests'
         if (quotation.requestId.isNotBlank()) {
             val requestRef = firestore.collection(COLLECTION_REQUESTS).document(quotation.requestId)
             batch.update(
@@ -92,20 +94,6 @@ class QuotationRepository(
                 )
             )
         }
-
-        // 4. Registrar log de evento de Notificación Push FCM (sin clientFcmToken en cotización, Cloud Functions obtiene el token del usuario)
-        val fcmLogRef = firestore.collection(COLLECTION_FCM_LOGS).document()
-        batch.set(
-            fcmLogRef,
-            mapOf(
-                "clientId" to quotation.clientId,
-                "title" to "¡Tu cotización para ${quotation.destination} está lista! ✈️",
-                "body" to "El agente preparó tu propuesta por $${quotationToSave.totalAmount} USD.",
-                "quotationId" to quotationId,
-                "status" to Quotation.STATUS_QUOTED,
-                "timestamp" to System.currentTimeMillis()
-            )
-        )
 
         batch.commit().await()
         return quotationToSave
@@ -167,14 +155,21 @@ class QuotationRepository(
                 throw IllegalStateException("La cotización no tiene cambios pendientes.")
             }
 
-            val roundedTotal = String.format(Locale.US, "%.2f", revision.totalAmount).toDouble()
-            val roundedBase = String.format(Locale.US, "%.2f", revision.baseCost).toDouble()
+            val roundedServices = revision.services.map { item ->
+                val calcSubtotal = BigDecimal.valueOf(item.unitCost)
+                    .multiply(BigDecimal.valueOf(item.quantity.toLong()))
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .toDouble()
+                item.copy(subtotal = calcSubtotal)
+            }
+            val roundedTotal = BigDecimal.valueOf(revision.totalAmount).setScale(2, RoundingMode.HALF_UP).toDouble()
+            val roundedBase = BigDecimal.valueOf(revision.baseCost).setScale(2, RoundingMode.HALF_UP).toDouble()
 
             // Manejo de versiones al corregir una cotización observada
             val newVersion = current.version + 1
 
             val updated = current.copy(
-                services = revision.services,
+                services = roundedServices,
                 baseCost = roundedBase,
                 marginPercent = revision.marginPercent,
                 totalAmount = roundedTotal,

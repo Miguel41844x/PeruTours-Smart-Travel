@@ -1,5 +1,6 @@
 package com.example.perutours.data.messaging
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -11,19 +12,23 @@ class FCMTokenManager(
     private val firestore: FirebaseFirestore
 ) {
     suspend fun saveToken(refreshedToken: String? = null) {
-        val user = auth.currentUser ?: return
-        val token = refreshedToken ?: FirebaseMessaging.getInstance().token.await()
+        try {
+            val user = auth.currentUser ?: return
+            val token = refreshedToken ?: FirebaseMessaging.getInstance().token.await()
 
-        // Guardamos el token preservando o inicializando campos básicos para no romper reglas
-        val updateMap = hashMapOf<String, Any>(
-            "fcmToken" to token,
-            "updatedAt" to System.currentTimeMillis()
-        )
+            val updateMap = hashMapOf<String, Any>(
+                "fcmToken" to token,
+                "updatedAt" to System.currentTimeMillis()
+            )
 
-        firestore
-            .collection("users")
-            .document(user.uid)
-            .set(updateMap, SetOptions.merge())
-            .await()
+            firestore
+                .collection("users")
+                .document(user.uid)
+                .set(updateMap, SetOptions.merge())
+                .await()
+            Log.d("FCMTokenManager", "Token FCM guardado exitosamente para uid=${user.uid}")
+        } catch (e: Exception) {
+            Log.e("FCMTokenManager", "Error al guardar el token FCM", e)
+        }
     }
 }

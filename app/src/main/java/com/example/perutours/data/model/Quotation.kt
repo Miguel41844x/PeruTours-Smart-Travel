@@ -29,7 +29,7 @@ data class Quotation(
     val conditions: String = "",
     val status: String = STATUS_QUOTED,    // ESTADO OBLIGATORIO: 'Cotizado'
     val agentId: String = "",
-    val agentName: String = "Nataly Chávez",
+    val agentName: String = "",
     val version: Int = 1,
     val parentQuotationId: String = "",
     val createdAtMillis: Long = System.currentTimeMillis(),

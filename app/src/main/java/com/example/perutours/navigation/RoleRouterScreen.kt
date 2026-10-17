@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.perutours.data.messaging.FCMTokenManager
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.ui.components.PeruToursBrand
 import com.google.firebase.auth.FirebaseAuth
@@ -30,7 +31,8 @@ import org.koin.compose.koinInject
 fun RoleRouterScreen(
     navController: NavHostController,
     auth: FirebaseAuth,
-    profileRepository: ProfileRepository = koinInject()
+    profileRepository: ProfileRepository = koinInject(),
+    fcmTokenManager: FCMTokenManager = koinInject()
 ) {
 
     var isLoading by remember {
@@ -55,6 +57,9 @@ fun RoleRouterScreen(
 
             return@LaunchedEffect
         }
+
+        // Registrar/actualizar token FCM al inicio de sesión o entrada persistente
+        runCatching { fcmTokenManager.saveToken() }
 
         try {
 
