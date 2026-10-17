@@ -35,6 +35,7 @@ import com.example.perutours.service.MyFirebaseMessagingService
 import com.example.perutours.data.messaging.FCMTokenManager
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
@@ -132,12 +133,12 @@ fun NavigationWrapper(
                 },
                 onLogout = {
                     coroutineScope.launch {
-                        runCatching { fcmTokenManager.clearToken() }
-                    }
-                    auth.signOut()
-                    navHostController.navigate("initial") {
-                        popUpTo(0) {
-                            inclusive = true
+                        withTimeoutOrNull(3_000) { fcmTokenManager.clearToken() }
+                        auth.signOut()
+                        navHostController.navigate("initial") {
+                            popUpTo(0) {
+                                inclusive = true
+                            }
                         }
                     }
                 }

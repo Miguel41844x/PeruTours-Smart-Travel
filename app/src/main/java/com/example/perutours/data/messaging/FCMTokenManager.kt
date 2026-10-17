@@ -46,6 +46,9 @@ class FCMTokenManager(
                 .document(user.uid)
                 .set(updateMap, SetOptions.merge())
                 .await()
+
+            runCatching { FirebaseMessaging.getInstance().deleteToken().await() }
+
             Log.d("FCMTokenManager", "Token FCM eliminado para uid=${user.uid}")
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e

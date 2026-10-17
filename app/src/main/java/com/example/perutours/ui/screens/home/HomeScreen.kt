@@ -80,6 +80,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.example.perutours.data.messaging.FCMTokenManager
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -149,10 +150,10 @@ fun HomeScreen(
                     onClick = {
                         showLogoutDialog = false
                         coroutineScope.launch {
-                            runCatching { fcmTokenManager.clearToken() }
+                            withTimeoutOrNull(3_000) { fcmTokenManager.clearToken() }
+                            auth.signOut()
+                            navigateToInitial()
                         }
-                        auth.signOut()
-                        navigateToInitial()
                     }
                 ) { Text("Cerrar sesión") }
             },
