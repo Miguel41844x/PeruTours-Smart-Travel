@@ -77,6 +77,10 @@ import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.perutours.data.messaging.FCMTokenManager
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("InlinedApi")
@@ -88,11 +92,13 @@ fun HomeScreen(
     navigateToReservations: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
     navigateToInitial: () -> Unit,
-    viewModel: HomeViewModel = koinViewModel()
+    viewModel: HomeViewModel = koinViewModel(),
+    fcmTokenManager: FCMTokenManager = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showNotificationPrompt by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -142,6 +148,9 @@ fun HomeScreen(
                 Button(
                     onClick = {
                         showLogoutDialog = false
+                        coroutineScope.launch {
+                            runCatching { fcmTokenManager.clearToken() }
+                        }
                         auth.signOut()
                         navigateToInitial()
                     }

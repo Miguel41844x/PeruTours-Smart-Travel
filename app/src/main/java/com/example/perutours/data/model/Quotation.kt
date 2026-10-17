@@ -23,7 +23,7 @@ data class Quotation(
     val baseCost: Double = 0.0,
     val marginPercent: Int = 15,
     val totalAmount: Double = 0.0,
-    val currency: String = "USD",
+    val currency: String = "S/",
     val validityDate: String = "",         // Formato YYYY-MM-DD
     val validUntilMillis: Long = 0L,
     val conditions: String = "",

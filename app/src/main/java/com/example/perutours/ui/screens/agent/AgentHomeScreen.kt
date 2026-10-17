@@ -56,6 +56,15 @@ import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
 import com.google.firebase.auth.FirebaseAuth
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.compose.runtime.LaunchedEffect
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgentHomeScreen(
@@ -64,8 +73,26 @@ fun AgentHomeScreen(
     onLogout: () -> Unit = {},
     viewModel: AgentHomeViewModel = koinViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { }
+    )
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     if (showLogoutDialog) {
         AlertDialog(

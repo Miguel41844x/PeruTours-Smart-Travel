@@ -27,6 +27,9 @@ import com.example.perutours.ui.components.PeruToursBrand
 import com.google.firebase.auth.FirebaseAuth
 import org.koin.compose.koinInject
 
+    import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
 @Composable
 fun RoleRouterScreen(
     navController: NavHostController,
@@ -34,6 +37,8 @@ fun RoleRouterScreen(
     profileRepository: ProfileRepository = koinInject(),
     fcmTokenManager: FCMTokenManager = koinInject()
 ) {
+
+    val coroutineScope = rememberCoroutineScope()
 
     var isLoading by remember {
         mutableStateOf(true)
@@ -58,8 +63,8 @@ fun RoleRouterScreen(
             return@LaunchedEffect
         }
 
-        // Registrar/actualizar token FCM al inicio de sesión o entrada persistente
-        runCatching { fcmTokenManager.saveToken() }
+        // Registrar/actualizar token FCM en segundo plano sin bloquear la carga inicial
+        coroutineScope.launch { runCatching { fcmTokenManager.saveToken() } }
 
         try {
 

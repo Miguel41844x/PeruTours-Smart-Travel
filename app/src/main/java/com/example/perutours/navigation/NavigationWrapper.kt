@@ -32,6 +32,9 @@ import com.example.perutours.ui.screens.request.TravelRequestScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
 import com.example.perutours.ui.screens.payment.PaymentScreen
 import com.example.perutours.service.MyFirebaseMessagingService
+import com.example.perutours.data.messaging.FCMTokenManager
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
@@ -120,12 +123,17 @@ fun NavigationWrapper(
         }
 
         composable(route = "agent_home") {
+            val fcmTokenManager: FCMTokenManager = koinInject()
+            val coroutineScope = rememberCoroutineScope()
             AgentHomeScreen(
                 auth = auth,
                 onViewRequests = {
                     navHostController.navigate("agent_requests")
                 },
                 onLogout = {
+                    coroutineScope.launch {
+                        runCatching { fcmTokenManager.clearToken() }
+                    }
                     auth.signOut()
                     navHostController.navigate("initial") {
                         popUpTo(0) {

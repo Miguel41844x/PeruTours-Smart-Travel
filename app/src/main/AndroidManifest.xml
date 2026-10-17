@@ -40,10 +40,13 @@
 
         </activity>
 
-        <!-- Canal de notificaciones predeterminado para FCM en segundo plano -->
+        <!-- Canal e ícono de notificaciones predeterminados para FCM en segundo plano -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="perutours_fcm_quotations" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
 
         <service
             android:name=".service.MyFirebaseMessagingService"

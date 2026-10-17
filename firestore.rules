@@ -381,6 +381,7 @@ service cloud.firestore {
         && item.quantity >= 1
         && item.quantity <= 100
         && isPositiveBoundedNumber(item.subtotal, 100000000)
+        && math.abs(item.subtotal - item.unitCost * item.quantity) < 0.01
         && (!('commercialCost' in item) || isPositiveBoundedNumber(item.commercialCost, 1000000))
         && (!('supplierName' in item) || (item.supplierName is string && item.supplierName.size() <= 100));
     }
@@ -545,22 +546,6 @@ service cloud.firestore {
             && data.paidAtMillis > 0
             && isRecentMillis(data.paidAtMillis))
         );
-    }
-
-    function isValidFcmPushLog(data) {
-      return hasRequiredFields(data, [
-          'toToken', 'title', 'body', 'quotationId', 'status', 'timestamp'
-        ])
-        && hasOnlyAllowedFields(data, [
-          'toToken', 'title', 'body', 'quotationId', 'status', 'timestamp'
-        ])
-        && data.toToken is string
-        && data.toToken.size() <= 4096
-        && validString(data.title, 1, 200)
-        && validString(data.body, 1, 500)
-        && validString(data.quotationId, 1, 128)
-        && data.status == 'Cotizado'
-        && isRecentMillis(data.timestamp);
     }
 
     // ===============================================================
@@ -861,21 +846,6 @@ service cloud.firestore {
 
       allow update: if isValidClientReservationPaymentUpdate();
       allow delete: if false;
-    }
-
-    match /fcm_push_logs/{logId} {
-      allow read: if isAgent()
-        && quotationBelongsToAgent(resource.data.quotationId);
-
-      allow create: if isAgent()
-        && isValidFcmPushLog(request.resource.data)
-        && existsAfter(quotationPath(request.resource.data.quotationId))
-        && getAfter(quotationPath(request.resource.data.quotationId)).data.agentId
-          == request.auth.uid
-        && getAfter(quotationPath(request.resource.data.quotationId)).data.status
-          == 'Cotizado';
-
-      allow update, delete: if false;
     }
 
     // Default deny for every path not explicitly covered above.

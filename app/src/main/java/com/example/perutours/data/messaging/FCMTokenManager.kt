@@ -28,7 +28,28 @@ class FCMTokenManager(
                 .await()
             Log.d("FCMTokenManager", "Token FCM guardado exitosamente para uid=${user.uid}")
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e("FCMTokenManager", "Error al guardar el token FCM", e)
+        }
+    }
+
+    suspend fun clearToken() {
+        try {
+            val user = auth.currentUser ?: return
+            val updateMap = hashMapOf<String, Any>(
+                "fcmToken" to com.google.firebase.firestore.FieldValue.delete(),
+                "updatedAt" to System.currentTimeMillis()
+            )
+
+            firestore
+                .collection("users")
+                .document(user.uid)
+                .set(updateMap, SetOptions.merge())
+                .await()
+            Log.d("FCMTokenManager", "Token FCM eliminado para uid=${user.uid}")
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.e("FCMTokenManager", "Error al eliminar el token FCM", e)
         }
     }
 }

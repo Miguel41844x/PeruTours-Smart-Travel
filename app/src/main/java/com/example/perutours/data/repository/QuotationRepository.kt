@@ -29,8 +29,8 @@ class QuotationRepository(
             )
 
         // Validación financiera y de moneda/vigencia
-        require(quotation.currency.equals("USD", ignoreCase = true)) {
-            "La moneda de la cotización debe ser USD."
+        require(quotation.currency.equals("S/", ignoreCase = true) || quotation.currency.equals("PEN", ignoreCase = true) || quotation.currency.equals("USD", ignoreCase = true)) {
+            "La moneda de la cotización debe ser S/ o PEN."
         }
         require(quotation.validUntilMillis > System.currentTimeMillis()) {
             "La fecha de vigencia debe ser futura."
@@ -419,7 +419,6 @@ class QuotationRepository(
     companion object {
         const val COLLECTION_QUOTATIONS = "cotizaciones"
         const val COLLECTION_REQUESTS = "travel_requests"
-        const val COLLECTION_FCM_LOGS = "fcm_push_logs"
         const val COLLECTION_RESERVATIONS = "reservations"
         const val SUBCOLLECTION_OBSERVATIONS = "observations"
     }
