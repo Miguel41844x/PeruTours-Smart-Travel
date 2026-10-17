@@ -41,7 +41,7 @@ fun FinancialSummaryCard(
 
             SummaryRow(
                 label = "Costo de proveedores",
-                value = formatUsd(baseCost)
+                value = formatSoles(baseCost)
             )
             SummaryRow(
                 label = "Margen de la agencia",
@@ -76,13 +76,13 @@ fun FinancialSummaryCard(
                     Column {
                         Text("Total cotizado", style = MaterialTheme.typography.labelLarge)
                         Text(
-                            "${formatUsd(totalAmount / travelerCount.coerceAtLeast(1))} por viajero",
+                            "${formatSoles(totalAmount / travelerCount.coerceAtLeast(1))} por viajero",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                     Text(
-                        formatUsd(totalAmount),
+                        formatSoles(totalAmount),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -111,10 +111,10 @@ private fun SummaryRow(label: String, value: String, emphasized: Boolean = false
     }
 }
 
-private fun formatUsd(value: Double): String {
+private fun formatSoles(value: Double): String {
     val number = NumberFormat.getNumberInstance(Locale.US).apply {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
     }.format(value)
-    return "\$$number USD"
+    return "S/ $number"
 }

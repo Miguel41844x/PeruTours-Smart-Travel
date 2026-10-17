@@ -331,7 +331,11 @@ internal fun formatQuotationAmount(amount: Double, currency: String): String {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
     }.format(amount)
-    return "\$$number $currency"
+    return if (currency.equals("S/", ignoreCase = true) || currency.equals("PEN", ignoreCase = true)) {
+        "S/ $number"
+    } else {
+        "\$$number $currency"
+    }
 }
 
 internal fun formatQuotationCreatedAt(value: Long): String =

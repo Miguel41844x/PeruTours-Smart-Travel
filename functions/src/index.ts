@@ -67,7 +67,7 @@ export const enviarNotificacionCotizacion = onDocumentCreated(
         title: "¡Tu cotización está lista! ✈️",
         body:
           "El agente preparó tu propuesta para " +
-          `${destination} por $${totalAmount} USD.`,
+          `${destination} por S/ ${totalAmount}.`,
       },
 
       data: {

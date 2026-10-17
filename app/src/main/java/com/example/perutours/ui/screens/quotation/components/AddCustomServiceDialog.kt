@@ -72,7 +72,7 @@ fun AddCustomServiceDialog(
                             costText = it.filter { character -> character.isDigit() || character == '.' }
                             error = null
                         },
-                        label = { Text("Costo USD") },
+                        label = { Text("Costo S/") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f),
                         singleLine = true

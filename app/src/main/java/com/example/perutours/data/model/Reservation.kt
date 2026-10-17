@@ -13,7 +13,7 @@ data class Reservation(
     val travelerCount: Int = 1,
     val services: List<QuotationServiceItem> = emptyList(),
     val totalAmount: Double = 0.0,
-    val currency: String = "S/",
+    val currency: String = "PEN",
     val validityDate: String = "",
     val conditions: String = "",
     val status: String = STATUS_CONFIRMED,

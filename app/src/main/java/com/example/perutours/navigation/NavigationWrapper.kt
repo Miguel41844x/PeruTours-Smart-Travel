@@ -421,7 +421,7 @@ fun NavigationWrapper(
             val quotationId = backStackEntry.arguments?.getString("quotationId").orEmpty()
             val reservationId = backStackEntry.arguments?.getString("reservationId").orEmpty()
             val amount = backStackEntry.arguments?.getString("amount")?.toDoubleOrNull() ?: 0.0
-            val currency = backStackEntry.arguments?.getString("currency") ?: "USD"
+            val currency = backStackEntry.arguments?.getString("currency") ?: "PEN"
 
             PaymentScreen(
                 quotationId = quotationId,

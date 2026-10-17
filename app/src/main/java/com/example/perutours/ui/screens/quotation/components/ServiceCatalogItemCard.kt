@@ -101,5 +101,5 @@ private fun formatCatalogPrice(value: Double): String {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
     }.format(value)
-    return "\$$formatted"
+    return "S/ $formatted"
 }
