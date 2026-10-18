@@ -849,7 +849,10 @@ service cloud.firestore {
         && request.resource.data.status == 'Pendiente de cotizacion'
         && request.resource.data.destinationLatitude is number
         && request.resource.data.destinationLongitude is number
-        && !('quotationId' in request.resource.data)
+        // La app serializa quotationId vacío al crear; el agente lo llena
+        // de verdad al cotizar (isValidAgentRequestQuotationUpdate).
+        && (!('quotationId' in request.resource.data)
+          || request.resource.data.quotationId == '')
         && isRecentMillis(request.resource.data.createdAtMillis);
 
       allow update: if isValidTravelRequest(request.resource.data)
