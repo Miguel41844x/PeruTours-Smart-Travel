@@ -43,6 +43,7 @@ import coil.compose.AsyncImage
 import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.theme.PeruGold40
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.io.File
 import java.util.UUID
@@ -61,6 +62,8 @@ fun PaymentScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCameraX by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // HU07: la reserva se consulta en Firestore para validar el estado
     // y mostrar el importe real del pago.
@@ -81,6 +84,14 @@ fun PaymentScreen(
     ) { granted ->
         if (granted) {
             showCameraX = true
+        } else {
+            // HU07: el cliente debe saber que sin permiso puede usar la
+            // galería en su lugar; antes el error quedaba silencioso.
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    "Permiso de cámara denegado. Puedes elegir el comprobante desde la galería."
+                )
+            }
         }
     }
 
@@ -104,7 +115,8 @@ fun PaymentScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -387,6 +399,7 @@ private fun CameraXPaymentDialog(
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var isCapturing by remember { mutableStateOf(false) }
+    var cameraErrorMessage by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(previewView, lifecycleOwner) {
         val view = previewView
@@ -414,7 +427,12 @@ private fun CameraXPaymentDialog(
                     )
                     cameraProvider = provider
                     imageCapture = capture
-                } catch (_: Exception) { }
+                } catch (_: Exception) {
+                    // HU07: si la cámara no está disponible, el cliente
+                    // ve el motivo en lugar de un diálogo mudo.
+                    cameraErrorMessage =
+                        "No se pudo iniciar la cámara. Puedes elegir el comprobante desde la galería."
+                }
             }, ContextCompat.getMainExecutor(context))
 
             onDispose {
@@ -435,6 +453,15 @@ private fun CameraXPaymentDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("Enfoca tu Comprobante", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+
+                cameraErrorMessage?.let { message ->
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
 
                 Box(
                     modifier = Modifier
@@ -463,6 +490,7 @@ private fun CameraXPaymentDialog(
                             val tempFile = File(context.cacheDir, "temp_voucher_${UUID.randomUUID()}.jpg")
                             val outputOptions = ImageCapture.OutputFileOptions.Builder(tempFile).build()
                             isCapturing = true
+                            cameraErrorMessage = null
                             capture.takePicture(
                                 outputOptions,
                                 ContextCompat.getMainExecutor(context),
@@ -473,6 +501,10 @@ private fun CameraXPaymentDialog(
                                     }
                                     override fun onError(exception: ImageCaptureException) {
                                         isCapturing = false
+                                        // HU07: el fallo de captura se comunica
+                                        // en lugar de descartarse en silencio.
+                                        cameraErrorMessage =
+                                            "No se pudo capturar la foto. Intenta nuevamente."
                                     }
                                 }
                             )
