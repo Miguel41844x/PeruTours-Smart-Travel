@@ -55,7 +55,6 @@ class AuthRepository(
             "role" to "cliente", // Seguridad: SIEMPRE cliente desde la app pública
             "photoUrl" to "",
             "preferences" to emptyList<String>(),
-            "createdAtMillis" to now,
             "updatedAt" to now
         )
 
@@ -101,7 +100,9 @@ class AuthRepository(
 
         if (!snapshot.exists() || snapshot.getString("role").isNullOrBlank()) {
             val parts = user.displayName.orEmpty().split("|").map { it.trim() }
-            val name = parts.getOrNull(0)?.ifBlank { user.email?.substringBefore("@") } ?: "Turista"
+            val derivedName = parts.getOrNull(0)?.ifBlank { user.email?.substringBefore("@") }
+            // Las reglas exigen un nombre de 3 a 100 caracteres.
+            val name = derivedName?.takeIf { it.length in 3..100 } ?: "Turista"
             val phone = parts.getOrNull(2).orEmpty()
             val now = System.currentTimeMillis()
 
@@ -110,8 +111,11 @@ class AuthRepository(
                 "name" to name,
                 "email" to (user.email ?: ""),
                 "phone" to phone,
-                "role" to "cliente",
+                "dni" to "",
                 "city" to "Lima, Perú",
+                "role" to "cliente",
+                "photoUrl" to "",
+                "preferences" to emptyList<String>(),
                 "updatedAt" to now
             )
             docRef.set(fallbackDoc, SetOptions.merge()).await()

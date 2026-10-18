@@ -162,10 +162,10 @@ service cloud.firestore {
     }
 
     // Firestore Rules has no general-purpose loop, so the profile list is
-    // capped and each possible element is checked explicitly.
+    // capped and each possible element is checked explicitly. A newly
+    // registered client may still have no preferences selected.
     function isValidPreferenceIdList(values) {
       return values is list
-        && values.size() >= 1
         && values.size() <= 10
         && isValidListStringItem(values, 0, 100)
         && isValidListStringItem(values, 1, 100)
