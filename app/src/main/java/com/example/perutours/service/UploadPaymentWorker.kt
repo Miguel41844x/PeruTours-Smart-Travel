@@ -5,7 +5,9 @@ import android.net.Uri
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.example.perutours.data.model.Payment
 import com.example.perutours.data.model.Reservation
+import com.example.perutours.data.repository.PaymentValidator
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -15,6 +17,16 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
 
+/**
+ * HU07: Sube el comprobante a Storage y registra el pago en la reserva.
+ *
+ * Flujo: la reserva pasa a 'Pago enviado' y el pago queda 'Pendiente'
+ * para que el agente lo verifique. La reserva NO se marca 'Pagado' aquí:
+ * eso solo lo hace el agente al aprobar el comprobante.
+ *
+ * El ID del pago es el ID de la reserva, por lo que un segundo envío
+ * sobrescribe el intento anterior en lugar de crear pagos duplicados.
+ */
 class UploadPaymentWorker(
     appContext: Context,
     workerParams: WorkerParameters
@@ -31,16 +43,20 @@ class UploadPaymentWorker(
         const val KEY_PAYMENT_METHOD = "payment_method"
         const val KEY_DOWNLOAD_URL = "download_url"
         const val KEY_ERROR = "error"
+        const val COLLECTION_PAYMENTS = "payments"
     }
 
     override suspend fun doWork(): Result {
         val quotationId = inputData.getString(KEY_QUOTATION_ID).orEmpty()
         val reservationId = inputData.getString(KEY_RESERVATION_ID).orEmpty()
         val imagePath = inputData.getString(KEY_IMAGE_PATH).orEmpty()
-        val paymentMethod = inputData.getString(KEY_PAYMENT_METHOD) ?: "Transferencia / Yape"
+        val paymentMethod = inputData.getString(KEY_PAYMENT_METHOD).orEmpty()
 
         if (quotationId.isBlank() || reservationId.isBlank() || imagePath.isBlank()) {
             return failure("Los datos del pago están incompletos")
+        }
+        if (!PaymentValidator.isValidMethod(paymentMethod)) {
+            return failure("Selecciona un método de pago válido (Yape, Plin o Transferencia BCP)")
         }
 
         val file = File(imagePath)
@@ -60,15 +76,26 @@ class UploadPaymentWorker(
             if (reservation.getString("quotationId") != quotationId) {
                 return failure("La cotización no corresponde a la reserva")
             }
-            if (reservation.getString("status") == Reservation.STATUS_PAID) {
-                file.delete()
-                return Result.success(
-                    workDataOf(KEY_DOWNLOAD_URL to reservation.getString("paymentVoucherUrl").orEmpty())
-                )
+
+            when (reservation.getString("status")) {
+                // Idempotencia: si el pago ya fue resuelto o está en revisión,
+                // no se vuelve a enviar ni se crean pagos duplicados.
+                Reservation.STATUS_PAID, Reservation.STATUS_PAYMENT_PENDING -> {
+                    file.delete()
+                    return Result.success(workDataOf(KEY_DOWNLOAD_URL to ""))
+                }
+                // Solo una reserva Confirmada o con pago rechazado permite
+                // registrar (o reenviar) el comprobante.
+                Reservation.STATUS_CONFIRMED, Reservation.STATUS_PAYMENT_REJECTED -> Unit
+                else -> return failure("La reserva no está disponible para registrar el pago")
             }
-            if (reservation.getString("status") != Reservation.STATUS_CONFIRMED) {
-                return failure("La reserva no está disponible para registrar el pago")
-            }
+
+            // El importe y la moneda SIEMPRE salen de la reserva en
+            // Firestore; jamás del valor recibido por navegación.
+            val totalAmount = reservation.getDouble("totalAmount")
+                ?: return failure("La reserva no tiene un importe válido")
+            val currency = reservation.getString("currency")
+                ?: return failure("La reserva no tiene una moneda válida")
 
             val storageRef = storage.reference.child(
                 "payment_vouchers/$userId/$reservationId/${file.name}"
@@ -83,15 +110,33 @@ class UploadPaymentWorker(
                 storageRef.downloadUrl.await().toString()
             }
 
-            val now = System.currentTimeMillis()
-            val paymentData = mapOf<String, Any>(
-                "status" to Reservation.STATUS_PAID,
-                "paymentVoucherUrl" to downloadUrl,
-                "paymentMethod" to paymentMethod,
-                "paidAtMillis" to now
+            val payment = Payment(
+                id = reservationId,
+                reservationId = reservationId,
+                quotationId = quotationId,
+                clientId = userId,
+                agentId = reservation.getString("agentId").orEmpty(),
+                method = paymentMethod,
+                amount = totalAmount,
+                currency = currency,
+                voucherUrl = downloadUrl,
+                status = Payment.STATUS_PENDING,
+                submittedAtMillis = System.currentTimeMillis()
             )
 
-            reservationRef.update(paymentData).await()
+            val batch = firestore.batch()
+            batch.set(
+                firestore.collection(COLLECTION_PAYMENTS).document(reservationId),
+                payment
+            )
+            batch.update(
+                reservationRef,
+                mapOf(
+                    "status" to Reservation.STATUS_PAYMENT_PENDING,
+                    "paymentId" to reservationId
+                )
+            )
+            batch.commit().await()
 
             file.delete()
 
