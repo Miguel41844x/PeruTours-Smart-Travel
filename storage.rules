@@ -36,7 +36,19 @@ service firebase.storage {
                     && reservationId.size() > 0
                     && reservationId.size() <= 128
                     && request.resource.size <= 10 * 1024 * 1024
-                    && request.resource.contentType.matches('image/(jpeg|png|webp)');
+                    && request.resource.contentType.matches('image/(jpeg|png|webp)')
+                    // La reserva debe existir, pertenecer al usuario que
+                    // sube el comprobante y estar en un estado que admita
+                    // (o readmite) el pago.
+                    && firestore.exists(
+                      /databases/(default)/documents/reservations/$(reservationId)
+                    )
+                    && firestore.get(
+                      /databases/(default)/documents/reservations/$(reservationId)
+                    ).data.clientId == request.auth.uid
+                    && firestore.get(
+                      /databases/(default)/documents/reservations/$(reservationId)
+                    ).data.status in ['Confirmada', 'Pago rechazado'];
       allow update: if false;
       // El cliente solo puede descartar el archivo local mientras la
       // reserva siga Confirmada; una vez enviado queda bajo revisión.
