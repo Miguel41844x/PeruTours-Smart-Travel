@@ -18,12 +18,15 @@ data class Reservation(
     val conditions: String = "",
     val status: String = STATUS_CONFIRMED,
     val createdAtMillis: Long = System.currentTimeMillis(),
+    val paymentId: String = "",
     val paymentVoucherUrl: String = "",
     val paymentMethod: String = "",
     val paidAtMillis: Long? = null
 ) {
     companion object {
         const val STATUS_CONFIRMED = "Confirmada"
+        const val STATUS_PAYMENT_PENDING = "Pago enviado"
         const val STATUS_PAID = "Pagado"
+        const val STATUS_PAYMENT_REJECTED = "Pago rechazado"
     }
 }
