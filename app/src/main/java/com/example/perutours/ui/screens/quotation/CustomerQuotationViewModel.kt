@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.repository.QuotationRepository
+import com.google.firebase.firestore.FirebaseFirestoreException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,14 +28,23 @@ class CustomerQuotationViewModel(
         MutableStateFlow<QuotationResponseUiState>(QuotationResponseUiState.Idle)
     val responseState: StateFlow<QuotationResponseUiState> = _responseState.asStateFlow()
 
+    private var quotationsJob: Job? = null
+
     fun loadQuotations() {
-        viewModelScope.launch {
+        quotationsJob?.cancel()
+        quotationsJob = viewModelScope.launch {
             _quotationsState.value = CustomerQuotationsUiState.Loading
-            _quotationsState.value = try {
-                CustomerQuotationsUiState.Success(repository.getCurrentClientQuotations())
-            } catch (_: Exception) {
-                CustomerQuotationsUiState.Error(
-                    "No pudimos cargar tus cotizaciones. Revisa tu conexión."
+            try {
+                repository.observeCurrentClientQuotations().collect { quotations ->
+                    _quotationsState.value = CustomerQuotationsUiState.Success(quotations)
+                }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _quotationsState.value = CustomerQuotationsUiState.Error(
+                    quotationErrorMessage(
+                        error,
+                        "No pudimos cargar tus cotizaciones. Inténtalo nuevamente."
+                    )
                 )
             }
         }
@@ -56,9 +68,13 @@ class CustomerQuotationViewModel(
                     quotation = quotation,
                     observations = observations
                 )
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
                 CustomerQuotationDetailUiState(
-                    errorMessage = "No pudimos cargar esta cotización. Inténtalo nuevamente."
+                    errorMessage = quotationErrorMessage(
+                        error,
+                        "No pudimos cargar esta cotización. Inténtalo nuevamente."
+                    )
                 )
             }
         }
@@ -125,9 +141,13 @@ class CustomerQuotationViewModel(
                     quotation = updatedQuotation,
                     message = successMessage
                 )
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
                 _responseState.value = QuotationResponseUiState.Error(
-                    "No pudimos actualizar la cotización. Inténtalo nuevamente."
+                    quotationErrorMessage(
+                        error,
+                        "No pudimos actualizar la cotización. Inténtalo nuevamente."
+                    )
                 )
             }
         }
@@ -142,5 +162,17 @@ class CustomerQuotationViewModel(
                 }
             )
         }
+    }
+
+    private fun quotationErrorMessage(error: Exception, fallback: String): String = when {
+        error is IllegalStateException || error is IllegalAccessException ->
+            error.localizedMessage?.takeIf(String::isNotBlank) ?: fallback
+        error is FirebaseFirestoreException &&
+            error.code == FirebaseFirestoreException.Code.PERMISSION_DENIED ->
+            "No tienes permiso para realizar esta acción. Vuelve a iniciar sesión."
+        error is FirebaseFirestoreException &&
+            error.code == FirebaseFirestoreException.Code.UNAVAILABLE ->
+            "No hay conexión con el servidor. Revisa tu internet e inténtalo nuevamente."
+        else -> fallback
     }
 }

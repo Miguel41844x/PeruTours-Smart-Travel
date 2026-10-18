@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.repository.PaymentReviewDataSource
 import com.example.perutours.data.repository.ReservationDataSource
+import com.google.firebase.firestore.FirebaseFirestoreException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,16 +25,23 @@ class CustomerReservationViewModel(
     private val _detailState = MutableStateFlow(CustomerReservationDetailUiState())
     val detailState: StateFlow<CustomerReservationDetailUiState> = _detailState.asStateFlow()
 
+    private var reservationsJob: Job? = null
+
     fun loadReservations() {
-        viewModelScope.launch {
+        reservationsJob?.cancel()
+        reservationsJob = viewModelScope.launch {
             _reservationsState.value = CustomerReservationsUiState.Loading
-            _reservationsState.value = try {
-                CustomerReservationsUiState.Success(
-                    repository.getCurrentClientReservations()
-                )
-            } catch (_: Exception) {
-                CustomerReservationsUiState.Error(
-                    "No pudimos cargar tus reservas. Revisa tu conexión."
+            try {
+                repository.observeCurrentClientReservations().collect { reservations ->
+                    _reservationsState.value = CustomerReservationsUiState.Success(reservations)
+                }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _reservationsState.value = CustomerReservationsUiState.Error(
+                    reservationErrorMessage(
+                        error,
+                        "No pudimos cargar tus reservas. Inténtalo nuevamente."
+                    )
                 )
             }
         }
@@ -57,11 +67,27 @@ class CustomerReservationViewModel(
                     paymentRepository.getPaymentForReservation(reservationId)
                 }.getOrNull()
                 CustomerReservationDetailUiState(reservation = reservation, payment = payment)
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
                 CustomerReservationDetailUiState(
-                    errorMessage = "No pudimos cargar esta reserva. Inténtalo nuevamente."
+                    errorMessage = reservationErrorMessage(
+                        error,
+                        "No pudimos cargar esta reserva. Inténtalo nuevamente."
+                    )
                 )
             }
         }
+    }
+
+    private fun reservationErrorMessage(error: Exception, fallback: String): String = when {
+        error is IllegalStateException || error is IllegalAccessException ->
+            error.localizedMessage?.takeIf(String::isNotBlank) ?: fallback
+        error is FirebaseFirestoreException &&
+            error.code == FirebaseFirestoreException.Code.PERMISSION_DENIED ->
+            "No tienes permiso para consultar esta reserva. Vuelve a iniciar sesión."
+        error is FirebaseFirestoreException &&
+            error.code == FirebaseFirestoreException.Code.UNAVAILABLE ->
+            "No hay conexión con el servidor. Revisa tu internet e inténtalo nuevamente."
+        else -> fallback
     }
 }

@@ -8,6 +8,9 @@ import com.example.perutours.data.model.Reservation
 import com.example.perutours.data.model.TravelRequest
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -114,6 +117,31 @@ class QuotationRepository(
 
         return getQuotationsByClient(clientId)
             .sortedByDescending { it.createdAtMillis }
+    }
+
+    fun observeCurrentClientQuotations(): Flow<List<Quotation>> = callbackFlow {
+        val clientId = auth.currentUser?.uid
+        if (clientId == null) {
+            close(IllegalStateException("Debes iniciar sesión para consultar tus cotizaciones."))
+            return@callbackFlow
+        }
+
+        val listener = firestore.collection(COLLECTION_QUOTATIONS)
+            .whereEqualTo("clientId", clientId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val quotations = snapshot
+                    ?.toObjects(Quotation::class.java)
+                    .orEmpty()
+                    .sortedByDescending { quotation -> quotation.createdAtMillis }
+                trySend(quotations)
+            }
+
+        awaitClose { listener.remove() }
     }
 
     suspend fun getQuotationById(quotationId: String): Quotation? {
