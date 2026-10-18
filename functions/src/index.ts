@@ -208,6 +208,8 @@ export const notificarRevisionPago = onDocumentUpdated(
     const reservationId =
       after.reservationId || event.params.paymentId;
     const amount = after.amount ?? 0;
+    // La base admite PEN y USD: el símbolo debe seguir la moneda del pago.
+    const symbol = after.currency === "USD" ? "$" : "S/";
     const approved = after.status === "Aprobado";
 
     await messaging.send({
@@ -216,7 +218,8 @@ export const notificarRevisionPago = onDocumentUpdated(
       notification: {
         title: approved ? "¡Pago aprobado! ✅" : "Pago rechazado",
         body: approved ?
-          `Tu pago por S/ ${amount} fue verificado. Tu reserva está lista.` :
+          `Tu pago por ${symbol} ${amount} ` +
+          "fue verificado. Tu reserva está lista." :
           after.rejectionReason ||
             "El agente rechazó tu comprobante. Puedes reenviar uno nuevo.",
       },
