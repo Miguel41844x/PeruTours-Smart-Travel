@@ -44,10 +44,21 @@ service cloud.firestore {
     //   id, quotationId, requestId, clientId, agentId, destination,
     //   originCity, departureAtMillis, returnAtMillis, travelerCount,
     //   services, totalAmount, currency, validityDate, conditions,
-    //   status, createdAtMillis, paymentVoucherUrl, paymentMethod,
-    //   paidAtMillis. A new reservation starts Confirmada with empty
-    //   payment fields; its client owner may later mark it Pagado.
-    //   HU06 uses the quotation ID as the reservation document ID.
+    //   status, createdAtMillis, paymentId, paymentVoucherUrl,
+    //   paymentMethod, paidAtMillis. A new reservation starts Confirmada
+    //   with empty payment fields. HU07 flow: Confirmada → Pago enviado
+    //   → Pagado | Pago rechazado. paymentId points to the payment doc
+    //   once a voucher has been submitted. HU06 uses the quotation ID
+    //   as the reservation document ID.
+    //
+    // payments/{paymentId}
+    //   id, reservationId, quotationId, clientId, agentId, method,
+    //   amount, currency, voucherUrl, status, rejectionReason,
+    //   submittedAtMillis, reviewedAtMillis, reviewedBy.
+    //   paymentId equals the reservation ID so a reservation can never
+    //   have two payment documents. The client submits with status
+    //   'Pendiente'; only the assigned agent may move it to 'Aprobado'
+    //   or 'Rechazado' with a mandatory reason.
     //
     // fcm_push_logs/{logId}
     //   toToken, title, body, quotationId, status, timestamp.
@@ -499,14 +510,14 @@ service cloud.firestore {
           'destination', 'originCity', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
           'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis',
-          'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
+          'paymentId', 'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
         ])
         && hasOnlyAllowedFields(data, [
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
           'destination', 'originCity', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
           'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis',
-          'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
+          'paymentId', 'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
         ])
         && validString(data.id, 1, 128)
         && validString(data.quotationId, 1, 128)
@@ -531,20 +542,90 @@ service cloud.firestore {
         && data.conditions.size() <= 2000
         && data.createdAtMillis is int
         && data.createdAtMillis > 0
+        && data.paymentId is string
+        && data.paymentId.size() <= 128
         && (
+          // HU07: el estado general de la reserva y su vínculo con el pago.
           (data.status == 'Confirmada'
+            && data.paymentId == ''
+            && data.paymentVoucherUrl == ''
+            && data.paymentMethod == ''
+            && data.paidAtMillis == null)
+          ||
+          (data.status in ['Pago enviado', 'Pago rechazado']
+            && data.paymentId == data.id
             && data.paymentVoucherUrl == ''
             && data.paymentMethod == ''
             && data.paidAtMillis == null)
           ||
           (data.status == 'Pagado'
-            && data.paymentVoucherUrl is string
-            && data.paymentVoucherUrl.size() <= 2048
-            && data.paymentVoucherUrl.matches('^https://.+')
-            && validString(data.paymentMethod, 3, 80)
-            && data.paidAtMillis is int
-            && data.paidAtMillis > 0
-            && isRecentMillis(data.paidAtMillis))
+            && (
+              // Nuevo flujo: el pago vive en payments/{paymentId}.
+              (data.paymentId == data.id
+                && data.paymentVoucherUrl == ''
+                && data.paymentMethod == ''
+                && data.paidAtMillis == null)
+              ||
+              // Compatibilidad con reservas Pagado del flujo anterior.
+              (data.paymentId == ''
+                && data.paymentVoucherUrl is string
+                && data.paymentVoucherUrl.size() <= 2048
+                && data.paymentVoucherUrl.matches('^https://.+')
+                && validString(data.paymentMethod, 3, 80)
+                && data.paidAtMillis is int
+                && data.paidAtMillis > 0)
+            ))
+        );
+    }
+
+    function isValidPayment(data) {
+      return hasRequiredFields(data, [
+          'id', 'reservationId', 'quotationId', 'clientId', 'agentId',
+          'method', 'amount', 'currency', 'voucherUrl', 'status',
+          'rejectionReason', 'submittedAtMillis', 'reviewedAtMillis',
+          'reviewedBy'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'reservationId', 'quotationId', 'clientId', 'agentId',
+          'method', 'amount', 'currency', 'voucherUrl', 'status',
+          'rejectionReason', 'submittedAtMillis', 'reviewedAtMillis',
+          'reviewedBy'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.reservationId, 1, 128)
+        && validString(data.quotationId, 1, 128)
+        && validString(data.clientId, 1, 128)
+        && validString(data.agentId, 1, 128)
+        && data.method in ['Yape', 'Plin', 'Transferencia BCP']
+        && isPositiveBoundedNumber(data.amount, 200000000)
+        && data.currency in ['USD', 'PEN']
+        && data.voucherUrl is string
+        && data.voucherUrl.size() <= 2048
+        && data.voucherUrl.matches('^https://.+')
+        && data.status in ['Pendiente', 'Aprobado', 'Rechazado']
+        && data.rejectionReason is string
+        && data.rejectionReason.size() <= 500
+        && data.submittedAtMillis is int
+        && data.submittedAtMillis > 0
+        && (data.reviewedAtMillis == null
+          || (data.reviewedAtMillis is int && data.reviewedAtMillis > 0))
+        && data.reviewedBy is string
+        && data.reviewedBy.size() <= 128
+        && (
+          (data.status == 'Pendiente'
+            && data.rejectionReason == ''
+            && data.reviewedAtMillis == null
+            && data.reviewedBy == '')
+          ||
+          (data.status == 'Aprobado'
+            && data.rejectionReason == ''
+            && data.reviewedAtMillis is int
+            && data.reviewedBy == request.auth.uid)
+          ||
+          (data.status == 'Rechazado'
+            && validString(data.rejectionReason, 10, 500)
+            && data.reviewedAtMillis is int
+            && data.reviewedBy == request.auth.uid)
         );
     }
 
@@ -562,6 +643,10 @@ service cloud.firestore {
 
     function reservationPath(reservationId) {
       return /databases/$(database)/documents/reservations/$(reservationId);
+    }
+
+    function paymentPath(paymentId) {
+      return /databases/$(database)/documents/payments/$(paymentId);
     }
 
     function quotationBelongsToRequester(quotationId) {
@@ -688,19 +773,54 @@ service cloud.firestore {
         && quotationAfter.status == data.status;
     }
 
-    function isValidClientReservationPaymentUpdate() {
+    // HU07: en una actualización solo el estado y el vínculo de pago
+    // pueden cambiar; el resto del documento se protege con
+    // areImmutableFieldsUnchanged, así que no hace falta revalidarlo
+    // completo (el evaluador de reglas tiene un límite de expresiones).
+    function isValidReservationStatusChange(data) {
+      return data.status in ['Confirmada', 'Pago enviado', 'Pago rechazado', 'Pagado']
+        && data.paymentId is string
+        && data.paymentId.size() <= 128
+        && (
+          (data.status == 'Confirmada' && data.paymentId == '')
+          || (data.status in ['Pago enviado', 'Pago rechazado']
+            && data.paymentId == data.id)
+          || (data.status == 'Pagado' && data.paymentId == data.id)
+        );
+    }
+
+    // HU07: el cliente envía su comprobante; la reserva pasa a
+    // 'Pago enviado' y el pago nace 'Pendiente' en la misma tanda.
+    function isValidClientPaymentSubmit() {
       let data = request.resource.data;
       let changed = data.diff(resource.data).affectedKeys();
-      let paymentFields = [
-        'status', 'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
-      ];
+      let reservationAfter = getAfter(reservationPath(data.id)).data;
       return isClient()
         && resource.data.clientId == request.auth.uid
-        && resource.data.status == 'Confirmada'
-        && data.status == 'Pagado'
-        && isValidReservation(data)
-        && changed.hasOnly(paymentFields)
-        && changed.hasAll(paymentFields);
+        && resource.data.status in ['Confirmada', 'Pago rechazado']
+        && data.status == 'Pago enviado'
+        && changed.hasOnly(['status', 'paymentId'])
+        && data.paymentId == data.id
+        && reservationAfter.id == data.id
+        && reservationAfter.clientId == request.auth.uid
+        && reservationAfter.status == 'Pago enviado'
+        && reservationAfter.paymentId == data.id;
+    }
+
+    // HU07: solo el agente asignado resuelve el pago pendiente.
+    function isValidAgentPaymentReview(reservationStatus, paymentStatus) {
+      let data = request.resource.data;
+      let changed = data.diff(resource.data).affectedKeys();
+      let paymentAfter = getAfter(paymentPath(data.paymentId)).data;
+      return isAgent()
+        && resource.data.agentId == request.auth.uid
+        && resource.data.status == 'Pago enviado'
+        && data.status == reservationStatus
+        && changed.hasOnly(['status'])
+        && data.paymentId == data.id
+        && paymentAfter.id == data.paymentId
+        && paymentAfter.reservationId == data.id
+        && paymentAfter.status == paymentStatus;
     }
 
     // ===============================================================
@@ -813,6 +933,7 @@ service cloud.firestore {
         && request.resource.data.quotationId == reservationId
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.status == 'Confirmada'
+        && request.resource.data.paymentId == ''
         && request.resource.data.paymentVoucherUrl == ''
         && request.resource.data.paymentMethod == ''
         && request.resource.data.paidAtMillis == null
@@ -848,8 +969,101 @@ service cloud.firestore {
         && getAfter(quotationPath(reservationId)).data.conditions
           == request.resource.data.conditions;
 
-      allow update: if isValidClientReservationPaymentUpdate();
+      allow update: if isValidReservationStatusChange(request.resource.data)
+        && areImmutableFieldsUnchanged([
+          'id', 'quotationId', 'requestId', 'clientId', 'agentId',
+          'destination', 'originCity', 'departureAtMillis',
+          'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
+          'currency', 'validityDate', 'conditions', 'createdAtMillis',
+          'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
+        ])
+        && (
+          isValidClientPaymentSubmit()
+          || isValidAgentPaymentReview('Pagado', 'Aprobado')
+          || isValidAgentPaymentReview('Pago rechazado', 'Rechazado')
+        );
+
       allow delete: if false;
+
+      match /{subcollection=**} {
+        allow read, write: if false;
+      }
+    }
+
+    // HU07: pago independiente de la reserva. El ID del pago es el ID de
+    // la reserva, por lo que nunca pueden existir dos pagos por reserva.
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated()
+        && (resource.data.clientId == request.auth.uid
+          || (isAgent() && resource.data.agentId == request.auth.uid));
+
+      // El cliente registra su comprobante junto con el cambio de la
+      // reserva a 'Pago enviado' (la verificación de importe y moneda se
+      // hace contra la reserva en la misma tanda).
+      allow create: if isClient()
+        && isValidPayment(request.resource.data)
+        && request.resource.data.id == paymentId
+        && request.resource.data.reservationId == paymentId
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.status == 'Pendiente'
+        && isRecentMillis(request.resource.data.submittedAtMillis)
+        && existsAfter(reservationPath(paymentId))
+        && getAfter(reservationPath(paymentId)).data.clientId
+          == request.auth.uid
+        && getAfter(reservationPath(paymentId)).data.status
+          == 'Pago enviado'
+        && getAfter(reservationPath(paymentId)).data.paymentId == paymentId
+        && getAfter(reservationPath(paymentId)).data.totalAmount
+          == request.resource.data.amount
+        && getAfter(reservationPath(paymentId)).data.currency
+          == request.resource.data.currency;
+
+      allow update: if (
+        // El cliente reenvía un comprobante tras un rechazo.
+        isClient()
+        && resource.data.clientId == request.auth.uid
+        && resource.data.status == 'Rechazado'
+        && request.resource.data.status == 'Pendiente'
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            'method', 'amount', 'currency', 'voucherUrl', 'status',
+            'rejectionReason', 'submittedAtMillis', 'reviewedAtMillis',
+            'reviewedBy'
+          ])
+        && isRecentMillis(request.resource.data.submittedAtMillis)
+        && existsAfter(reservationPath(paymentId))
+        && getAfter(reservationPath(paymentId)).data.status
+          == 'Pago enviado'
+        && getAfter(reservationPath(paymentId)).data.paymentId == paymentId
+        && getAfter(reservationPath(paymentId)).data.totalAmount
+          == request.resource.data.amount
+        && getAfter(reservationPath(paymentId)).data.currency
+          == request.resource.data.currency
+      ) || (
+        // El agente asignado aprueba o rechaza el pago pendiente.
+        isAgent()
+        && resource.data.agentId == request.auth.uid
+        && resource.data.status == 'Pendiente'
+        && request.resource.data.status in ['Aprobado', 'Rechazado']
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            'status', 'rejectionReason', 'reviewedAtMillis', 'reviewedBy'
+          ])
+        && isRecentMillis(request.resource.data.reviewedAtMillis)
+        && request.resource.data.reviewedBy == request.auth.uid
+        && (request.resource.data.status == 'Aprobado'
+          ? getAfter(reservationPath(paymentId)).data.status == 'Pagado'
+          : getAfter(reservationPath(paymentId)).data.status
+            == 'Pago rechazado')
+        && getAfter(reservationPath(paymentId)).data.paymentId == paymentId
+      )
+        && isValidPayment(request.resource.data);
+
+      allow delete: if false;
+
+      match /{subcollection=**} {
+        allow read, write: if false;
+      }
     }
 
     // Default deny for every path not explicitly covered above.

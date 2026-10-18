@@ -17,8 +17,20 @@ service firebase.storage {
     }
 
     match /payment_vouchers/{userId}/{reservationId}/{fileName} {
+      // HU07: el comprobante lo ve el cliente que lo envió y el agente
+      // asignado a la reserva, verificado contra Firestore.
       allow read: if request.auth != null
-                  && request.auth.uid == userId;
+                  && (
+                    request.auth.uid == userId
+                    || (
+                      firestore.exists(
+                        /databases/(default)/documents/reservations/$(reservationId)
+                      )
+                      && firestore.get(
+                        /databases/(default)/documents/reservations/$(reservationId)
+                      ).data.agentId == request.auth.uid
+                    )
+                  );
       allow create: if request.auth != null
                     && request.auth.uid == userId
                     && reservationId.size() > 0
@@ -26,8 +38,16 @@ service firebase.storage {
                     && request.resource.size <= 10 * 1024 * 1024
                     && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow update: if false;
+      // El cliente solo puede descartar el archivo local mientras la
+      // reserva siga Confirmada; una vez enviado queda bajo revisión.
       allow delete: if request.auth != null
-                    && request.auth.uid == userId;
+                    && request.auth.uid == userId
+                    && firestore.exists(
+                      /databases/(default)/documents/reservations/$(reservationId)
+                    )
+                    && firestore.get(
+                      /databases/(default)/documents/reservations/$(reservationId)
+                    ).data.status == 'Confirmada';
     }
   }
 }
