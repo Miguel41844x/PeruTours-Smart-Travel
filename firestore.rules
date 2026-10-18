@@ -1016,7 +1016,13 @@ service cloud.firestore {
         && getAfter(reservationPath(paymentId)).data.totalAmount
           == request.resource.data.amount
         && getAfter(reservationPath(paymentId)).data.currency
-          == request.resource.data.currency;
+          == request.resource.data.currency
+        // El agente y la cotización del pago deben coincidir con la
+        // reserva: nadie puede reasignar la revisión a otro agente.
+        && getAfter(reservationPath(paymentId)).data.agentId
+          == request.resource.data.agentId
+        && getAfter(reservationPath(paymentId)).data.quotationId
+          == request.resource.data.quotationId;
 
       allow update: if (
         // El cliente reenvía un comprobante tras un rechazo.
@@ -1039,6 +1045,12 @@ service cloud.firestore {
           == request.resource.data.amount
         && getAfter(reservationPath(paymentId)).data.currency
           == request.resource.data.currency
+        // El agente y la cotización del pago deben coincidir con la
+        // reserva: nadie puede reasignar la revisión a otro agente.
+        && getAfter(reservationPath(paymentId)).data.agentId
+          == request.resource.data.agentId
+        && getAfter(reservationPath(paymentId)).data.quotationId
+          == request.resource.data.quotationId
       ) || (
         // El agente asignado aprueba o rechaza el pago pendiente.
         isAgent()

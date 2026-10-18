@@ -227,6 +227,34 @@ describe('Envío del comprobante por el cliente', () => {
       submitPaymentBatch(dbAs(CLIENT_UID), { payment: { currency: 'USD' } })
     );
   });
+
+  it('rechaza un pago que reasigna la revisión a otro agente', async () => {
+    await assertFails(
+      submitPaymentBatch(dbAs(CLIENT_UID), { payment: { agentId: OTHER_AGENT_UID } })
+    );
+  });
+
+  it('rechaza un pago que apunta a otra cotización distinta a la reserva', async () => {
+    await assertFails(
+      submitPaymentBatch(dbAs(CLIENT_UID), { payment: { quotationId: 'otra_cotizacion' } })
+    );
+  });
+
+  it('rechaza reenviar el comprobante con un agente distinto al de la reserva', async () => {
+    await seedRejectedPayment();
+    const db = dbAs(CLIENT_UID);
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'payments', RESERVATION_ID), {
+      agentId: OTHER_AGENT_UID,
+      status: 'Pendiente',
+      rejectionReason: '',
+      submittedAtMillis: Date.now(),
+      reviewedAtMillis: null,
+      reviewedBy: ''
+    });
+    batch.update(doc(db, 'reservations', RESERVATION_ID), { status: 'Pago enviado' });
+    await assertFails(batch.commit());
+  });
 });
 
 describe('Revisión del pago por el agente', () => {
