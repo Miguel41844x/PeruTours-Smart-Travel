@@ -7,14 +7,29 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.Constraints
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.example.perutours.service.UploadPaymentWorker
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+
+/**
+ * HU07: estado observable de la subida del comprobante.
+ * Refleja el ciclo En cola → Subiendo → Enviado → Error.
+ */
+sealed interface PaymentUploadState {
+    data object Idle : PaymentUploadState
+    data object Enqueued : PaymentUploadState
+    data object Uploading : PaymentUploadState
+    data object Uploaded : PaymentUploadState
+    data class Error(val message: String) : PaymentUploadState
+}
 
 class PaymentRepository(
     private val context: Context,
@@ -40,7 +55,7 @@ class PaymentRepository(
                         val bytesRead = input.read(buffer)
                         if (bytesRead < 0) break
                         totalBytes += bytesRead
-                        require(totalBytes <= MAX_VOUCHER_BYTES) {
+                        require(PaymentValidator.isValidVoucherSize(totalBytes)) {
                             "El comprobante no debe superar los 10 MB"
                         }
                         output.write(buffer, 0, bytesRead)
@@ -84,6 +99,27 @@ class PaymentRepository(
         return uploadRequest.id
     }
 
+    /**
+     * HU07: sigue el WorkInfo del trabajo encolado y lo traduce a un
+     * estado de UI para que el cliente vea el progreso real y los
+     * errores definitivos de la subida.
+     */
+    fun observeUpload(workId: UUID): Flow<PaymentUploadState> =
+        workManager.getWorkInfoByIdFlow(workId).map { info -> mapWorkInfo(info) }
+
+    private fun mapWorkInfo(info: WorkInfo): PaymentUploadState = when (info.state) {
+        WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> PaymentUploadState.Enqueued
+        WorkInfo.State.RUNNING -> PaymentUploadState.Uploading
+        WorkInfo.State.SUCCEEDED -> PaymentUploadState.Uploaded
+        WorkInfo.State.FAILED -> PaymentUploadState.Error(
+            info.outputData.getString(UploadPaymentWorker.KEY_ERROR)
+                ?: "No se pudo subir el comprobante. Intenta nuevamente."
+        )
+        WorkInfo.State.CANCELLED -> PaymentUploadState.Error(
+            "La subida del comprobante fue cancelada."
+        )
+    }
+
     private fun resolveImageExtension(uri: Uri): String {
         val mimeType = context.contentResolver.getType(uri)
         val extensionFromMime = mimeType?.let(MimeTypeMap.getSingleton()::getExtensionFromMimeType)
@@ -93,7 +129,7 @@ class PaymentRepository(
             ?: extensionFromUri.takeIf(String::isNotBlank)
             ?: "jpg"
 
-        require(extension.lowercase() in ALLOWED_IMAGE_EXTENSIONS) {
+        require(PaymentValidator.isValidImageExtension(extension)) {
             "Selecciona una imagen JPG, PNG o WEBP"
         }
         return extension.lowercase()
@@ -101,7 +137,5 @@ class PaymentRepository(
 
     private companion object {
         const val VOUCHERS_DIRECTORY = "payment_vouchers"
-        const val MAX_VOUCHER_BYTES = 10L * 1024L * 1024L
-        val ALLOWED_IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
     }
 }

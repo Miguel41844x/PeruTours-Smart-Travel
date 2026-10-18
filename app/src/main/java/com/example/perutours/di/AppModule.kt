@@ -218,7 +218,8 @@ val appModule = module {
     // HU07: ViewModel de Pago del Viaje
     viewModel {
         PaymentViewModel(
-            paymentRepository = get()
+            paymentRepository = get(),
+            reservationRepository = get()
         )
     }
 }

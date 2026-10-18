@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.theme.PeruGold40
 import org.koin.androidx.compose.koinViewModel
@@ -60,6 +61,12 @@ fun PaymentScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCameraX by remember { mutableStateOf(false) }
+
+    // HU07: la reserva se consulta en Firestore para validar el estado
+    // y mostrar el importe real del pago.
+    LaunchedEffect(reservationId) {
+        viewModel.loadReservation(reservationId)
+    }
 
     // Selector de Galería
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -114,21 +121,61 @@ fun PaymentScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Total a Pagar", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // El importe autoritativo viene de la reserva en Firestore;
+                    // el recibido por navegación solo se muestra como respaldo.
                     Text(
-                        text = formatQuotationAmount(totalAmount, currency),
+                        text = uiState.reservationAmount
+                            ?.let { formatQuotationAmount(it, uiState.reservationCurrency) }
+                            ?: formatQuotationAmount(totalAmount, currency),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = PeruGold40
                     )
-                    Text(
-                        text = "Adjunta tu comprobante físico o voucher digital para validar tu reserva.",
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    if (uiState.isLoadingReservation) {
+                        Text(
+                            text = "Verificando el importe de la reserva...",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Adjunta tu comprobante físico o voucher digital para validar tu reserva.",
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // HU07: selector real del método de pago (Yape, Plin o
+            // Transferencia BCP); sin selección no se puede enviar.
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Método de pago",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    uiState.paymentMethods.forEach { method ->
+                        FilterChip(
+                            selected = uiState.paymentMethod == method,
+                            onClick = { viewModel.onPaymentMethodChange(method) },
+                            label = { Text(method, fontSize = 12.sp) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Botones de Cámara (CameraX) y Galería
             Row(
@@ -204,29 +251,60 @@ fun PaymentScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón de Confirmación con WorkManager
-            Button(
-                onClick = { viewModel.submitPayment(quotationId, reservationId) },
-                enabled = !uiState.isSubmitting && !uiState.uploadEnqueued,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
-            ) {
-                if (uiState.isSubmitting) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
-                } else {
-                    Text("Confirmar y Registrar Pago", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
-            }
-
-            // Notificación de Sincronización Diferida (Criterio 2 y 3)
-            if (uiState.uploadEnqueued) {
-                Card(
+            when (val uploadState = uiState.uploadState) {
+                // Estado inicial: botón de envío con validación completa.
+                PaymentUploadState.Idle -> Button(
+                    onClick = { viewModel.submitPayment(quotationId, reservationId) },
+                    enabled = uiState.canSubmit,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp),
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+                ) {
+                    if (uiState.isPreparing) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
+                    } else {
+                        Text("Confirmar y Registrar Pago", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
+                }
+
+                // HU07: seguimiento en tiempo real del Worker.
+                PaymentUploadState.Enqueued, PaymentUploadState.Uploading -> Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = PeruGold40)
+                        Text(
+                            text = if (uploadState is PaymentUploadState.Enqueued) {
+                                "En cola para subir el comprobante..."
+                            } else {
+                                "Subiendo comprobante..."
+                            },
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(top = 10.dp)
+                        )
+                        Text(
+                            text = "Puedes cerrar la app; la subida continúa en segundo plano.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                // Comprobante enviado: queda a la espera de la revisión
+                // del agente (Confirmada → Pago enviado).
+                PaymentUploadState.Uploaded -> Card(
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFECFDF5))
                 ) {
@@ -236,13 +314,13 @@ fun PaymentScreen(
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669))
                         Text(
-                            text = "Comprobante guardado",
+                            text = "Comprobante enviado",
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF065F46),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Text(
-                            text = "Se subirá automáticamente y tu reserva se actualizará cuando tengas conexión.",
+                            text = "Tu reserva quedó en estado 'Pago enviado'. El agente verificará el pago y te notificaremos la decisión.",
                             fontSize = 12.sp,
                             color = Color(0xFF047857),
                             modifier = Modifier.padding(top = 4.dp)
@@ -253,6 +331,43 @@ fun PaymentScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
                         ) {
                             Text("Aceptar y Volver")
+                        }
+                    }
+                }
+
+                // Error definitivo (tras los reintentos del Worker): se
+                // puede reintentar desde la misma pantalla.
+                is PaymentUploadState.Error -> Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No se pudo enviar el comprobante",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = uploadState.message,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                        Button(
+                            onClick = { viewModel.retryUpload(quotationId, reservationId) },
+                            enabled = uiState.canSubmit,
+                            modifier = Modifier.padding(top = 12.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+                        ) {
+                            Text("Reintentar envío")
                         }
                     }
                 }
