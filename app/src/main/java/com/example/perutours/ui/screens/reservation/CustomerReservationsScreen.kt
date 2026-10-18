@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -187,11 +188,33 @@ private fun ReservationCard(
     }
 }
 
+// HU07: el chip del estado refleja el punto del flujo de pago:
+// Confirmada → Pago enviado → Pagado | Pago rechazado.
 @Composable
 internal fun ConfirmedStatusPill(status: String) {
+    val containerColor: Color
+    val contentColor: Color
+    when (status) {
+        Reservation.STATUS_PAYMENT_PENDING -> {
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        }
+        Reservation.STATUS_PAYMENT_REJECTED -> {
+            containerColor = MaterialTheme.colorScheme.errorContainer
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        }
+        Reservation.STATUS_PAID -> {
+            containerColor = Color(0xFFD1FAE5)
+            contentColor = Color(0xFF065F46)
+        }
+        else -> {
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+        }
+    }
     Surface(
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        color = containerColor,
+        contentColor = contentColor,
         shape = MaterialTheme.shapes.small
     ) {
         Text(

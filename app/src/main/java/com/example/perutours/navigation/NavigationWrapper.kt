@@ -345,6 +345,7 @@ fun NavigationWrapper(
             if (reservation != null) {
                 ReservationDetailScreen(
                     reservation = reservation,
+                    payment = detailState.payment,
                     onNavigateBack = { navHostController.popBackStack() },
                     onNavigateToPayment = {
                         navHostController.navigate(

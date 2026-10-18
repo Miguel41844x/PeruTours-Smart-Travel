@@ -12,6 +12,8 @@ import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
 import com.example.perutours.data.repository.PaymentRepository
+import com.example.perutours.data.repository.PaymentReviewDataSource
+import com.example.perutours.data.repository.PaymentReviewRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -113,6 +115,14 @@ val appModule = module {
         )
     }
 
+    // HU07: revisión del pago (lectura del cliente y panel del agente)
+    single<PaymentReviewDataSource> {
+        PaymentReviewRepository(
+            auth = get(),
+            firestore = get()
+        )
+    }
+
     // 3. Room SQLite
     single {
         AppDatabase.getInstance(androidContext())
@@ -187,7 +197,8 @@ val appModule = module {
 
     viewModel {
         CustomerReservationViewModel(
-            repository = get()
+            repository = get(),
+            paymentRepository = get()
         )
     }
 

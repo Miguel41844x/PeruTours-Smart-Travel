@@ -3,6 +3,7 @@ package com.example.perutours.ui.screens.reservation
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,10 +17,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -36,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.perutours.data.model.Payment
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.SectionHeading
@@ -50,7 +54,8 @@ import java.util.Locale
 fun ReservationDetailScreen(
     reservation: Reservation,
     onNavigateBack: () -> Unit,
-    onNavigateToPayment: () -> Unit = {}
+    onNavigateToPayment: () -> Unit = {},
+    payment: Payment? = null
 ) {
     Scaffold(
         topBar = { PeruToursTopBar(title = "Detalle de reserva", onBack = onNavigateBack) },
@@ -242,31 +247,60 @@ fun ReservationDetailScreen(
                 }
             }
 
-            // HU07: Botón para Registrar Comprobante de Pago
+            // HU07: estado del pago y acción disponible según el flujo
+            // Confirmada → Pago enviado → Pagado | Pago rechazado.
             item {
                 Spacer(modifier = Modifier.height(10.dp))
-                if (reservation.status.equals("Pagado", ignoreCase = true)) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 720.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFECFDF5)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                when (reservation.status) {
+                    Reservation.STATUS_PAID -> PaymentStatusCard(
+                        containerColor = Color(0xFFECFDF5),
+                        icon = {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669))
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text("Pago Registrado y Confirmado", fontWeight = FontWeight.Bold, color = Color(0xFF065F46))
-                                Text("Tu comprobante ya ha sido procesado.", fontSize = 12.sp, color = Color(0xFF047857))
-                            }
+                        },
+                        title = "Pago aprobado",
+                        subtitle = "El agente verificó tu comprobante. ¡Reserva lista!"
+                    )
+
+                    Reservation.STATUS_PAYMENT_PENDING -> PaymentStatusCard(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        icon = {
+                            Icon(Icons.Default.Schedule, contentDescription = null)
+                        },
+                        title = "Comprobante en revisión",
+                        subtitle = "Tu pago fue enviado. El agente lo verificará y te avisaremos la decisión."
+                    )
+
+                    Reservation.STATUS_PAYMENT_REJECTED -> PaymentStatusCard(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        icon = {
+                            Icon(
+                                Icons.Default.Cancel,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        },
+                        title = "Pago rechazado",
+                        subtitle = payment?.rejectionReason
+                            ?.takeIf(String::isNotBlank)
+                            ?: "El agente rechazó el comprobante. Reenvía uno nuevo.",
+                        titleColor = MaterialTheme.colorScheme.onErrorContainer,
+                        subtitleColor = MaterialTheme.colorScheme.onErrorContainer
+                    ) {
+                        Button(
+                            onClick = onNavigateToPayment,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
+                        ) {
+                            Icon(Icons.Default.Payment, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Reenviar comprobante de pago", fontWeight = FontWeight.Bold)
                         }
                     }
-                } else {
-                    Button(
+
+                    else -> Button(
                         onClick = onNavigateToPayment,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -284,6 +318,44 @@ fun ReservationDetailScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * HU07: tarjeta genérica del estado del pago (aprobado, en revisión o
+ * rechazado) con acción opcional para reenviar el comprobante.
+ */
+@Composable
+private fun PaymentStatusCard(
+    containerColor: Color,
+    icon: @Composable () -> Unit,
+    title: String,
+    subtitle: String,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    content: (@Composable ColumnScope.() -> Unit)? = null
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 720.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                icon()
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(title, fontWeight = FontWeight.Bold, color = titleColor)
+                    Text(subtitle, fontSize = 12.sp, color = subtitleColor)
+                }
+            }
+            if (content != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                content()
             }
         }
     }
