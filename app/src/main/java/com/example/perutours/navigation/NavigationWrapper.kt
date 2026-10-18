@@ -38,6 +38,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
+import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
+import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
 import org.koin.compose.koinInject
 
@@ -131,6 +133,9 @@ fun NavigationWrapper(
                 onViewRequests = {
                     navHostController.navigate("agent_requests")
                 },
+                onViewPayments = {
+                    navHostController.navigate("agent_payments")
+                },
                 onLogout = {
                     coroutineScope.launch {
                         withTimeoutOrNull(3_000) { fcmTokenManager.clearToken() }
@@ -142,6 +147,24 @@ fun NavigationWrapper(
                         }
                     }
                 }
+            )
+        }
+
+        // HU07: panel del agente para revisar comprobantes de pago.
+        composable(route = "agent_payments") {
+            AgentPaymentsScreen(
+                onNavigateBack = { navHostController.popBackStack() },
+                onPaymentSelected = { paymentId ->
+                    navHostController.navigate("agent_payment/$paymentId")
+                }
+            )
+        }
+
+        composable(route = "agent_payment/{paymentId}") { backStackEntry ->
+            val paymentId = backStackEntry.arguments?.getString("paymentId").orEmpty()
+            AgentPaymentDetailScreen(
+                paymentId = paymentId,
+                onNavigateBack = { navHostController.popBackStack() }
             )
         }
 

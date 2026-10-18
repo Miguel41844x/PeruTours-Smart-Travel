@@ -25,6 +25,7 @@ import com.example.perutours.ui.screens.signup.SignUpViewModel
 import com.example.perutours.ui.screens.profile.ProfileViewModel
 import com.example.perutours.ui.screens.agent.AgentRequestsViewModel
 import com.example.perutours.ui.screens.agent.AgentHomeViewModel
+import com.example.perutours.ui.screens.agent.AgentPaymentViewModel
 import com.example.perutours.ui.screens.quotation.QuotationViewModel
 import com.example.perutours.ui.screens.quotation.CustomerQuotationViewModel
 import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
@@ -231,6 +232,13 @@ val appModule = module {
         PaymentViewModel(
             paymentRepository = get(),
             reservationRepository = get()
+        )
+    }
+
+    // HU07: revisión de comprobantes por el agente
+    viewModel {
+        AgentPaymentViewModel(
+            repository = get()
         )
     }
 }
