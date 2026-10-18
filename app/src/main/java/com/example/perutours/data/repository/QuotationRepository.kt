@@ -125,8 +125,10 @@ class QuotationRepository(
 
     suspend fun getQuotationByRequestId(requestId: String): Quotation? {
         if (requestId.isBlank()) return null
+        val currentAgentId = auth.currentUser?.uid ?: return null
         val snapshot = firestore.collection(COLLECTION_QUOTATIONS)
             .whereEqualTo("requestId", requestId)
+            .whereEqualTo("agentId", currentAgentId)
             .get()
             .await()
         return snapshot.documents.firstOrNull()?.toObject(Quotation::class.java)

@@ -14,7 +14,8 @@ data class TravelRequest(
     val travelerCount: Int = 1,
     val notes: String = "",
     val status: String = STATUS_PENDING_QUOTE,
-    val createdAtMillis: Long = 0L
+    val createdAtMillis: Long = 0L,
+    val quotationId: String = ""
 ) {
     companion object {
         const val STATUS_PENDING_QUOTE = "Pendiente de cotizacion"

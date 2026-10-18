@@ -712,6 +712,10 @@ service cloud.firestore {
       allow create: if isValidUserCreate(userId);
       allow update: if isValidUserUpdate(userId);
       allow delete: if false;
+
+      match /user_preferences/{prefId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /travel_requests/{requestId} {
