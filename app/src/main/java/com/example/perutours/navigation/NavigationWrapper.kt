@@ -48,6 +48,7 @@ fun NavigationWrapper(
     navHostController: NavHostController,
     auth: FirebaseAuth = koinInject(),
     pendingQuotationId: String? = null,
+    pendingReservationId: String? = null,
     pendingNotificationType: String? = null,
     onPendingQuotationConsumed: () -> Unit = {}
 ) {
@@ -62,9 +63,30 @@ fun NavigationWrapper(
             "initial"
         }
 
-    LaunchedEffect(pendingQuotationId, pendingNotificationType, currentUser?.uid) {
+    LaunchedEffect(
+        pendingQuotationId,
+        pendingReservationId,
+        pendingNotificationType,
+        currentUser?.uid
+    ) {
+        if (currentUser?.isEmailVerified != true) return@LaunchedEffect
+
+        // HU07: la notificación de revisión de pago abre la reserva del
+        // cliente para ver el resultado del comprobante.
+        val paymentReservationId = pendingReservationId?.takeIf { it.isNotBlank() }
+        if (
+            pendingNotificationType == MyFirebaseMessagingService.TYPE_PAYMENT_REVIEW &&
+            paymentReservationId != null
+        ) {
+            navHostController.navigate("customer_reservation/$paymentReservationId") {
+                launchSingleTop = true
+            }
+            onPendingQuotationConsumed()
+            return@LaunchedEffect
+        }
+
         val quotationId = pendingQuotationId?.takeIf { it.isNotBlank() }
-        if (quotationId != null && currentUser?.isEmailVerified == true) {
+        if (quotationId != null) {
             val route = if (
                 pendingNotificationType == MyFirebaseMessagingService.TYPE_QUOTATION_RESPONSE
             ) {

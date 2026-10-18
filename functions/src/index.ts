@@ -166,3 +166,68 @@ export const enviarRespuestaCotizacion = onDocumentUpdated(
     console.log(`Respuesta ${after.status} notificada al agente.`);
   }
 );
+
+// HU07: cuando el agente aprueba o rechaza un comprobante, el cliente
+// recibe una notificación que abre su reserva directamente.
+export const notificarRevisionPago = onDocumentUpdated(
+  "payments/{paymentId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+
+    if (!before || !after || before.status === after.status) {
+      return;
+    }
+
+    if (
+      before.status !== "Pendiente" ||
+      (after.status !== "Aprobado" && after.status !== "Rechazado")
+    ) {
+      return;
+    }
+
+    const clientId = after.clientId;
+
+    if (!clientId) {
+      console.log("El pago no tiene clientId.");
+      return;
+    }
+
+    const clientDocument = await db
+      .collection("users")
+      .doc(clientId)
+      .get();
+
+    const clientToken = clientDocument.data()?.fcmToken;
+
+    if (!clientToken) {
+      console.log(`El cliente ${clientId} no tiene fcmToken.`);
+      return;
+    }
+
+    const reservationId =
+      after.reservationId || event.params.paymentId;
+    const amount = after.amount ?? 0;
+    const approved = after.status === "Aprobado";
+
+    await messaging.send({
+      token: clientToken,
+
+      notification: {
+        title: approved ? "¡Pago aprobado! ✅" : "Pago rechazado",
+        body: approved ?
+          `Tu pago por S/ ${amount} fue verificado. Tu reserva está lista.` :
+          after.rejectionReason ||
+            "El agente rechazó tu comprobante. Puedes reenviar uno nuevo.",
+      },
+
+      data: {
+        reservationId: reservationId,
+        type: "payment_review",
+        status: after.status,
+      },
+    });
+
+    console.log(`Pago ${after.status} notificado al cliente.`);
+  }
+);

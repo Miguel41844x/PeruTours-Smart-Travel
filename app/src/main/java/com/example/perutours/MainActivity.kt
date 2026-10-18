@@ -25,6 +25,7 @@ import org.koin.android.ext.android.inject
 class MainActivity : ComponentActivity() {
     private val auth: FirebaseAuth by inject()
     private val pendingQuotationId = mutableStateOf<String?>(null)
+    private val pendingReservationId = mutableStateOf<String?>(null)
     private val pendingNotificationType = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         pendingQuotationId.value = intent.quotationId()
+        pendingReservationId.value = intent.reservationId()
         pendingNotificationType.value = intent.notificationType()
 
         setContent {
@@ -45,9 +47,11 @@ class MainActivity : ComponentActivity() {
                         navHostController = navHostController,
                         auth = auth,
                         pendingQuotationId = pendingQuotationId.value,
+                        pendingReservationId = pendingReservationId.value,
                         pendingNotificationType = pendingNotificationType.value,
                         onPendingQuotationConsumed = {
                             pendingQuotationId.value = null
+                            pendingReservationId.value = null
                             pendingNotificationType.value = null
                         }
                     )
@@ -60,12 +64,17 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         pendingQuotationId.value = intent.quotationId()
+        pendingReservationId.value = intent.reservationId()
         pendingNotificationType.value = intent.notificationType()
     }
 
     private fun Intent.quotationId(): String? =
         getStringExtra(MyFirebaseMessagingService.EXTRA_QUOTATION_ID)
             ?: getStringExtra("quotationId")
+
+    private fun Intent.reservationId(): String? =
+        getStringExtra(MyFirebaseMessagingService.EXTRA_RESERVATION_ID)
+            ?: getStringExtra("reservationId")
 
     private fun Intent.notificationType(): String? =
         getStringExtra(MyFirebaseMessagingService.EXTRA_NOTIFICATION_TYPE)

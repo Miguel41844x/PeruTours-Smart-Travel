@@ -42,15 +42,18 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             ?: "El agente turístico ha preparado tu propuesta con estado 'Cotizado'."
 
         val quotationId = remoteMessage.data["quotationId"] ?: ""
+        // HU07: las revisiones de pago abren la reserva del cliente.
+        val reservationId = remoteMessage.data["reservationId"] ?: ""
         val notificationType = remoteMessage.data["type"] ?: TYPE_QUOTATION
 
-        mostrarNotificacionPush(title, body, quotationId, notificationType)
+        mostrarNotificacionPush(title, body, quotationId, reservationId, notificationType)
     }
 
     private fun mostrarNotificacionPush(
         title: String,
         body: String,
         quotationId: String,
+        reservationId: String,
         notificationType: String
     ) {
         val channelId = "perutours_fcm_quotations"
@@ -71,12 +74,13 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra(EXTRA_QUOTATION_ID, quotationId)
+            putExtra(EXTRA_RESERVATION_ID, reservationId)
             putExtra(EXTRA_NOTIFICATION_TYPE, notificationType)
         }
 
         val pendingIntent = PendingIntent.getActivity(
             this,
-            quotationId.hashCode(),
+            (quotationId + reservationId).hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -103,8 +107,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         const val EXTRA_QUOTATION_ID = "EXTRA_QUOTATION_ID"
+        const val EXTRA_RESERVATION_ID = "EXTRA_RESERVATION_ID"
         const val EXTRA_NOTIFICATION_TYPE = "EXTRA_NOTIFICATION_TYPE"
         const val TYPE_QUOTATION = "quotation"
         const val TYPE_QUOTATION_RESPONSE = "quotation_response"
+        const val TYPE_PAYMENT_REVIEW = "payment_review"
     }
 }
