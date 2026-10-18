@@ -44,18 +44,12 @@ class AuthRepository(
         user.updateProfile(profileUpdates).await()
 
         // 2. Crear documento completo en users/{uid} en Firestore de inmediato
-        val now = System.currentTimeMillis()
-        val userDoc = hashMapOf(
-            "uid" to user.uid,
-            "name" to cleanName,
-            "email" to cleanEmail,
-            "phone" to cleanPhone,
-            "dni" to "",
-            "city" to "Lima, Perú",
-            "role" to "cliente", // Seguridad: SIEMPRE cliente desde la app pública
-            "photoUrl" to "",
-            "preferences" to emptyList<String>(),
-            "updatedAt" to now
+        val userDoc = buildClientProfileDoc(
+            uid = user.uid,
+            name = cleanName,
+            email = cleanEmail,
+            phone = cleanPhone,
+            nowMillis = System.currentTimeMillis()
         )
 
         firestore.collection("users")
@@ -106,17 +100,12 @@ class AuthRepository(
             val phone = parts.getOrNull(2).orEmpty()
             val now = System.currentTimeMillis()
 
-            val fallbackDoc = hashMapOf(
-                "uid" to user.uid,
-                "name" to name,
-                "email" to (user.email ?: ""),
-                "phone" to phone,
-                "dni" to "",
-                "city" to "Lima, Perú",
-                "role" to "cliente",
-                "photoUrl" to "",
-                "preferences" to emptyList<String>(),
-                "updatedAt" to now
+            val fallbackDoc = buildClientProfileDoc(
+                uid = user.uid,
+                name = name,
+                email = user.email ?: "",
+                phone = phone,
+                nowMillis = now
             )
             docRef.set(fallbackDoc, SetOptions.merge()).await()
         }
@@ -128,6 +117,33 @@ class AuthRepository(
 
     fun logout() {
         auth.signOut()
+    }
+
+    companion object {
+        /**
+         * Construye el documento completo de users/{uid} que exigen las reglas
+         * de Firestore (isValidFullUser). El rol SIEMPRE es "cliente" desde la
+         * app pública y el documento nunca incluye campos fuera de la lista
+         * permitida (por ejemplo, createdAtMillis).
+         */
+        fun buildClientProfileDoc(
+            uid: String,
+            name: String,
+            email: String,
+            phone: String,
+            nowMillis: Long
+        ): Map<String, Any> = mapOf(
+            "uid" to uid,
+            "name" to name,
+            "email" to email,
+            "phone" to phone,
+            "dni" to "",
+            "city" to "Lima, Perú",
+            "role" to "cliente", // Seguridad: SIEMPRE cliente desde la app pública
+            "photoUrl" to "",
+            "preferences" to emptyList<String>(),
+            "updatedAt" to nowMillis
+        )
     }
 }
 
