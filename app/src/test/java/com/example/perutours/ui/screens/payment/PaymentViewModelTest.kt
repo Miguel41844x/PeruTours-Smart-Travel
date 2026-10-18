@@ -134,7 +134,7 @@ class PaymentViewModelTest {
         viewModel.submitPayment("res_1", "res_1")
 
         assertTrue(viewModel.uiState.value.errorMessage != null)
-        verify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
     }
 
     @Test
@@ -144,7 +144,7 @@ class PaymentViewModelTest {
         viewModel.submitPayment("res_1", "res_1")
 
         assertTrue(viewModel.uiState.value.errorMessage != null)
-        verify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
     }
 
     @Test
@@ -161,7 +161,7 @@ class PaymentViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.errorMessage != null)
-        verify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
     }
 
     @Test
@@ -172,7 +172,7 @@ class PaymentViewModelTest {
         val workId = UUID.randomUUID()
         val methodSlot = slot<String>()
         coEvery { paymentRepository.saveVoucherLocally(any()) } returns "/tmp/voucher.jpg"
-        every {
+        coEvery {
             paymentRepository.enqueuePaymentUpload(any(), any(), any(), capture(methodSlot))
         } returns workId
         every {
@@ -202,7 +202,7 @@ class PaymentViewModelTest {
         } returns reservation()
         val workId = UUID.randomUUID()
         coEvery { paymentRepository.saveVoucherLocally(any()) } returns "/tmp/voucher.jpg"
-        every {
+        coEvery {
             paymentRepository.enqueuePaymentUpload(any(), any(), any(), any())
         } returns workId
         every {
@@ -222,6 +222,6 @@ class PaymentViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 2) { paymentRepository.saveVoucherLocally(any()) }
-        verify(exactly = 2) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
+        coVerify(exactly = 2) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
     }
 }

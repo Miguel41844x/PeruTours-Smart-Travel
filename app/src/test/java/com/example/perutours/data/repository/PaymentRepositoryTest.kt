@@ -9,6 +9,7 @@ import androidx.work.Operation
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.perutours.service.UploadPaymentWorker
+import com.google.common.util.concurrent.ListenableFuture
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -83,11 +84,12 @@ class PaymentRepositoryTest {
     }
 
     @Test
-    fun `enqueuePaymentUpload devuelve el id del trabajo y envia el metodo elegido`() {
+    fun `enqueuePaymentUpload devuelve el id del trabajo y envia el metodo elegido`() = runTest {
         val requestSlot = slot<OneTimeWorkRequest>()
         every {
             workManager.enqueueUniqueWork(any(), any(), capture(requestSlot))
         } returns mockk<Operation>()
+        stubUniqueWork(emptyList())
 
         val workId = repository.enqueuePaymentUpload(
             quotationId = "res_1",
@@ -110,6 +112,40 @@ class PaymentRepositoryTest {
         assertEquals("res_1", inputData.getString(UploadPaymentWorker.KEY_RESERVATION_ID))
         assertEquals("/tmp/voucher.jpg", inputData.getString(UploadPaymentWorker.KEY_IMAGE_PATH))
         assertEquals("Yape", inputData.getString(UploadPaymentWorker.KEY_PAYMENT_METHOD))
+    }
+
+    @Test
+    fun `enqueuePaymentUpload devuelve el trabajo pendiente y descarta la copia nueva`() = runTest {
+        val pendingId = UUID.randomUUID()
+        val pendingInfo = mockk<WorkInfo>()
+        every { pendingInfo.state } returns WorkInfo.State.ENQUEUED
+        every { pendingInfo.id } returns pendingId
+        stubUniqueWork(listOf(pendingInfo))
+
+        val localFile = File(context.cacheDir, "voucher_pendiente.jpg").apply {
+            writeBytes(byteArrayOf(1, 2))
+        }
+
+        val workId = repository.enqueuePaymentUpload(
+            quotationId = "res_1",
+            reservationId = "res_1",
+            localImagePath = localFile.absolutePath,
+            paymentMethod = "Yape"
+        )
+
+        // La UI debe observar el trabajo que KEEP sí va a ejecutar, y la
+        // copia local descartada no puede quedar huérfana.
+        assertEquals(pendingId, workId)
+        assertFalse(localFile.exists())
+        verify(exactly = 0) {
+            workManager.enqueueUniqueWork(any(), any(), any<OneTimeWorkRequest>())
+        }
+    }
+
+    private fun stubUniqueWork(workInfos: List<WorkInfo>) {
+        val future = mockk<ListenableFuture<List<WorkInfo>>>()
+        every { workManager.getWorkInfosForUniqueWork(any()) } returns future
+        every { future.get() } returns workInfos
     }
 
     @Test

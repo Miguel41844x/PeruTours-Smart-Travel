@@ -69,12 +69,34 @@ class PaymentRepository(
         localFile.absolutePath
     }
 
-    fun enqueuePaymentUpload(
+    /**
+     * HU07: encola la subida del comprobante con WorkManager. Devuelve el
+     * ID del trabajo REALMENTE activo: con ExistingWorkPolicy.KEEP, si ya
+     * hay una subida pendiente para la reserva se conserva la anterior y
+     * esta petición se descarta, por lo que la UI debe observar el
+     * trabajo que sí se va a ejecutar y no uno desechado.
+     */
+    suspend fun enqueuePaymentUpload(
         quotationId: String,
         reservationId: String,
         localImagePath: String,
         paymentMethod: String
-    ): UUID {
+    ): UUID = withContext(Dispatchers.IO) {
+        val uniqueName = "payment_upload_$reservationId"
+
+        val pendingWorkId = workManager
+            .getWorkInfosForUniqueWork(uniqueName).get()
+            .firstOrNull { !it.state.isFinished }
+            ?.id
+
+        if (pendingWorkId != null) {
+            // Ya hay una subida en cola: KEEP la conservaría y descartar
+            // esta. Se descarta la copia recién creada para no dejar un
+            // archivo local huérfano.
+            File(localImagePath).delete()
+            return@withContext pendingWorkId
+        }
+
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -92,11 +114,11 @@ class PaymentRepository(
             .build()
 
         workManager.enqueueUniqueWork(
-            "payment_upload_$reservationId",
+            uniqueName,
             ExistingWorkPolicy.KEEP,
             uploadRequest
         )
-        return uploadRequest.id
+        uploadRequest.id
     }
 
     /**
