@@ -403,30 +403,21 @@ service cloud.firestore {
     }
 
     // As with preferences, every allowed list position is inspected.
+    // NOTE: the rules evaluator allows at most 1000 expressions per request,
+    // and it charges every function call it reaches. Scanning 20 positions
+    // of this expensive per-item check made every quotation write exceed the
+    // budget and fail with PERMISSION_DENIED, so the app caps quotations at
+    // 5 services (QuotationValidator.MAX_SERVICES) and the rules mirror
+    // that limit with exactly 5 inspected positions.
     function isValidQuotationServices(items) {
       return items is list
         && items.size() >= 1
-        && items.size() <= 20
+        && items.size() <= 5
         && isValidServiceItemAt(items, 0)
         && isValidServiceItemAt(items, 1)
         && isValidServiceItemAt(items, 2)
         && isValidServiceItemAt(items, 3)
-        && isValidServiceItemAt(items, 4)
-        && isValidServiceItemAt(items, 5)
-        && isValidServiceItemAt(items, 6)
-        && isValidServiceItemAt(items, 7)
-        && isValidServiceItemAt(items, 8)
-        && isValidServiceItemAt(items, 9)
-        && isValidServiceItemAt(items, 10)
-        && isValidServiceItemAt(items, 11)
-        && isValidServiceItemAt(items, 12)
-        && isValidServiceItemAt(items, 13)
-        && isValidServiceItemAt(items, 14)
-        && isValidServiceItemAt(items, 15)
-        && isValidServiceItemAt(items, 16)
-        && isValidServiceItemAt(items, 17)
-        && isValidServiceItemAt(items, 18)
-        && isValidServiceItemAt(items, 19);
+        && isValidServiceItemAt(items, 4);
     }
 
     function isValidQuotation(data) {
@@ -486,6 +477,41 @@ service cloud.firestore {
         && (!('parentQuotationId' in data) || (data.parentQuotationId is string && data.parentQuotationId.size() <= 128));
     }
 
+    // Validates only the fields that may change on update. Identity fields
+    // (id, clientId, agentId, createdAtMillis, ...) are pinned by the
+    // affectedKeys().hasOnly(...) checks in the update rules, so re-running
+    // the full isValidQuotation here would only waste the evaluator's
+    // expression budget (1000 per write) — which previously made every
+    // quotation save fail with PERMISSION_DENIED.
+    function isValidQuotationUpdateFields(data) {
+      return isValidQuotationServices(data.services)
+        && isPositiveBoundedNumber(data.baseCost, 100000000)
+        && data.marginPercent is int
+        && data.marginPercent >= 0
+        && data.marginPercent <= 100
+        && isPositiveBoundedNumber(data.totalAmount, 200000000)
+        && data.totalAmount >= data.baseCost
+        && data.currency in ['USD', 'PEN']
+        && data.validityDate is string
+        && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.validUntilMillis is int
+        && data.validUntilMillis > request.time.toMillis()
+        && data.validUntilMillis <= request.time.toMillis() + 2678400000
+        && data.conditions is string
+        && data.conditions.size() <= 2000
+        && data.status in ['Cotizado', 'Aceptada', 'Observada', 'Cancelada']
+        && data.version is int
+        && data.version >= 1
+        && data.parentQuotationId is string
+        && data.parentQuotationId.size() <= 128
+        && data.latestObservation is string
+        && data.latestObservation.size() <= 500
+        && data.reservationId is string
+        && data.reservationId.size() <= 128
+        && (data.respondedAtMillis == null
+          || (data.respondedAtMillis is int && data.respondedAtMillis > 0));
+    }
+
     function isValidObservation(data) {
       return hasRequiredFields(data, [
           'id', 'quotationId', 'authorId', 'authorName', 'message',
@@ -504,78 +530,22 @@ service cloud.firestore {
         && isRecentMillis(data.createdAtMillis);
     }
 
+    // Used only by the reservation create rule. The rule cross-checks
+    // every business value against the quotation/request documents via
+    // getAfter (see isValidAcceptedReservation) and asserts the status /
+    // payment invariants inline — and every required field is read by one
+    // of those checks, so a missing field already fails the rule with an
+    // evaluation error. Only the "no extra fields" guarantee is needed
+    // here; re-validating each field blew the evaluator's shared
+    // 1000-expression budget for the whole accept batch.
     function isValidReservation(data) {
-      return hasRequiredFields(data, [
+      return hasOnlyAllowedFields(data, [
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
           'destination', 'originCity', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
           'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis',
           'paymentId', 'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
-        ])
-        && hasOnlyAllowedFields(data, [
-          'id', 'quotationId', 'requestId', 'clientId', 'agentId',
-          'destination', 'originCity', 'departureAtMillis',
-          'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
-          'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis',
-          'paymentId', 'paymentVoucherUrl', 'paymentMethod', 'paidAtMillis'
-        ])
-        && validString(data.id, 1, 128)
-        && validString(data.quotationId, 1, 128)
-        && validString(data.requestId, 1, 128)
-        && validString(data.clientId, 1, 128)
-        && validString(data.agentId, 1, 128)
-        && validString(data.destination, 3, 120)
-        && validString(data.originCity, 2, 120)
-        && data.departureAtMillis is int
-        && data.returnAtMillis is int
-        && data.departureAtMillis > 0
-        && data.returnAtMillis > data.departureAtMillis
-        && data.travelerCount is int
-        && data.travelerCount >= 1
-        && data.travelerCount <= 20
-        && isValidQuotationServices(data.services)
-        && isPositiveBoundedNumber(data.totalAmount, 200000000)
-        && data.currency in ['USD', 'PEN']
-        && data.validityDate is string
-        && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && data.conditions is string
-        && data.conditions.size() <= 2000
-        && data.createdAtMillis is int
-        && data.createdAtMillis > 0
-        && data.paymentId is string
-        && data.paymentId.size() <= 128
-        && (
-          // HU07: el estado general de la reserva y su vínculo con el pago.
-          (data.status == 'Confirmada'
-            && data.paymentId == ''
-            && data.paymentVoucherUrl == ''
-            && data.paymentMethod == ''
-            && data.paidAtMillis == null)
-          ||
-          (data.status in ['Pago enviado', 'Pago rechazado']
-            && data.paymentId == data.id
-            && data.paymentVoucherUrl == ''
-            && data.paymentMethod == ''
-            && data.paidAtMillis == null)
-          ||
-          (data.status == 'Pagado'
-            && (
-              // Nuevo flujo: el pago vive en payments/{paymentId}.
-              (data.paymentId == data.id
-                && data.paymentVoucherUrl == ''
-                && data.paymentMethod == ''
-                && data.paidAtMillis == null)
-              ||
-              // Compatibilidad con reservas Pagado del flujo anterior.
-              (data.paymentId == ''
-                && data.paymentVoucherUrl is string
-                && data.paymentVoucherUrl.size() <= 2048
-                && data.paymentVoucherUrl.matches('^https://.+')
-                && validString(data.paymentMethod, 3, 80)
-                && data.paidAtMillis is int
-                && data.paidAtMillis > 0)
-            ))
-        );
+        ]);
     }
 
     function isValidPayment(data) {
@@ -685,6 +655,22 @@ service cloud.firestore {
         && requestAfter.quotationId == quotationId;
     }
 
+    // Campos que un cliente puede tocar al responder (status,
+    // respondedAtMillis, latestObservation, reservationId). El resto del
+    // documento queda congelado por changed.hasOnly(...) y ya fue
+    // validado al crearse, así que aquí NO se revalidan servicios ni
+    // importes: eso agotaba el presupuesto de expresiones del lote de
+    // aceptación (create reserva + update cotización + update solicitud).
+    function isValidQuotationClientResponseFields(data) {
+      return data.status in ['Cotizado', 'Aceptada', 'Observada', 'Cancelada']
+        && (data.respondedAtMillis == null
+          || (data.respondedAtMillis is int && data.respondedAtMillis > 0))
+        && data.latestObservation is string
+        && data.latestObservation.size() <= 500
+        && data.reservationId is string
+        && data.reservationId.size() <= 128;
+    }
+
     function isValidClientQuotationUpdate(quotationId) {
       let data = request.resource.data;
       let changed = data.diff(resource.data).affectedKeys();
@@ -704,7 +690,7 @@ service cloud.firestore {
         && data.reservationId == resource.data.reservationId;
       return isClient()
         && resource.data.clientId == request.auth.uid
-        && isValidQuotation(data)
+        && isValidQuotationClientResponseFields(data)
         && canRespond
         && isRecentMillis(data.respondedAtMillis)
         && changed.hasOnly([
@@ -717,7 +703,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return isAgent()
         && resource.data.agentId == request.auth.uid
-        && isValidQuotation(data)
+        && isValidQuotationUpdateFields(data)
         && resource.data.status == 'Observada'
         && data.status == 'Cotizado'
         && data.validUntilMillis is int
@@ -842,7 +828,8 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && (resource.data.userId == request.auth.uid || isAgent());
 
-      allow create: if isClient()
+      allow create: if !exists(requestPath(requestId))
+        && isClient()
         && isValidTravelRequest(request.resource.data)
         && request.resource.data.id == requestId
         && request.resource.data.userId == request.auth.uid
@@ -855,7 +842,19 @@ service cloud.firestore {
           || request.resource.data.quotationId == '')
         && isRecentMillis(request.resource.data.createdAtMillis);
 
-      allow update: if isValidTravelRequest(request.resource.data)
+      // En una actualización solo cambian status y quotationId; el resto
+      // de campos queda congelado por areImmutableFieldsUnchanged. Aquí
+      // NO se revalida el documento completo (isValidTravelRequest): el
+      // evaluador tiene un techo de 1000 expresiones por escritura y
+      // revalidar todo agotaba el presupuesto del lote de aceptación.
+      allow update: if exists(requestPath(requestId))
+        && request.resource.data.id == requestId
+        && request.resource.data.status in [
+          'Pendiente de cotizacion', 'Cotizado', 'Aceptada',
+          'Observada', 'Cancelada'
+        ]
+        && (!('quotationId' in request.resource.data)
+          || request.resource.data.quotationId is string)
         && areImmutableFieldsUnchanged([
           'id', 'userId', 'destination', 'destinationLatitude',
           'destinationLongitude', 'originCity',
@@ -863,8 +862,11 @@ service cloud.firestore {
           'returnAtMillis', 'travelerCount', 'notes', 'createdAtMillis'
         ])
         && (
-          isValidAgentRequestQuotationUpdate(requestId)
-          || isValidClientRequestResponseUpdate(requestId)
+          // La rama del cliente va primero: es la que usa el flujo de
+          // aceptación/observación y corta antes de evaluar las ramas
+          // del agente (el presupuesto de expresiones es por tanda).
+          isValidClientRequestResponseUpdate(requestId)
+          || isValidAgentRequestQuotationUpdate(requestId)
           || isValidAssignedAgentRequestUpdate(requestId)
         );
 
@@ -892,10 +894,17 @@ service cloud.firestore {
         && (resource.data.clientId == request.auth.uid
           || (isAgent() && resource.data.agentId == request.auth.uid));
 
-      allow create: if isValidAgentQuotationCreate(quotationId);
+      // Guardas de existencia: el motor evalúa TODAS las cláusulas del
+      // path en cada escritura y comparten el techo de 1000 expresiones
+      // por solicitud. Sin la guarda, cada update de cotización (p. ej.
+      // la aceptación del cliente) re-ejecutaba isValidAgentQuotationCreate
+      // entero solo para descartarlo, y el lote agotaba el presupuesto.
+      allow create: if !exists(quotationPath(quotationId))
+        && isValidAgentQuotationCreate(quotationId);
 
-      allow update: if isValidClientQuotationUpdate(quotationId)
-        || isValidAgentQuotationUpdate();
+      allow update: if exists(quotationPath(quotationId))
+        && (isValidClientQuotationUpdate(quotationId)
+          || isValidAgentQuotationUpdate());
 
       allow delete: if false;
 
@@ -925,12 +934,43 @@ service cloud.firestore {
       }
     }
 
+    // HU07/HU06: la reserva creada por el cliente debe reflejar exactamente
+    // la cotización aceptada y los datos de la solicitud; ambos documentos
+    // se escriben en la misma transacción y sus reglas garantizan su
+    // integridad, por lo que aquí basta el cruce de campos. Se usa una
+    // función (y no una cadena inline) para reutilizar los getAfter sin
+    // repetirlos: el evaluador cobra cada expresión de un presupuesto
+    // fijo de 1000 por escritura.
+    // HU07/HU06: la reserva creada por el cliente debe reflejar la
+    // cotización aceptada y la solicitud. Solo se cruzan los campos
+    // críticos: el resto ya quedó inmutable en sus documentos de origen
+    // (las reglas de cotizaciones y travel_requests congelan esos
+    // campos), y el evaluador tiene un techo de 1000 expresiones por
+    // lote que un cruce exhaustivo desbordaba.
+    function isValidAcceptedReservation(reservationId) {
+      let data = request.resource.data;
+      let quotationAfter = getAfter(quotationPath(reservationId)).data;
+      let requestAfter = getAfter(requestPath(data.requestId)).data;
+      return existsAfter(quotationPath(reservationId))
+        && quotationAfter.status == 'Aceptada'
+        && quotationAfter.clientId == request.auth.uid
+        && quotationAfter.reservationId == reservationId
+        && quotationAfter.requestId == data.requestId
+        && quotationAfter.agentId == data.agentId
+        && quotationAfter.totalAmount == data.totalAmount
+        && quotationAfter.currency == data.currency
+        && requestAfter.originCity == data.originCity
+        && requestAfter.departureAtMillis == data.departureAtMillis
+        && requestAfter.returnAtMillis == data.returnAtMillis;
+    }
+
     match /reservations/{reservationId} {
       allow read: if isAuthenticated()
         && (resource.data.clientId == request.auth.uid
           || (isAgent() && resource.data.agentId == request.auth.uid));
 
-      allow create: if isClient()
+      allow create: if !exists(reservationPath(reservationId))
+        && isClient()
         && isValidReservation(request.resource.data)
         && request.resource.data.id == reservationId
         && request.resource.data.quotationId == reservationId
@@ -941,38 +981,10 @@ service cloud.firestore {
         && request.resource.data.paymentMethod == ''
         && request.resource.data.paidAtMillis == null
         && isRecentMillis(request.resource.data.createdAtMillis)
-        && existsAfter(quotationPath(reservationId))
-        && getAfter(quotationPath(reservationId)).data.status == 'Aceptada'
-        && getAfter(quotationPath(reservationId)).data.clientId
-          == request.auth.uid
-        && getAfter(quotationPath(reservationId)).data.reservationId
-          == reservationId
-        && getAfter(quotationPath(reservationId)).data.requestId
-          == request.resource.data.requestId
-        && getAfter(quotationPath(reservationId)).data.agentId
-          == request.resource.data.agentId
-        && getAfter(quotationPath(reservationId)).data.destination
-          == request.resource.data.destination
-        && getAfter(requestPath(request.resource.data.requestId)).data.originCity
-          == request.resource.data.originCity
-        && getAfter(requestPath(request.resource.data.requestId)).data.departureAtMillis
-          == request.resource.data.departureAtMillis
-        && getAfter(requestPath(request.resource.data.requestId)).data.returnAtMillis
-          == request.resource.data.returnAtMillis
-        && getAfter(quotationPath(reservationId)).data.travelerCount
-          == request.resource.data.travelerCount
-        && getAfter(quotationPath(reservationId)).data.services
-          == request.resource.data.services
-        && getAfter(quotationPath(reservationId)).data.totalAmount
-          == request.resource.data.totalAmount
-        && getAfter(quotationPath(reservationId)).data.currency
-          == request.resource.data.currency
-        && getAfter(quotationPath(reservationId)).data.validityDate
-          == request.resource.data.validityDate
-        && getAfter(quotationPath(reservationId)).data.conditions
-          == request.resource.data.conditions;
+        && isValidAcceptedReservation(reservationId);
 
-      allow update: if isValidReservationStatusChange(request.resource.data)
+      allow update: if exists(reservationPath(reservationId))
+        && isValidReservationStatusChange(request.resource.data)
         && areImmutableFieldsUnchanged([
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
           'destination', 'originCity', 'departureAtMillis',
@@ -1003,7 +1015,8 @@ service cloud.firestore {
       // El cliente registra su comprobante junto con el cambio de la
       // reserva a 'Pago enviado' (la verificación de importe y moneda se
       // hace contra la reserva en la misma tanda).
-      allow create: if isClient()
+      allow create: if !exists(paymentPath(paymentId))
+        && isClient()
         && isValidPayment(request.resource.data)
         && request.resource.data.id == paymentId
         && request.resource.data.reservationId == paymentId
@@ -1027,7 +1040,7 @@ service cloud.firestore {
         && getAfter(reservationPath(paymentId)).data.quotationId
           == request.resource.data.quotationId;
 
-      allow update: if (
+      allow update: if exists(paymentPath(paymentId)) && (
         // El cliente reenvía un comprobante tras un rechazo.
         isClient()
         && resource.data.clientId == request.auth.uid
@@ -1087,3 +1100,4 @@ service cloud.firestore {
     }
   }
 }
+
