@@ -72,6 +72,10 @@ import java.util.concurrent.TimeUnit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TravelRequestScreen(
+    suggestedDestination: String = "",
+    referencePackageTitle: String = "",
+    referencePackageDuration: String = "",
+    referencePackageDescription: String = "",
     onBack: () -> Unit = {},
     onSaved: () -> Unit = {},
     viewModel: TravelRequestViewModel = koinViewModel()
@@ -80,6 +84,20 @@ fun TravelRequestScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var dateTimeTarget by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(
+        suggestedDestination,
+        referencePackageTitle,
+        referencePackageDuration,
+        referencePackageDescription
+    ) {
+        viewModel.prefillFromPackage(
+            destination = suggestedDestination,
+            packageTitle = referencePackageTitle,
+            duration = referencePackageDuration,
+            description = referencePackageDescription
+        )
+    }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()

@@ -75,6 +75,32 @@ class TravelRequestViewModel(
         }
     }
 
+    fun prefillFromPackage(
+        destination: String,
+        packageTitle: String,
+        duration: String,
+        description: String
+    ) {
+        if (destination.isBlank() || packageTitle.isBlank()) return
+
+        val state = _uiState.value
+        if (state.destination.isNotBlank() || state.notes.isNotBlank()) return
+
+        val referenceNote = buildString {
+            append("Paquete de referencia: ")
+            append(packageTitle.trim())
+            if (duration.isNotBlank()) append(" (${duration.trim()})")
+            if (description.isNotBlank()) append(". ${description.trim()}")
+        }.take(MAX_NOTES_LENGTH)
+
+        _uiState.value = state.copy(
+            destination = destination.trim().take(MAX_PLACE_LENGTH),
+            notes = referenceNote,
+            destinationError = null,
+            message = "Usamos $packageTitle como referencia para tu solicitud."
+        )
+    }
+
     fun detectCurrentLocation() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLocating = true, message = null)
@@ -216,5 +242,6 @@ class TravelRequestViewModel(
 
     companion object {
         private const val MAX_PLACE_LENGTH = 120
+        private const val MAX_NOTES_LENGTH = 500
     }
 }

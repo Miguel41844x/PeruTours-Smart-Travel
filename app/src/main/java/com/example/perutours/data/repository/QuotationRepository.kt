@@ -1,6 +1,5 @@
 package com.example.perutours.data.repository
 
-import android.util.Log
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.QuotationObservation
 import com.example.perutours.data.model.QuotationValidity
@@ -324,7 +323,7 @@ class QuotationRepository(
                 respondedAtMillis = respondedAt,
                 reservationId = reservation.id
             )
-        }.await().also {
+        }.await().also { acceptedQuotation ->
             // Segunda escritura: el estado de la solicitud viaja en una
             // segunda tanda. El evaluador de reglas Firestore tiene un techo
             // de 1000 expresiones COMPARTIDO por toda la solicitud, y las
@@ -334,20 +333,12 @@ class QuotationRepository(
             // cotización ya esté 'Aceptada' con getAfter, que aquí lee el
             // resultado confirmado de la primera tanda).
             //
-            // Si esta segunda tanda falla (p. ej. sin conexión), la
-            // aceptación ya quedó registrada en la reserva y la cotización;
-            // el estado de la solicitud se reintentará en la siguiente
-            // sincronización, por lo que el error no se propaga.
-            try {
-                firestore.collection(COLLECTION_REQUESTS)
-                    .document(it.requestId)
-                    .update("status", Quotation.STATUS_ACCEPTED)
-                    .await()
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                Log.w("HU06", "Aceptación registrada, pero no se pudo actualizar el estado de la solicitud.")
-            }
+            // La confirmación de esta escritura también forma parte del proceso. Si falla, el
+            // repositorio propaga el error para que la interfaz no informe una aceptación completa.
+            firestore.collection(COLLECTION_REQUESTS)
+                .document(acceptedQuotation.requestId)
+                .update("status", Quotation.STATUS_ACCEPTED)
+                .await()
         }
     }
 

@@ -72,6 +72,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
 import com.example.perutours.R
+import com.example.perutours.data.remote.DestinationDto
 import com.example.perutours.ui.components.PeruToursBrand
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
@@ -88,7 +89,7 @@ import org.koin.compose.koinInject
 @Composable
 fun HomeScreen(
     auth: FirebaseAuth,
-    navigateToTravelRequest: () -> Unit = {},
+    navigateToTravelRequest: (DestinationDto?) -> Unit = {},
     navigateToQuotations: () -> Unit = {},
     navigateToReservations: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
@@ -308,7 +309,7 @@ fun HomeScreen(
                             color = Color.White
                         )
                         Button(
-                            onClick = navigateToTravelRequest,
+                            onClick = { navigateToTravelRequest(null) },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 contentColor = MaterialTheme.colorScheme.primary
@@ -415,8 +416,10 @@ fun HomeScreen(
                                             style = MaterialTheme.typography.titleLarge,
                                             color = MaterialTheme.colorScheme.primary
                                         )
-                                        TextButton(onClick = navigateToTravelRequest) {
-                                            Text("Solicitar")
+                                        TextButton(
+                                            onClick = { navigateToTravelRequest(destination) }
+                                        ) {
+                                            Text("Solicitar este viaje")
                                         }
                                     }
                                 }

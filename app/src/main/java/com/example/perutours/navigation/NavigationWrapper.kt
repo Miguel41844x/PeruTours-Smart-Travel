@@ -1,5 +1,6 @@
 package com.example.perutours.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -12,8 +13,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.koin.androidx.compose.koinViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.perutours.ui.screens.home.HomeScreen
 import com.example.perutours.ui.screens.initial.InitialScreen
 import com.example.perutours.ui.screens.login.LoginScreen
@@ -193,8 +196,17 @@ fun NavigationWrapper(
         composable(route = "home") {
             HomeScreen(
                 auth = auth,
-                navigateToTravelRequest = {
-                    navHostController.navigate(route = "travelRequest")
+                navigateToTravelRequest = { destination ->
+                    val route = if (destination == null) {
+                        "travelRequest"
+                    } else {
+                        "travelRequest" +
+                            "?destination=${Uri.encode(destination.location)}" +
+                            "&packageTitle=${Uri.encode(destination.title)}" +
+                            "&duration=${Uri.encode(destination.duration)}" +
+                            "&description=${Uri.encode(destination.description.orEmpty())}"
+                    }
+                    navHostController.navigate(route)
                 },
                 navigateToQuotations = {
                     navHostController.navigate(route = "customer_quotations")
@@ -222,12 +234,45 @@ fun NavigationWrapper(
             )
         }
 
-        composable(route = "travelRequest") {
+        composable(
+            route = "travelRequest?destination={destination}" +
+                "&packageTitle={packageTitle}&duration={duration}&description={description}",
+            arguments = listOf(
+                navArgument("destination") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("packageTitle") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("duration") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("description") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
             TravelRequestScreen(
+                suggestedDestination = backStackEntry.arguments
+                    ?.getString("destination")
+                    .orEmpty(),
+                referencePackageTitle = backStackEntry.arguments
+                    ?.getString("packageTitle")
+                    .orEmpty(),
+                referencePackageDuration = backStackEntry.arguments
+                    ?.getString("duration")
+                    .orEmpty(),
+                referencePackageDescription = backStackEntry.arguments
+                    ?.getString("description")
+                    .orEmpty(),
                 onBack = { navHostController.popBackStack() },
                 onSaved = {
                     navHostController.navigate(route = "home") {
-                        popUpTo("travelRequest") { inclusive = true }
+                        popUpTo("home") { inclusive = false }
                         launchSingleTop = true
                     }
                 }
