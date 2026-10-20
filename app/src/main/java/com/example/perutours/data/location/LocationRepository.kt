@@ -54,9 +54,19 @@ class LocationRepository(context: Context) : LocationDataSource {
         }
 
         return withContext(Dispatchers.IO) {
-            Geocoder(appContext, Locale.getDefault())
-                .getFromLocationName(normalizedQuery, 5)
-                ?.firstOrNull { address -> address.hasMeaningfulPlaceName() }
+            Geocoder(appContext, PERU_LOCALE)
+                .getFromLocationName(
+                    "$normalizedQuery, Perú",
+                    MAX_GEOCODER_RESULTS,
+                    PERU_SOUTH_LATITUDE,
+                    PERU_WEST_LONGITUDE,
+                    PERU_NORTH_LATITUDE,
+                    PERU_EAST_LONGITUDE
+                )
+                ?.firstOrNull { address ->
+                    address.countryCode.equals(PERU_COUNTRY_CODE, ignoreCase = true) &&
+                        address.hasMeaningfulPlaceName()
+                }
                 ?.let { address ->
                     DetectedLocation(
                         city = address.toPlaceLabel(normalizedQuery),
@@ -99,5 +109,19 @@ class LocationRepository(context: Context) : LocationDataSource {
         return parts.take(3).joinToString(", ")
             .ifBlank { featureName?.trim().orEmpty() }
             .ifBlank { fallback }
+    }
+
+    private companion object {
+        const val MAX_GEOCODER_RESULTS = 5
+        const val PERU_COUNTRY_CODE = "PE"
+        const val PERU_SOUTH_LATITUDE = -18.5
+        const val PERU_WEST_LONGITUDE = -81.5
+        const val PERU_NORTH_LATITUDE = 0.1
+        const val PERU_EAST_LONGITUDE = -68.5
+
+        val PERU_LOCALE: Locale = Locale.Builder()
+            .setLanguage("es")
+            .setRegion(PERU_COUNTRY_CODE)
+            .build()
     }
 }
