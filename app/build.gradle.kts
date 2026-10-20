@@ -71,6 +71,7 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.google.play.services.location)
+    implementation(libs.mpandroidchart)
 
     // Tests
     testImplementation(libs.junit)
