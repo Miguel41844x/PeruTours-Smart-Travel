@@ -415,21 +415,6 @@ private fun DateTimeField(
     }
 }
 
-private fun formatDateTime(value: Long): String =
-    SimpleDateFormat("EEE d MMM, HH:mm", Locale.forLanguageTag("es-PE")).format(Date(value))
-
-private fun tripDurationText(departure: Long, returnAt: Long): String? {
-    if (departure <= 0L || returnAt <= departure) return null
-    val difference = returnAt - departure
-    val days = TimeUnit.MILLISECONDS.toDays(difference)
-    val hours = TimeUnit.MILLISECONDS.toHours(difference) % 24
-    return when {
-        days > 0 && hours > 0 -> "$days días y $hours horas"
-        days > 0 -> "$days días"
-        else -> "$hours horas"
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RequestDateTimePicker(
@@ -439,7 +424,7 @@ private fun RequestDateTimePicker(
     onConfirm: (Long) -> Unit
 ) {
     val baseValue = initialValue.takeIf { it > minimumValue }
-        ?: minimumValue + DEFAULT_DATE_TIME_OFFSET_MILLIS
+        ?: (minimumValue + DEFAULT_DATE_TIME_OFFSET_MILLIS)
     val initialCalendar = remember(baseValue) {
         Calendar.getInstance().apply { timeInMillis = baseValue }
     }
@@ -505,6 +490,21 @@ private fun RequestDateTimePicker(
             },
             dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
         )
+    }
+}
+
+private fun formatDateTime(value: Long): String =
+    SimpleDateFormat("EEE d MMM, HH:mm", Locale.forLanguageTag("es-PE")).format(Date(value))
+
+private fun tripDurationText(departure: Long, returnAt: Long): String? {
+    if (departure <= 0L || returnAt <= departure) return null
+    val difference = returnAt - departure
+    val days = TimeUnit.MILLISECONDS.toDays(difference)
+    val hours = TimeUnit.MILLISECONDS.toHours(difference) % 24
+    return when {
+        days > 0 && hours > 0 -> "$days días y $hours horas"
+        days > 0 -> "$days días"
+        else -> "$hours horas"
     }
 }
 

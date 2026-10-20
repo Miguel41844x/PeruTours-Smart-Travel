@@ -30,6 +30,27 @@ class ReservationRepository(
             .sortedByDescending { reservation -> reservation.createdAtMillis }
     }
 
+    override suspend fun getCurrentClientReservationById(
+        reservationId: String
+    ): Reservation? {
+        require(reservationId.isNotBlank()) {
+            "No se recibió el identificador de la reserva."
+        }
+
+        val clientId = currentClientId()
+        val reservation = firestore.collection(COLLECTION_RESERVATIONS)
+            .document(reservationId)
+            .get()
+            .await()
+            .toObject(Reservation::class.java)
+            ?: return null
+
+        if (reservation.clientId != clientId) {
+            throw IllegalAccessException("Esta reserva no pertenece al usuario autenticado.")
+        }
+        return reservation
+    }
+
     override fun observeCurrentClientReservations(): Flow<List<Reservation>> = callbackFlow {
         val clientId = auth.currentUser?.uid
         if (clientId == null) {
@@ -53,27 +74,6 @@ class ReservationRepository(
             }
 
         awaitClose { listener.remove() }
-    }
-
-    override suspend fun getCurrentClientReservationById(
-        reservationId: String
-    ): Reservation? {
-        require(reservationId.isNotBlank()) {
-            "No se recibió el identificador de la reserva."
-        }
-
-        val clientId = currentClientId()
-        val reservation = firestore.collection(COLLECTION_RESERVATIONS)
-            .document(reservationId)
-            .get()
-            .await()
-            .toObject(Reservation::class.java)
-            ?: return null
-
-        if (reservation.clientId != clientId) {
-            throw IllegalAccessException("Esta reserva no pertenece al usuario autenticado.")
-        }
-        return reservation
     }
 
     private fun currentClientId(): String = auth.currentUser?.uid
