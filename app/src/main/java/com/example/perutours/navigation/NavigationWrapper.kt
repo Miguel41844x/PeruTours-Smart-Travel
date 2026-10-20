@@ -44,6 +44,7 @@ import com.example.perutours.ui.screens.agent.AgentHomeScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
+import com.example.perutours.ui.screens.sales.SalesDashboardScreen
 import org.koin.compose.koinInject
 
 @Composable
@@ -147,6 +148,22 @@ fun NavigationWrapper(
             RoleRouterScreen(
                 navController = navHostController,
                 auth = auth
+            )
+        }
+
+        composable(route = "sales_dashboard") {
+            val fcmTokenManager: FCMTokenManager = koinInject()
+            val coroutineScope = rememberCoroutineScope()
+            SalesDashboardScreen(
+                onLogout = {
+                    coroutineScope.launch {
+                        withTimeoutOrNull(3_000) { fcmTokenManager.clearToken() }
+                        auth.signOut()
+                        navHostController.navigate("initial") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
             )
         }
 

@@ -14,6 +14,8 @@ import com.example.perutours.data.repository.TravelRequestDataSource
 import com.example.perutours.data.repository.PaymentRepository
 import com.example.perutours.data.repository.PaymentReviewDataSource
 import com.example.perutours.data.repository.PaymentReviewRepository
+import com.example.perutours.data.repository.SalesDashboardDataSource
+import com.example.perutours.data.repository.SalesDashboardRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -30,6 +32,7 @@ import com.example.perutours.ui.screens.quotation.QuotationViewModel
 import com.example.perutours.ui.screens.quotation.CustomerQuotationViewModel
 import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
 import com.example.perutours.ui.screens.payment.PaymentViewModel
+import com.example.perutours.ui.screens.sales.SalesDashboardViewModel
 
 import android.app.Application
 import androidx.work.WorkManager
@@ -39,6 +42,7 @@ import com.example.perutours.data.repository.DestinationRepository
 import com.example.perutours.ui.screens.home.HomeViewModel
 import com.example.perutours.ui.screens.request.TravelRequestPlaceResolver
 import com.example.perutours.ui.screens.request.TravelRequestViewModel
+import com.example.perutours.domain.analytics.SalesAnalyticsCalculator
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 
@@ -146,6 +150,16 @@ val appModule = module {
         )
     }
 
+    // HU09: analítica comercial calculada desde Firestore.
+    single { SalesAnalyticsCalculator() }
+
+    single<SalesDashboardDataSource> {
+        SalesDashboardRepository(
+            firestore = get(),
+            calculator = get()
+        )
+    }
+
     // 5. ViewModels Inyectados con Koin
     viewModel {
         LoginViewModel(
@@ -238,6 +252,12 @@ val appModule = module {
     // HU07: revisión de comprobantes por el agente
     viewModel {
         AgentPaymentViewModel(
+            repository = get()
+        )
+    }
+
+    viewModel {
+        SalesDashboardViewModel(
             repository = get()
         )
     }

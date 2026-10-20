@@ -72,6 +72,18 @@ fun RoleRouterScreen(
 
             when (profile.role.lowercase()) {
 
+                "gerente", "administrador" -> {
+
+                    navController.navigate("sales_dashboard") {
+
+                        popUpTo("role_router") {
+                            inclusive = true
+                        }
+
+                        launchSingleTop = true
+                    }
+                }
+
                 "agente" -> {
 
                     navController.navigate("agent_home") {

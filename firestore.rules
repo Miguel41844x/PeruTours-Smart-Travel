@@ -101,6 +101,10 @@ service cloud.firestore {
       return hasRole('agente');
     }
 
+    function isManager() {
+      return hasRole('gerente') || hasRole('administrador');
+    }
+
     // Verify UID has not been tampered with on create.
     function uidUnchanged() {
       return isAuthenticated()
@@ -223,7 +227,7 @@ service cloud.firestore {
           || data.dni.matches('^[0-9]{8}$')
           || (data.dni.size() >= 6 && data.dni.matches('^[A-Za-z0-9]+$')))
         && validString(data.city, 2, 100)
-        && data.role in ['cliente', 'agente']
+        && data.role in ['cliente', 'agente', 'gerente', 'administrador']
         && isValidUrl(data.photoUrl)
         && isValidPreferenceIdList(data.preferences)
         && data.updatedAt is int
@@ -814,7 +818,7 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAgent();
+      allow read: if isOwner(userId) || isAgent() || isManager();
       allow create: if isValidUserCreate(userId);
       allow update: if isValidUserUpdate(userId);
       allow delete: if false;
@@ -826,7 +830,7 @@ service cloud.firestore {
 
     match /travel_requests/{requestId} {
       allow read: if isAuthenticated()
-        && (resource.data.userId == request.auth.uid || isAgent());
+        && (resource.data.userId == request.auth.uid || isAgent() || isManager());
 
       allow create: if !exists(requestPath(requestId))
         && isClient()
@@ -892,7 +896,8 @@ service cloud.firestore {
     match /cotizaciones/{quotationId} {
       allow read: if isAuthenticated()
         && (resource.data.clientId == request.auth.uid
-          || (isAgent() && resource.data.agentId == request.auth.uid));
+          || (isAgent() && resource.data.agentId == request.auth.uid)
+          || isManager());
 
       // Guardas de existencia: el motor evalúa TODAS las cláusulas del
       // path en cada escritura y comparten el techo de 1000 expresiones
@@ -1010,7 +1015,8 @@ service cloud.firestore {
     match /payments/{paymentId} {
       allow read: if isAuthenticated()
         && (resource.data.clientId == request.auth.uid
-          || (isAgent() && resource.data.agentId == request.auth.uid));
+          || (isAgent() && resource.data.agentId == request.auth.uid)
+          || isManager());
 
       // El cliente registra su comprobante junto con el cambio de la
       // reserva a 'Pago enviado' (la verificación de importe y moneda se
