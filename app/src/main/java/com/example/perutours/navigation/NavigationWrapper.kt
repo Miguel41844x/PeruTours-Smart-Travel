@@ -53,6 +53,8 @@ import com.example.perutours.ui.screens.agent.AgentRequestsScreen
 import com.example.perutours.ui.screens.sales.SalesDashboardScreen
 import com.example.perutours.ui.screens.trip.TripListScreen
 import com.example.perutours.ui.screens.trip.TripDetailScreen
+import com.example.perutours.ui.screens.trip.AgentTripsScreen
+import com.example.perutours.ui.screens.trip.AgentTripManagementScreen
 import org.koin.compose.koinInject
 
 @Composable
@@ -252,6 +254,9 @@ fun NavigationWrapper(
                 onViewPayments = {
                     navHostController.navigate("agent_payments")
                 },
+                onManageTrips = {
+                    navHostController.navigate("agent_trips")
+                },
                 onLogout = {
                     coroutineScope.launch {
                         withTimeoutOrNull(3_000) { fcmTokenManager.clearToken() }
@@ -263,6 +268,22 @@ fun NavigationWrapper(
                         }
                     }
                 }
+            )
+        }
+
+        composable(route = "agent_trips") {
+            AgentTripsScreen(
+                onNavigateBack = { navHostController.popBackStack() },
+                onTripSelected = { reservationId ->
+                    navHostController.navigate("agent_trip/$reservationId")
+                }
+            )
+        }
+
+        composable(route = "agent_trip/{reservationId}") { backStackEntry ->
+            AgentTripManagementScreen(
+                reservationId = backStackEntry.arguments?.getString("reservationId").orEmpty(),
+                onNavigateBack = { navHostController.popBackStack() }
             )
         }
 

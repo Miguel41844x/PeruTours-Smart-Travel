@@ -5,6 +5,8 @@ import com.example.perutours.data.location.LocationDataSource
 import com.example.perutours.data.location.LocationRepository
 import com.example.perutours.data.repository.AuthRepository
 import com.example.perutours.data.repository.AdminDashboardRepository
+import com.example.perutours.data.repository.AgentTripDataSource
+import com.example.perutours.data.repository.AgentTripRepository
 import com.example.perutours.data.repository.CatalogImageRepository
 import com.example.perutours.data.repository.DestinationCatalogRepository
 import com.example.perutours.data.repository.GeocodingRepository
@@ -52,6 +54,7 @@ import com.example.perutours.ui.screens.payment.PaymentViewModel
 import com.example.perutours.ui.screens.sales.SalesDashboardViewModel
 import com.example.perutours.ui.screens.trip.TripListViewModel
 import com.example.perutours.ui.screens.trip.TripDetailViewModel
+import com.example.perutours.ui.screens.trip.AgentTripViewModel
 
 import android.app.Application
 import androidx.work.WorkManager
@@ -234,6 +237,13 @@ val appModule = module {
         )
     }
 
+    single<AgentTripDataSource> {
+        AgentTripRepository(
+            auth = get(),
+            firestore = get()
+        )
+    }
+
     // HU catálogo: puntos de interés cercanos (Geoapify + caché Room)
     single {
         PointsOfInterestRepository(
@@ -371,6 +381,10 @@ val appModule = module {
             repository = get(),
             locationRepository = get()
         )
+    }
+
+    viewModel {
+        AgentTripViewModel(repository = get())
     }
 
     // HU08 / catálogo turístico: panel y pantallas del administrador
