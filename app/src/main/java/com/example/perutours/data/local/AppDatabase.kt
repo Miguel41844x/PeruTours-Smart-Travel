@@ -8,8 +8,15 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [DestinationEntity::class, PlaceEntity::class],
-    version = 4,
+    entities = [
+        DestinationEntity::class,
+        PlaceEntity::class,
+        TripEntity::class,
+        TripItineraryEntity::class,
+        TripChecklistEntity::class,
+        TripIncidentEntity::class
+    ],
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -17,6 +24,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun destinationDao(): DestinationDao
 
     abstract fun placeDao(): PlaceDao
+
+    abstract fun tripDao(): TripDao
 
     companion object {
         @Volatile
@@ -81,6 +90,143 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migración de versión 4 a 5: centro de viaje disponible sin conexión.
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS trips (
+                        reservationId TEXT PRIMARY KEY NOT NULL,
+                        quotationId TEXT NOT NULL,
+                        clientId TEXT NOT NULL,
+                        agentId TEXT NOT NULL,
+                        destination TEXT NOT NULL,
+                        originCity TEXT NOT NULL,
+                        departureAtMillis INTEGER NOT NULL,
+                        returnAtMillis INTEGER NOT NULL,
+                        travelerCount INTEGER NOT NULL,
+                        totalAmount REAL NOT NULL,
+                        currency TEXT NOT NULL,
+                        reservationStatus TEXT NOT NULL,
+                        cachedAtMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_trips_clientId ON trips (clientId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_trips_agentId ON trips (agentId)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trips_departureAtMillis " +
+                        "ON trips (departureAtMillis)"
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS trip_itinerary_items (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        reservationId TEXT NOT NULL,
+                        clientId TEXT NOT NULL,
+                        agentId TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        locationName TEXT NOT NULL,
+                        latitude REAL NOT NULL,
+                        longitude REAL NOT NULL,
+                        startAtMillis INTEGER NOT NULL,
+                        endAtMillis INTEGER NOT NULL,
+                        dayIndex INTEGER NOT NULL,
+                        sortOrder INTEGER NOT NULL,
+                        providerName TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        notes TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        createdAtMillis INTEGER NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_itinerary_items_reservationId " +
+                        "ON trip_itinerary_items (reservationId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_itinerary_items_clientId " +
+                        "ON trip_itinerary_items (clientId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_itinerary_items_agentId " +
+                        "ON trip_itinerary_items (agentId)"
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS trip_checklist_items (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        reservationId TEXT NOT NULL,
+                        clientId TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        isCompleted INTEGER NOT NULL,
+                        createdAtMillis INTEGER NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL,
+                        syncState TEXT NOT NULL,
+                        isDeleted INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_checklist_items_reservationId " +
+                        "ON trip_checklist_items (reservationId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_checklist_items_clientId " +
+                        "ON trip_checklist_items (clientId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_checklist_items_syncState " +
+                        "ON trip_checklist_items (syncState)"
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS trip_incidents (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        reservationId TEXT NOT NULL,
+                        clientId TEXT NOT NULL,
+                        agentId TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        priority TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        locationName TEXT NOT NULL,
+                        latitude REAL NOT NULL,
+                        longitude REAL NOT NULL,
+                        agentResponse TEXT NOT NULL,
+                        createdAtMillis INTEGER NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL,
+                        resolvedAtMillis INTEGER
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_incidents_reservationId " +
+                        "ON trip_incidents (reservationId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_incidents_clientId " +
+                        "ON trip_incidents (clientId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_incidents_agentId " +
+                        "ON trip_incidents (agentId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_trip_incidents_status " +
+                        "ON trip_incidents (status)"
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -88,8 +234,13 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "perutours_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
-                .fallbackToDestructiveMigration(dropAllTables = true)
+                    .addMigrations(
+                        MIGRATION_1_2,
+                        MIGRATION_2_3,
+                        MIGRATION_3_4,
+                        MIGRATION_4_5
+                    )
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance
                 instance

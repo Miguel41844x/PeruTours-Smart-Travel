@@ -199,6 +199,10 @@ val appModule = module {
         get<AppDatabase>().placeDao()
     }
 
+    single {
+        get<AppDatabase>().tripDao()
+    }
+
     // HU catálogo: puntos de interés cercanos (Geoapify + caché Room)
     single {
         PointsOfInterestRepository(
