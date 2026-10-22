@@ -92,6 +92,25 @@ class TripRepositoryTest {
         assertEquals("Documento de identidad", overview.checklist.single().title)
     }
 
+    @Test
+    fun `actualiza y elimina checklist de forma optimista`() = runBlocking {
+        remote.reservations = listOf(paidReservation())
+        repository.refreshTrip("reservation-1")
+        val itemId = repository.addChecklistItem(
+            reservationId = "reservation-1",
+            title = "Cargar batería externa",
+            category = TripChecklistItem.CATEGORY_LUGGAGE
+        ).getOrThrow()
+
+        repository.toggleChecklistItem(itemId).getOrThrow()
+        var overview = repository.observeTrip("reservation-1").first { it != null }!!
+        assertTrue(overview.checklist.single().isCompleted)
+
+        repository.deleteChecklistItem(itemId).getOrThrow()
+        overview = repository.observeTrip("reservation-1").first { it != null }!!
+        assertTrue(overview.checklist.isEmpty())
+    }
+
     private fun paidReservation() = Reservation(
         id = "reservation-1",
         quotationId = "quotation-1",

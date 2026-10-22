@@ -7,6 +7,8 @@ data class TripDetailUiState(
     val overview: TripOverview? = null,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isSavingChecklist: Boolean = false,
+    val checklistItemInProgress: String? = null,
     val message: String? = null
 )
 

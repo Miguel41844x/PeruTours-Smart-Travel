@@ -56,6 +56,7 @@ class TripDetailViewModel(
             }
         }
         refresh()
+        repository.requestChecklistSync()
     }
 
     fun refresh() {
@@ -88,5 +89,46 @@ class TripDetailViewModel(
 
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }
+    }
+
+    fun addChecklistItem(title: String, category: String) {
+        val reservationId = _uiState.value.reservationId
+        if (reservationId.isBlank() || _uiState.value.isSavingChecklist) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingChecklist = true, message = null) }
+            repository.addChecklistItem(reservationId, title, category)
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(message = error.localizedMessage ?: "No pudimos agregar el pendiente.")
+                    }
+                }
+            _uiState.update { it.copy(isSavingChecklist = false) }
+        }
+    }
+
+    fun toggleChecklistItem(itemId: String) {
+        runChecklistAction(itemId) { repository.toggleChecklistItem(itemId) }
+    }
+
+    fun deleteChecklistItem(itemId: String) {
+        runChecklistAction(itemId) { repository.deleteChecklistItem(itemId) }
+    }
+
+    fun syncChecklist() = repository.requestChecklistSync()
+
+    private fun runChecklistAction(
+        itemId: String,
+        action: suspend () -> Result<Unit>
+    ) {
+        if (itemId.isBlank() || _uiState.value.checklistItemInProgress != null) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(checklistItemInProgress = itemId, message = null) }
+            action().onFailure { error ->
+                _uiState.update {
+                    it.copy(message = error.localizedMessage ?: "No pudimos actualizar el checklist.")
+                }
+            }
+            _uiState.update { it.copy(checklistItemInProgress = null) }
+        }
     }
 }

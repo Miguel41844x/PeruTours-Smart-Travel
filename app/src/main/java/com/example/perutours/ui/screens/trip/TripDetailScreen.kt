@@ -122,6 +122,12 @@ fun TripDetailScreen(
                 overview = overview,
                 selectedSection = selectedSection,
                 onSectionSelected = { selectedSection = it },
+                isSavingChecklist = state.isSavingChecklist,
+                checklistItemInProgress = state.checklistItemInProgress,
+                onAddChecklist = viewModel::addChecklistItem,
+                onToggleChecklist = viewModel::toggleChecklistItem,
+                onDeleteChecklist = viewModel::deleteChecklistItem,
+                onSyncChecklist = viewModel::syncChecklist,
                 contentPadding = PaddingValues(
                     start = 20.dp,
                     end = 20.dp,
@@ -148,6 +154,12 @@ private fun TripDetailContent(
     overview: TripOverview,
     selectedSection: TripDetailSection,
     onSectionSelected: (TripDetailSection) -> Unit,
+    isSavingChecklist: Boolean,
+    checklistItemInProgress: String?,
+    onAddChecklist: (String, String) -> Unit,
+    onToggleChecklist: (String) -> Unit,
+    onDeleteChecklist: (String) -> Unit,
+    onSyncChecklist: () -> Unit,
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -166,13 +178,15 @@ private fun TripDetailContent(
 
         when (selectedSection) {
             TripDetailSection.ITINERARY -> itineraryItems(overview)
-            TripDetailSection.CHECKLIST -> item {
-                PendingSection(
-                    icon = Icons.Default.CheckCircle,
-                    title = "Prepara lo necesario",
-                    text = "El checklist estará disponible en esta sección."
-                )
-            }
+            TripDetailSection.CHECKLIST -> tripChecklistItems(
+                overview = overview,
+                isSaving = isSavingChecklist,
+                itemInProgress = checklistItemInProgress,
+                onAdd = onAddChecklist,
+                onToggle = onToggleChecklist,
+                onDelete = onDeleteChecklist,
+                onSync = onSyncChecklist
+            )
             TripDetailSection.SUPPORT -> item {
                 PendingSection(
                     icon = Icons.AutoMirrored.Filled.HelpOutline,
