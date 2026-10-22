@@ -3,6 +3,7 @@ package com.example.perutours.ui.screens.trip
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.repository.TripDataSource
+import com.example.perutours.data.location.LocationDataSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +13,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class TripDetailViewModel(
-    private val repository: TripDataSource
+    private val repository: TripDataSource,
+    private val locationRepository: LocationDataSource
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TripDetailUiState())
@@ -129,6 +131,64 @@ class TripDetailViewModel(
                 }
             }
             _uiState.update { it.copy(checklistItemInProgress = null) }
+        }
+    }
+
+    fun detectIncidentLocation() {
+        if (_uiState.value.isDetectingLocation) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDetectingLocation = true, message = null) }
+            runCatching { locationRepository.getCurrentLocation() }
+                .onSuccess { location ->
+                    _uiState.update { it.copy(incidentLocation = location) }
+                }
+                .onFailure { error ->
+                    if (error is CancellationException) throw error
+                    _uiState.update {
+                        it.copy(
+                            message = error.localizedMessage
+                                ?: "No pudimos obtener tu ubicación. Puedes continuar sin ella."
+                        )
+                    }
+                }
+            _uiState.update { it.copy(isDetectingLocation = false) }
+        }
+    }
+
+    fun clearIncidentLocation() {
+        _uiState.update { it.copy(incidentLocation = null) }
+    }
+
+    fun createIncident(description: String, category: String, priority: String) {
+        val reservationId = _uiState.value.reservationId
+        if (reservationId.isBlank() || _uiState.value.isSubmittingIncident) return
+        val location = _uiState.value.incidentLocation
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingIncident = true, message = null) }
+            repository.createIncident(
+                reservationId = reservationId,
+                description = description,
+                category = category,
+                priority = priority,
+                locationName = location?.city.orEmpty(),
+                latitude = location?.latitude ?: 0.0,
+                longitude = location?.longitude ?: 0.0
+            ).onSuccess {
+                _uiState.update {
+                    it.copy(
+                        incidentLocation = null,
+                        message = "La incidencia fue enviada a tu agente."
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        message = error.localizedMessage
+                            ?: "No pudimos enviar la incidencia."
+                    )
+                }
+            }
+            _uiState.update { it.copy(isSubmittingIncident = false) }
         }
     }
 }

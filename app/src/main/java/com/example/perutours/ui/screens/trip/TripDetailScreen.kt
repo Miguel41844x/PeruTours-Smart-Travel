@@ -128,6 +128,12 @@ fun TripDetailScreen(
                 onToggleChecklist = viewModel::toggleChecklistItem,
                 onDeleteChecklist = viewModel::deleteChecklistItem,
                 onSyncChecklist = viewModel::syncChecklist,
+                isSubmittingIncident = state.isSubmittingIncident,
+                isDetectingLocation = state.isDetectingLocation,
+                incidentLocation = state.incidentLocation,
+                onDetectIncidentLocation = viewModel::detectIncidentLocation,
+                onClearIncidentLocation = viewModel::clearIncidentLocation,
+                onCreateIncident = viewModel::createIncident,
                 contentPadding = PaddingValues(
                     start = 20.dp,
                     end = 20.dp,
@@ -160,6 +166,12 @@ private fun TripDetailContent(
     onToggleChecklist: (String) -> Unit,
     onDeleteChecklist: (String) -> Unit,
     onSyncChecklist: () -> Unit,
+    isSubmittingIncident: Boolean,
+    isDetectingLocation: Boolean,
+    incidentLocation: com.example.perutours.data.location.DetectedLocation?,
+    onDetectIncidentLocation: () -> Unit,
+    onClearIncidentLocation: () -> Unit,
+    onCreateIncident: (String, String, String) -> Unit,
     contentPadding: PaddingValues
 ) {
     LazyColumn(
@@ -187,13 +199,15 @@ private fun TripDetailContent(
                 onDelete = onDeleteChecklist,
                 onSync = onSyncChecklist
             )
-            TripDetailSection.SUPPORT -> item {
-                PendingSection(
-                    icon = Icons.AutoMirrored.Filled.HelpOutline,
-                    title = "Asistencia del viaje",
-                    text = "Desde aquí podrás informar un problema a tu agente."
-                )
-            }
+            TripDetailSection.SUPPORT -> tripSupportItems(
+                overview = overview,
+                isSubmitting = isSubmittingIncident,
+                isDetectingLocation = isDetectingLocation,
+                detectedLocation = incidentLocation,
+                onDetectLocation = onDetectIncidentLocation,
+                onClearLocation = onClearIncidentLocation,
+                onCreateIncident = onCreateIncident
+            )
         }
     }
 }

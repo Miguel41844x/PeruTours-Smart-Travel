@@ -111,6 +111,27 @@ class TripRepositoryTest {
         assertTrue(overview.checklist.isEmpty())
     }
 
+    @Test
+    fun `crea incidencia vinculada al cliente y agente de la reserva`() = runBlocking {
+        remote.reservations = listOf(paidReservation())
+        repository.refreshTrip("reservation-1")
+
+        val result = repository.createIncident(
+            reservationId = "reservation-1",
+            description = "El traslado no llegó al punto de encuentro acordado.",
+            category = TripIncident.CATEGORY_TRANSPORT,
+            priority = TripIncident.PRIORITY_HIGH,
+            locationName = "Cusco",
+            latitude = -13.5319,
+            longitude = -71.9675
+        )
+
+        assertTrue(result.isSuccess)
+        val overview = repository.observeTrip("reservation-1").first { it != null }!!
+        assertEquals("agent-1", overview.incidents.single().agentId)
+        assertEquals(TripIncident.STATUS_OPEN, overview.incidents.single().status)
+    }
+
     private fun paidReservation() = Reservation(
         id = "reservation-1",
         quotationId = "quotation-1",
@@ -155,6 +176,11 @@ class TripRepositoryTest {
         override suspend fun getChecklist(reservationId: String) = checklist
 
         override suspend fun getIncidents(reservationId: String) = incidents
+
+        override suspend fun saveIncident(incident: TripIncident) {
+            error?.let { throw it }
+            incidents = incidents + incident
+        }
     }
 
     private class FakeTripScheduler : TripBackgroundScheduler {

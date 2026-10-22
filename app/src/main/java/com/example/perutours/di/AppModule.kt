@@ -367,7 +367,10 @@ val appModule = module {
     }
 
     viewModel {
-        TripDetailViewModel(repository = get())
+        TripDetailViewModel(
+            repository = get(),
+            locationRepository = get()
+        )
     }
 
     // HU08 / catálogo turístico: panel y pantallas del administrador

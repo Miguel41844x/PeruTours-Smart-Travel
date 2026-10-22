@@ -29,6 +29,7 @@ interface TripRemoteDataSource {
     suspend fun getItinerary(reservationId: String): List<TripItineraryItem>
     suspend fun getChecklist(reservationId: String): List<com.example.perutours.data.model.TripChecklistItem>
     suspend fun getIncidents(reservationId: String): List<TripIncident>
+    suspend fun saveIncident(incident: TripIncident)
 }
 
 class FirestoreTripRemoteDataSource(
@@ -108,6 +109,16 @@ class FirestoreTripRemoteDataSource(
             .sortedByDescending(TripIncident::createdAtMillis)
     }
 
+    override suspend fun saveIncident(incident: TripIncident) {
+        require(incident.clientId == currentUserId()) {
+            "La incidencia no pertenece al usuario autenticado."
+        }
+        firestore.collection(COLLECTION_INCIDENTS)
+            .document(incident.id)
+            .set(incident)
+            .await()
+    }
+
     companion object {
         const val COLLECTION_ITINERARY = "trip_itinerary_items"
         const val COLLECTION_CHECKLIST = "trip_checklist_items"
@@ -128,6 +139,15 @@ interface TripDataSource {
     suspend fun toggleChecklistItem(itemId: String): Result<Unit>
     suspend fun deleteChecklistItem(itemId: String): Result<Unit>
     fun requestChecklistSync()
+    suspend fun createIncident(
+        reservationId: String,
+        description: String,
+        category: String,
+        priority: String,
+        locationName: String = "",
+        latitude: Double = 0.0,
+        longitude: Double = 0.0
+    ): Result<String>
 }
 
 class TripRepository(
@@ -266,6 +286,40 @@ class TripRepository(
     }
 
     override fun requestChecklistSync() = scheduler.enqueueChecklistSync()
+
+    override suspend fun createIncident(
+        reservationId: String,
+        description: String,
+        category: String,
+        priority: String,
+        locationName: String,
+        latitude: Double,
+        longitude: Double
+    ): Result<String> = runCatching {
+        TripDomainRules.validateIncident(description, category, priority)?.let {
+            throw IllegalArgumentException(it)
+        }
+        val trip = requireOwnedTrip(reservationId)
+        val now = System.currentTimeMillis()
+        val incident = TripIncident(
+            id = UUID.randomUUID().toString(),
+            reservationId = reservationId,
+            clientId = trip.clientId,
+            agentId = trip.agentId,
+            category = category,
+            priority = priority,
+            status = TripIncident.STATUS_OPEN,
+            description = description.trim(),
+            locationName = locationName.trim(),
+            latitude = latitude,
+            longitude = longitude,
+            createdAtMillis = now,
+            updatedAtMillis = now
+        )
+        remote.saveIncident(incident)
+        tripDao.upsertIncidents(listOf(incident.toEntity()))
+        incident.id
+    }
 
     private suspend fun requireOwnedTrip(reservationId: String) =
         tripDao.getTrip(reservationId)?.takeIf { it.clientId == remote.currentUserId() }
