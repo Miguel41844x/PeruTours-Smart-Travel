@@ -7,10 +7,16 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [DestinationEntity::class], version = 3, exportSchema = true)
+@Database(
+    entities = [DestinationEntity::class, PlaceEntity::class],
+    version = 4,
+    exportSchema = true
+)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun destinationDao(): DestinationDao
+
+    abstract fun placeDao(): PlaceDao
 
     companion object {
         @Volatile
@@ -50,6 +56,31 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migración de versión 3 a 4: tabla de puntos de interés cercanos
+        // (datos de la API externa de Geoapify cacheados en Room).
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS places (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        destinationId TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        categories TEXT NOT NULL,
+                        address TEXT NOT NULL,
+                        latitude REAL NOT NULL,
+                        longitude REAL NOT NULL,
+                        distanceMeters REAL NOT NULL,
+                        fetchedAtMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_places_destinationId ON places (destinationId)"
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -57,7 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "perutours_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance

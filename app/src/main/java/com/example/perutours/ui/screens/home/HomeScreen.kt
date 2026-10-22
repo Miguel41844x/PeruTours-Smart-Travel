@@ -93,6 +93,7 @@ fun HomeScreen(
     navigateToQuotations: () -> Unit = {},
     navigateToReservations: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
+    navigateToDetail: (String) -> Unit = {},
     navigateToInitial: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
     fcmTokenManager: FCMTokenManager = koinInject()
@@ -342,7 +343,13 @@ fun HomeScreen(
                     )
                     is HomeDestinationsState.Success -> state.destinations.forEach { destination ->
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    // HU catálogo: abre el detalle del destino
+                                    // con sus paquetes y lugares cercanos.
+                                    navigateToDetail(destination.destinationId)
+                                },
                             shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surface

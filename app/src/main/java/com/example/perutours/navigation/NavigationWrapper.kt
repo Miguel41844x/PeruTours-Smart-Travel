@@ -46,6 +46,7 @@ import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormSc
 import com.example.perutours.ui.screens.admin.destination.AdminDestinationsScreen
 import com.example.perutours.ui.screens.admin.packages.AdminPackagesScreen
 import com.example.perutours.ui.screens.admin.provider.AdminProvidersScreen
+import com.example.perutours.ui.screens.destination.DestinationDetailScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
@@ -295,11 +296,36 @@ fun NavigationWrapper(
                 navigateToProfile = {
                     navHostController.navigate(route = "profile")
                 },
+                navigateToDetail = { destinationId ->
+                    if (destinationId.isNotBlank()) {
+                        navHostController.navigate(
+                            "destination_detail?destinationId=${Uri.encode(destinationId)}"
+                        )
+                    }
+                },
                 navigateToInitial = {
                     navHostController.navigate(route = "initial") {
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // HU catálogo: detalle del destino con puntos de interés cercanos
+        composable(
+            route = "destination_detail?destinationId={destinationId}",
+            arguments = listOf(
+                navArgument("destinationId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
+            DestinationDetailScreen(
+                destinationId = backStackEntry.arguments
+                    ?.getString("destinationId")
+                    .orEmpty(),
+                onNavigateBack = { navHostController.popBackStack() }
             )
         }
 

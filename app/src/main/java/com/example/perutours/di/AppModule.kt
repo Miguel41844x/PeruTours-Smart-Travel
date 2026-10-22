@@ -9,6 +9,7 @@ import com.example.perutours.data.repository.CatalogImageRepository
 import com.example.perutours.data.repository.DestinationCatalogRepository
 import com.example.perutours.data.repository.GeocodingRepository
 import com.example.perutours.data.repository.PackageRepository
+import com.example.perutours.data.repository.PointsOfInterestRepository
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.data.repository.QuotationRepository
 import com.example.perutours.data.repository.ReservationDataSource
@@ -36,6 +37,7 @@ import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormVi
 import com.example.perutours.ui.screens.admin.destination.AdminDestinationsViewModel
 import com.example.perutours.ui.screens.admin.packages.AdminPackagesViewModel
 import com.example.perutours.ui.screens.admin.provider.AdminProvidersViewModel
+import com.example.perutours.ui.screens.destination.DestinationDetailViewModel
 import com.example.perutours.ui.screens.agent.AgentRequestsViewModel
 import com.example.perutours.ui.screens.agent.AgentHomeViewModel
 import com.example.perutours.ui.screens.agent.AgentPaymentViewModel
@@ -193,6 +195,18 @@ val appModule = module {
         get<AppDatabase>().destinationDao()
     }
 
+    single {
+        get<AppDatabase>().placeDao()
+    }
+
+    // HU catálogo: puntos de interés cercanos (Geoapify + caché Room)
+    single {
+        PointsOfInterestRepository(
+            api = get(),
+            placeDao = get()
+        )
+    }
+
     // Repositorio de catálogo del cliente (Firestore -> Room)
     single {
         DestinationRepository(
@@ -347,6 +361,15 @@ val appModule = module {
             destinationRepository = get(),
             serviceCatalogRepository = get(),
             auth = get()
+        )
+    }
+
+    // HU catálogo: detalle del destino con puntos de interés cercanos
+    viewModel {
+        DestinationDetailViewModel(
+            destinationRepository = get(),
+            packageRepository = get(),
+            pointsOfInterestRepository = get()
         )
     }
 }
