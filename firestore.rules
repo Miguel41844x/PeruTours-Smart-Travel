@@ -24,6 +24,30 @@ service cloud.firestore {
     //   id, name, city, category, unitCost, description,
     //   defaultQuantity, active.
     //
+    // destinations/{destinationId}   (HU catálogo turístico)
+    //   id, name, department, summary, latitude, longitude,
+    //   coverImageUrl, categories, externalPlaceId, status,
+    //   createdBy, createdAtMillis, updatedAtMillis.
+    //   status: BORRADOR | PUBLICADO | ARCHIVADO. Solo el administrador
+    //   escribe; el cliente únicamente puede leer destinos PUBLICADOS.
+    //   latitude/longitude provienen de la geocodificación externa y
+    //   alimentan la consulta de puntos de interés cercanos.
+    //
+    // providers/{providerId}          (HU catálogo turístico)
+    //   id, name, contactName, phone, email, city, serviceNames,
+    //   active, createdBy, createdAtMillis, updatedAtMillis.
+    //
+    // packages/{packageId}            (HU catálogo turístico)
+    //   id, destinationId, title, summary, durationText, durationDays,
+    //   priceAmount, currency, ratingScore, category, coverImageUrl,
+    //   conditions, includedServiceIds, status, createdBy,
+    //   createdAtMillis, updatedAtMillis.
+    //   status: BORRADOR | PUBLICADO | ARCHIVADO. El cliente solo ve
+    //   los paquetes PUBLICADOS.
+    //
+    // packages/{packageId}/included_services/{serviceId}
+    //   serviceId (ID del servicio incluido, documento = ID de servicio).
+    //
     // preferences/{preferenceId}
     //   id, name, description, active, order.
     //
@@ -103,6 +127,12 @@ service cloud.firestore {
 
     function isManager() {
       return hasRole('gerente') || hasRole('administrador');
+    }
+
+    // HU catálogo turístico: la gestión de destinos, proveedores y
+    // paquetes está reservada al administrador del caso de negocio.
+    function isAdmin() {
+      return hasRole('administrador');
     }
 
     // Verify UID has not been tampered with on create.
@@ -360,6 +390,194 @@ service cloud.firestore {
         && data.defaultQuantity >= 1
         && data.defaultQuantity <= 100
         && data.active is bool;
+    }
+
+    // ===============================================================
+    // HU catálogo turístico: destinos, proveedores y paquetes
+    // ===============================================================
+
+    // Firestore Rules no permite bucles generales: la lista de categorías
+    // se inspecciona posición por posición hasta un máximo de 10, siguiendo
+    // el mismo patrón (y el mismo límite de presupuesto) que preferences.
+    function isValidCategoryItem(values, index) {
+      return values.size() <= index
+        || (values[index] is string
+          && values[index].size() > 0
+          && values[index].size() <= 60);
+    }
+
+    function isValidCategoryList(values) {
+      return values is list
+        && values.size() <= 10
+        && isValidCategoryItem(values, 0)
+        && isValidCategoryItem(values, 1)
+        && isValidCategoryItem(values, 2)
+        && isValidCategoryItem(values, 3)
+        && isValidCategoryItem(values, 4)
+        && isValidCategoryItem(values, 5)
+        && isValidCategoryItem(values, 6)
+        && isValidCategoryItem(values, 7)
+        && isValidCategoryItem(values, 8)
+        && isValidCategoryItem(values, 9);
+    }
+
+    function isValidIncludedServiceIdItem(values, index) {
+      return values.size() <= index
+        || (values[index] is string
+          && values[index].size() > 0
+          && values[index].size() <= 128);
+    }
+
+    function isValidIncludedServiceIdList(values) {
+      return values is list
+        && values.size() <= 10
+        && isValidIncludedServiceIdItem(values, 0)
+        && isValidIncludedServiceIdItem(values, 1)
+        && isValidIncludedServiceIdItem(values, 2)
+        && isValidIncludedServiceIdItem(values, 3)
+        && isValidIncludedServiceIdItem(values, 4)
+        && isValidIncludedServiceIdItem(values, 5)
+        && isValidIncludedServiceIdItem(values, 6)
+        && isValidIncludedServiceIdItem(values, 7)
+        && isValidIncludedServiceIdItem(values, 8)
+        && isValidIncludedServiceIdItem(values, 9);
+    }
+
+    function isValidProviderServiceItem(values, index) {
+      return values.size() <= index
+        || (values[index] is string
+          && values[index].size() > 0
+          && values[index].size() <= 120);
+    }
+
+    function isValidProviderServiceList(values) {
+      return values is list
+        && values.size() <= 10
+        && isValidProviderServiceItem(values, 0)
+        && isValidProviderServiceItem(values, 1)
+        && isValidProviderServiceItem(values, 2)
+        && isValidProviderServiceItem(values, 3)
+        && isValidProviderServiceItem(values, 4)
+        && isValidProviderServiceItem(values, 5)
+        && isValidProviderServiceItem(values, 6)
+        && isValidProviderServiceItem(values, 7)
+        && isValidProviderServiceItem(values, 8)
+        && isValidProviderServiceItem(values, 9);
+    }
+
+    function isValidCatalogStatus(value) {
+      return value in ['BORRADOR', 'PUBLICADO', 'ARCHIVADO'];
+    }
+
+    function isValidCatalogTimestamps(data) {
+      return data.createdAtMillis is int
+        && data.createdAtMillis > 0
+        && data.updatedAtMillis is int
+        && data.updatedAtMillis > 0
+        && data.updatedAtMillis >= data.createdAtMillis;
+    }
+
+    function isValidDestination(data) {
+      return hasRequiredFields(data, [
+          'id', 'name', 'department', 'summary', 'latitude', 'longitude',
+          'coverImageUrl', 'categories', 'externalPlaceId', 'status',
+          'createdBy', 'createdAtMillis', 'updatedAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'name', 'department', 'summary', 'latitude', 'longitude',
+          'coverImageUrl', 'categories', 'externalPlaceId', 'status',
+          'createdBy', 'createdAtMillis', 'updatedAtMillis'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.name, 3, 120)
+        && validString(data.department, 2, 100)
+        && data.summary is string
+        && data.summary.size() <= 1000
+        && data.latitude is number
+        && data.latitude >= -90
+        && data.latitude <= 90
+        && data.longitude is number
+        && data.longitude >= -180
+        && data.longitude <= 180
+        && isValidUrl(data.coverImageUrl)
+        && isValidCategoryList(data.categories)
+        && data.externalPlaceId is string
+        && data.externalPlaceId.size() <= 128
+        && isValidCatalogStatus(data.status)
+        && validString(data.createdBy, 1, 128)
+        && isValidCatalogTimestamps(data);
+    }
+
+    function isValidProvider(data) {
+      return hasRequiredFields(data, [
+          'id', 'name', 'contactName', 'phone', 'email', 'city',
+          'serviceNames', 'active', 'createdBy', 'createdAtMillis',
+          'updatedAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'name', 'contactName', 'phone', 'email', 'city',
+          'serviceNames', 'active', 'createdBy', 'createdAtMillis',
+          'updatedAtMillis'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.name, 2, 120)
+        && data.contactName is string
+        && data.contactName.size() <= 120
+        && data.phone is string
+        && data.phone.size() <= 20
+        && isValidEmail(data.email)
+        && validString(data.city, 2, 100)
+        && isValidProviderServiceList(data.serviceNames)
+        && data.active is bool
+        && validString(data.createdBy, 1, 128)
+        && isValidCatalogTimestamps(data);
+    }
+
+    function isValidPackage(data) {
+      return hasRequiredFields(data, [
+          'id', 'destinationId', 'title', 'summary', 'durationText',
+          'durationDays', 'priceAmount', 'currency', 'ratingScore',
+          'category', 'coverImageUrl', 'conditions', 'includedServiceIds',
+          'status', 'createdBy', 'createdAtMillis', 'updatedAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'destinationId', 'title', 'summary', 'durationText',
+          'durationDays', 'priceAmount', 'currency', 'ratingScore',
+          'category', 'coverImageUrl', 'conditions', 'includedServiceIds',
+          'status', 'createdBy', 'createdAtMillis', 'updatedAtMillis'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.destinationId, 1, 128)
+        && validString(data.title, 3, 140)
+        && data.summary is string
+        && data.summary.size() <= 1000
+        && data.durationText is string
+        && data.durationText.size() <= 60
+        && data.durationDays is int
+        && data.durationDays >= 1
+        && data.durationDays <= 365
+        && isPositiveBoundedNumber(data.priceAmount, 100000000)
+        && data.currency in ['PEN', 'USD']
+        && isPositiveBoundedNumber(data.ratingScore, 5)
+        && validString(data.category, 1, 80)
+        && isValidUrl(data.coverImageUrl)
+        && data.conditions is string
+        && data.conditions.size() <= 2000
+        && isValidIncludedServiceIdList(data.includedServiceIds)
+        && isValidCatalogStatus(data.status)
+        && validString(data.createdBy, 1, 128)
+        && isValidCatalogTimestamps(data);
+    }
+
+    // Un destino puede archivarse, pero su ID, autoría y fecha de creación
+    // quedan congelados en cualquier actualización del catálogo.
+    function catalogIdentityPinned(collection) {
+      let data = request.resource.data;
+      let previous = resource.data;
+      return data.id == previous.id
+        && data.createdBy == previous.createdBy
+        && data.createdAtMillis == previous.createdAtMillis
+        && request.resource.data.id == collection;
     }
 
     function isValidPreference(data) {
@@ -883,6 +1101,75 @@ service cloud.firestore {
         && isValidCatalogService(request.resource.data)
         && request.resource.data.id == serviceId;
       allow delete: if false;
+    }
+
+    // ===============================================================
+    // HU catálogo turístico (proceso: destinos -> proveedores ->
+    // paquetes -> publicación). Escritura exclusiva del administrador.
+    // ===============================================================
+
+    match /destinations/{destinationId} {
+      // El cliente solo puede leer destinos publicados; el administrador
+      // ve también borradores y archivados para gestionarlos.
+      allow read: if isAuthenticated()
+        && (isAdmin() || resource.data.status == 'PUBLICADO');
+
+      allow create: if isAdmin()
+        && isValidDestination(request.resource.data)
+        && request.resource.data.id == destinationId
+        && request.resource.data.createdBy == request.auth.uid
+        // Un destino recién creado nace con su marca de tiempo inicial.
+        && request.resource.data.createdAtMillis == request.resource.data.updatedAtMillis;
+
+      // El administrador puede editar el destino y moverlo por su ciclo
+      // de vida (BORRADOR -> PUBLICADO -> ARCHIVADO).
+      allow update: if isAdmin()
+        && isValidDestination(request.resource.data)
+        && catalogIdentityPinned(destinationId);
+
+      allow delete: if false;
+    }
+
+    match /providers/{providerId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAdmin()
+        && isValidProvider(request.resource.data)
+        && request.resource.data.id == providerId
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAtMillis == request.resource.data.updatedAtMillis;
+
+      allow update: if isAdmin()
+        && isValidProvider(request.resource.data)
+        && catalogIdentityPinned(providerId);
+
+      allow delete: if false;
+    }
+
+    match /packages/{packageId} {
+      allow read: if isAuthenticated()
+        && (isAdmin() || resource.data.status == 'PUBLICADO');
+
+      allow create: if isAdmin()
+        && isValidPackage(request.resource.data)
+        && request.resource.data.id == packageId
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == 'BORRADOR'
+        && request.resource.data.destinationId.size() > 0
+        && exists(/databases/$(database)/documents/destinations/$(request.resource.data.destinationId))
+        && request.resource.data.createdAtMillis == request.resource.data.updatedAtMillis;
+
+      allow update: if isAdmin()
+        && isValidPackage(request.resource.data)
+        && catalogIdentityPinned(packageId)
+        && exists(/databases/$(database)/documents/destinations/$(request.resource.data.destinationId));
+
+      allow delete: if false;
+
+      match /included_services/{serviceId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+      }
     }
 
     match /preferences/{preferenceId} {
