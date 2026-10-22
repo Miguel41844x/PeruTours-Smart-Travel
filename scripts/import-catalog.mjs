@@ -1,5 +1,6 @@
 /**
- * Migra el catálogo histórico (api/perutours-destinations.json) a Firestore.
+ * Migra el catálogo histórico (scripts/seed/perutours-destinations.json) a
+ * Firestore. Ese JSON era el que la app consumía desde GitHub.
  *
  * Qué hace:
  *  1. Lee el JSON que la app consumía desde GitHub.
@@ -21,7 +22,7 @@ import { initializeApplicationDefault, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const JSON_PATH = resolve(SCRIPT_DIR, "..", "api", "perutours-destinations.json");
+const JSON_PATH = resolve(SCRIPT_DIR, "seed", "perutours-destinations.json");
 const DRY_RUN = process.argv.includes("--dry-run");
 
 /**

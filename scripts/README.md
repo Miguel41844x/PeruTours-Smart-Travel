@@ -4,7 +4,8 @@
 
 La app dejó de consumir `api/perutours-destinations.json` desde
 `raw.githubusercontent.com`; ahora el catálogo vive en Firestore. Este script
-importa ese JSON histórico:
+importa ese JSON histórico (guardado como respaldo en
+`scripts/seed/perutours-destinations.json`):
 
 - Crea un **destino** por departamento (`destinations/{destinationId}`) con su
   nombre, resumen y coordenadas.

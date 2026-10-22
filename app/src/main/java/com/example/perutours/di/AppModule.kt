@@ -47,7 +47,6 @@ import com.example.perutours.ui.screens.sales.SalesDashboardViewModel
 import android.app.Application
 import androidx.work.WorkManager
 import com.example.perutours.data.local.AppDatabase
-import com.example.perutours.data.remote.NetworkClient
 import com.example.perutours.data.repository.DestinationRepository
 import com.example.perutours.ui.screens.home.HomeViewModel
 import com.example.perutours.ui.screens.request.TravelRequestPlaceResolver
@@ -181,11 +180,6 @@ val appModule = module {
 
     single {
         get<AppDatabase>().destinationDao()
-    }
-
-    // 4. Retrofit API
-    single {
-        NetworkClient.getApiService(androidContext())
     }
 
     // Repositorio de catálogo del cliente (Firestore -> Room)
