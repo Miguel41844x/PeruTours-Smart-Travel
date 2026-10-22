@@ -44,6 +44,7 @@ import com.example.perutours.ui.screens.agent.AgentHomeScreen
 import com.example.perutours.ui.screens.admin.AdminDashboardScreen
 import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormScreen
 import com.example.perutours.ui.screens.admin.destination.AdminDestinationsScreen
+import com.example.perutours.ui.screens.admin.provider.AdminProvidersScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
@@ -191,6 +192,13 @@ fun NavigationWrapper(
                         "admin_destination_form?destinationId=${Uri.encode(destinationId)}"
                     )
                 }
+            )
+        }
+
+        // HU catálogo: proveedores turísticos del administrador
+        composable(route = "admin_providers") {
+            AdminProvidersScreen(
+                onNavigateBack = { navHostController.popBackStack() }
             )
         }
 

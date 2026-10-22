@@ -33,6 +33,7 @@ import com.example.perutours.ui.screens.profile.ProfileViewModel
 import com.example.perutours.ui.screens.admin.AdminDashboardViewModel
 import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormViewModel
 import com.example.perutours.ui.screens.admin.destination.AdminDestinationsViewModel
+import com.example.perutours.ui.screens.admin.provider.AdminProvidersViewModel
 import com.example.perutours.ui.screens.agent.AgentRequestsViewModel
 import com.example.perutours.ui.screens.agent.AgentHomeViewModel
 import com.example.perutours.ui.screens.agent.AgentPaymentViewModel
@@ -324,6 +325,12 @@ val appModule = module {
             repository = get(),
             imageRepository = get(),
             auth = get()
+        )
+    }
+
+    viewModel {
+        AdminProvidersViewModel(
+            repository = get()
         )
     }
 }
