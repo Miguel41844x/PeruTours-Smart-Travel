@@ -12,12 +12,15 @@ import com.example.perutours.data.model.TripDomainRules
 import com.example.perutours.data.model.TripIncident
 import com.example.perutours.data.model.TripItineraryItem
 import com.example.perutours.data.model.TripOverview
+import com.example.perutours.data.model.TripChecklistItem
+import com.example.perutours.service.TripBackgroundScheduler
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 interface TripRemoteDataSource {
     fun currentUserId(): String
@@ -117,11 +120,20 @@ interface TripDataSource {
     fun observeTrip(reservationId: String): Flow<TripOverview?>
     suspend fun refreshTrips(): Result<Unit>
     suspend fun refreshTrip(reservationId: String): Result<Unit>
+    suspend fun addChecklistItem(
+        reservationId: String,
+        title: String,
+        category: String
+    ): Result<String>
+    suspend fun toggleChecklistItem(itemId: String): Result<Unit>
+    suspend fun deleteChecklistItem(itemId: String): Result<Unit>
+    fun requestChecklistSync()
 }
 
 class TripRepository(
     private val remote: TripRemoteDataSource,
-    private val tripDao: TripDao
+    private val tripDao: TripDao,
+    private val scheduler: TripBackgroundScheduler
 ) : TripDataSource {
 
     override fun observeTrips(): Flow<List<Reservation>> {
@@ -154,6 +166,7 @@ class TripRepository(
             clientId = clientId,
             trips = reservations.map { it.toTripEntity() }
         )
+        reservations.forEach(scheduler::scheduleDepartureReminder)
     }
 
     override suspend fun refreshTrip(reservationId: String): Result<Unit> = runCatching {
@@ -162,6 +175,7 @@ class TripRepository(
             ?: throw NoSuchElementException("El viaje no existe o todavía no está pagado.")
 
         tripDao.upsertTrips(listOf(reservation.toTripEntity()))
+        scheduler.scheduleDepartureReminder(reservation)
 
         val remoteItinerary = remote.getItinerary(reservationId)
         val itinerary = remoteItinerary.ifEmpty {
@@ -187,4 +201,73 @@ class TripRepository(
             incidents = remote.getIncidents(reservationId).map(TripIncident::toEntity)
         )
     }
+
+    override suspend fun addChecklistItem(
+        reservationId: String,
+        title: String,
+        category: String
+    ): Result<String> = runCatching {
+        TripDomainRules.validateChecklistTitle(title)?.let { throw IllegalArgumentException(it) }
+        require(category in TripChecklistItem.VALID_CATEGORIES) {
+            "Selecciona una categoría válida."
+        }
+        val trip = requireOwnedTrip(reservationId)
+        val now = System.currentTimeMillis()
+        val id = UUID.randomUUID().toString()
+        val item = TripChecklistItem(
+            id = id,
+            reservationId = reservationId,
+            clientId = trip.clientId,
+            title = title.trim(),
+            category = category,
+            createdAtMillis = now,
+            updatedAtMillis = now
+        )
+        tripDao.upsertChecklistItem(
+            item.toEntity(syncState = TripChecklistEntity.PENDING_UPSERT)
+        )
+        scheduler.enqueueChecklistSync()
+        id
+    }
+
+    override suspend fun toggleChecklistItem(itemId: String): Result<Unit> = runCatching {
+        val clientId = remote.currentUserId()
+        val current = tripDao.getChecklistItem(itemId)
+            ?: throw NoSuchElementException("El elemento ya no existe.")
+        if (current.clientId != clientId) {
+            throw IllegalAccessException("No puedes modificar este checklist.")
+        }
+        tripDao.upsertChecklistItem(
+            current.copy(
+                isCompleted = !current.isCompleted,
+                updatedAtMillis = System.currentTimeMillis(),
+                syncState = TripChecklistEntity.PENDING_UPSERT,
+                isDeleted = false
+            )
+        )
+        scheduler.enqueueChecklistSync()
+    }
+
+    override suspend fun deleteChecklistItem(itemId: String): Result<Unit> = runCatching {
+        val clientId = remote.currentUserId()
+        val current = tripDao.getChecklistItem(itemId)
+            ?: return@runCatching
+        if (current.clientId != clientId) {
+            throw IllegalAccessException("No puedes eliminar este elemento.")
+        }
+        tripDao.upsertChecklistItem(
+            current.copy(
+                updatedAtMillis = System.currentTimeMillis(),
+                syncState = TripChecklistEntity.PENDING_DELETE,
+                isDeleted = true
+            )
+        )
+        scheduler.enqueueChecklistSync()
+    }
+
+    override fun requestChecklistSync() = scheduler.enqueueChecklistSync()
+
+    private suspend fun requireOwnedTrip(reservationId: String) =
+        tripDao.getTrip(reservationId)?.takeIf { it.clientId == remote.currentUserId() }
+            ?: throw IllegalStateException("Actualiza el viaje antes de modificar su checklist.")
 }

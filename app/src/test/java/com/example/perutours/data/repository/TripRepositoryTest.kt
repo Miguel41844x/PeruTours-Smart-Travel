@@ -9,6 +9,7 @@ import com.example.perutours.data.model.Reservation
 import com.example.perutours.data.model.TripChecklistItem
 import com.example.perutours.data.model.TripIncident
 import com.example.perutours.data.model.TripItineraryItem
+import com.example.perutours.service.TripBackgroundScheduler
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -33,7 +34,7 @@ class TripRepositoryTest {
             .allowMainThreadQueries()
             .build()
         remote = FakeTripRemoteDataSource()
-        repository = TripRepository(remote, database.tripDao())
+        repository = TripRepository(remote, database.tripDao(), FakeTripScheduler())
     }
 
     @After
@@ -73,6 +74,22 @@ class TripRepositoryTest {
 
         assertTrue(repository.refreshTrips().isFailure)
         assertEquals(1, repository.observeTrips().first().size)
+    }
+
+    @Test
+    fun `agrega checklist local antes de sincronizar`() = runBlocking {
+        remote.reservations = listOf(paidReservation())
+        repository.refreshTrip("reservation-1")
+
+        val result = repository.addChecklistItem(
+            reservationId = "reservation-1",
+            title = "Documento de identidad",
+            category = TripChecklistItem.CATEGORY_DOCUMENTS
+        )
+
+        assertTrue(result.isSuccess)
+        val overview = repository.observeTrip("reservation-1").first { it != null }!!
+        assertEquals("Documento de identidad", overview.checklist.single().title)
     }
 
     private fun paidReservation() = Reservation(
@@ -119,5 +136,10 @@ class TripRepositoryTest {
         override suspend fun getChecklist(reservationId: String) = checklist
 
         override suspend fun getIncidents(reservationId: String) = incidents
+    }
+
+    private class FakeTripScheduler : TripBackgroundScheduler {
+        override fun enqueueChecklistSync() = Unit
+        override fun scheduleDepartureReminder(reservation: Reservation) = Unit
     }
 }

@@ -60,6 +60,8 @@ import com.example.perutours.ui.screens.home.HomeViewModel
 import com.example.perutours.ui.screens.request.TravelRequestPlaceResolver
 import com.example.perutours.ui.screens.request.TravelRequestViewModel
 import com.example.perutours.domain.analytics.SalesAnalyticsCalculator
+import com.example.perutours.service.TripBackgroundScheduler
+import com.example.perutours.service.TripWorkScheduler
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 
@@ -175,6 +177,13 @@ val appModule = module {
         WorkManager.getInstance(androidContext())
     }
 
+    single<TripBackgroundScheduler> {
+        TripWorkScheduler(
+            context = androidContext(),
+            workManager = get()
+        )
+    }
+
     single {
         PaymentRepository(
             context = androidContext(),
@@ -218,7 +227,8 @@ val appModule = module {
     single<TripDataSource> {
         TripRepository(
             remote = get(),
-            tripDao = get()
+            tripDao = get(),
+            scheduler = get()
         )
     }
 

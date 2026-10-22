@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import com.example.perutours.di.appModule
+import com.example.perutours.service.PeruToursApplicationChannels
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 
@@ -35,6 +36,16 @@ class PeruToursApplication : Application() {
 
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(channel)
+
+            val tripChannel = NotificationChannel(
+                PeruToursApplicationChannels.TRIP_REMINDERS,
+                "Recordatorios de viaje",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Avisos para preparar una salida y revisar el itinerario"
+                enableVibration(true)
+            }
+            notificationManager?.createNotificationChannel(tripChannel)
         }
     }
 }
