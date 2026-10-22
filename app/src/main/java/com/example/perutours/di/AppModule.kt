@@ -4,11 +4,14 @@ import com.example.perutours.data.messaging.FCMTokenManager
 import com.example.perutours.data.location.LocationDataSource
 import com.example.perutours.data.location.LocationRepository
 import com.example.perutours.data.repository.AuthRepository
+import com.example.perutours.data.repository.DestinationCatalogRepository
+import com.example.perutours.data.repository.PackageRepository
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.data.repository.QuotationRepository
 import com.example.perutours.data.repository.ReservationDataSource
 import com.example.perutours.data.repository.ReservationRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
+import com.example.perutours.data.repository.TourProviderRepository
 import com.example.perutours.data.repository.TravelRequestRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
 import com.example.perutours.data.repository.PaymentRepository
@@ -98,6 +101,28 @@ val appModule = module {
     single {
         ServiceCatalogRepository(
             firestore = get()
+        )
+    }
+
+    // HU catálogo turístico: destinos, paquetes y proveedores en Firestore
+    single {
+        DestinationCatalogRepository(
+            firestore = get(),
+            auth = get()
+        )
+    }
+
+    single {
+        PackageRepository(
+            firestore = get(),
+            auth = get()
+        )
+    }
+
+    single {
+        TourProviderRepository(
+            firestore = get(),
+            auth = get()
         )
     }
 
