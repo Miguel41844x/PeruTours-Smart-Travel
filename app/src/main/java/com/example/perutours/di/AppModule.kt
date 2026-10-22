@@ -7,6 +7,7 @@ import com.example.perutours.data.repository.AuthRepository
 import com.example.perutours.data.repository.AdminDashboardRepository
 import com.example.perutours.data.repository.CatalogImageRepository
 import com.example.perutours.data.repository.DestinationCatalogRepository
+import com.example.perutours.data.repository.GeocodingRepository
 import com.example.perutours.data.repository.PackageRepository
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.data.repository.QuotationRepository
@@ -47,6 +48,7 @@ import com.example.perutours.ui.screens.sales.SalesDashboardViewModel
 import android.app.Application
 import androidx.work.WorkManager
 import com.example.perutours.data.local.AppDatabase
+import com.example.perutours.data.remote.geoapify.GeoapifyClient
 import com.example.perutours.data.repository.DestinationRepository
 import com.example.perutours.ui.screens.home.HomeViewModel
 import com.example.perutours.ui.screens.request.TravelRequestPlaceResolver
@@ -144,6 +146,15 @@ val appModule = module {
             storage = get(),
             auth = get()
         )
+    }
+
+    // HU catálogo: API externa de Geoapify (geocodificación y lugares)
+    single {
+        GeoapifyClient.getApiService(androidContext().cacheDir)
+    }
+
+    single {
+        GeocodingRepository(api = get())
     }
 
     single {
@@ -319,6 +330,7 @@ val appModule = module {
         AdminDestinationFormViewModel(
             repository = get(),
             imageRepository = get(),
+            geocodingRepository = get(),
             auth = get()
         )
     }

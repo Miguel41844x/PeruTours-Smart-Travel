@@ -166,6 +166,24 @@ fun AdminDestinationFormScreen(
                 )
             }
 
+            // HU catálogo: validación del destino contra la geocodificación
+            // externa (Geoapify) para fijar coordenadas reales.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = viewModel::resolveCoordinates,
+                    enabled = !uiState.isResolvingCoordinates && !uiState.isSaving
+                ) {
+                    Text("Validar con Geoapify")
+                }
+                if (uiState.isResolvingCoordinates) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+            }
+
             OutlinedTextField(
                 value = uiState.coverImageUrl,
                 onValueChange = viewModel::onImageUrlChange,

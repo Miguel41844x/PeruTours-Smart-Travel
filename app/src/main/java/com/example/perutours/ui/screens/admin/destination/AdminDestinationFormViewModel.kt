@@ -7,6 +7,7 @@ import com.example.perutours.data.model.CatalogStatus
 import com.example.perutours.data.model.TourDestination
 import com.example.perutours.data.repository.CatalogImageRepository
 import com.example.perutours.data.repository.DestinationCatalogRepository
+import com.example.perutours.data.repository.GeocodingRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ data class AdminDestinationFormUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val isUploadingImage: Boolean = false,
+    val isResolvingCoordinates: Boolean = false,
     val destinationId: String = "",
     val name: String = "",
     val department: String = "",
@@ -49,6 +51,7 @@ data class AdminDestinationFormUiState(
 class AdminDestinationFormViewModel(
     private val repository: DestinationCatalogRepository,
     private val imageRepository: CatalogImageRepository,
+    private val geocodingRepository: GeocodingRepository,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -268,6 +271,47 @@ class AdminDestinationFormViewModel(
                 coordinatesError = null,
                 savedDestinationId = null
             )
+        }
+    }
+
+    /**
+     * Valida el nombre del destino contra la geocodificación externa
+     * (Geoapify) y fija las coordenadas reales del lugar. Publicar un
+     * destino exige este paso para poder consultar después los puntos de
+     * interés cercanos.
+     */
+    fun resolveCoordinates() {
+        val state = _uiState.value
+        val nameError = DestinationFormValidator.validateName(state.name)
+        val departmentError = DestinationFormValidator.validateDepartment(state.department)
+        if (nameError != null || departmentError != null) {
+            _uiState.update {
+                it.copy(
+                    nameError = nameError,
+                    departmentError = departmentError,
+                    errorMessage = "Completa el nombre y el departamento antes de validar."
+                )
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isResolvingCoordinates = true, errorMessage = null) }
+            val result = geocodingRepository.geocodeDestination(state.name, state.department)
+            result.fold(
+                onSuccess = { geocoded ->
+                    applyCoordinates(geocoded.latitude, geocoded.longitude, geocoded.placeId)
+                },
+                onFailure = {
+                    _uiState.update {
+                        it.copy(
+                            coordinatesError = "Geoapify no encontró «${state.name}». " +
+                                "Revisa el nombre o ajusta las coordenadas manualmente."
+                        )
+                    }
+                }
+            )
+            _uiState.update { it.copy(isResolvingCoordinates = false) }
         }
     }
 }
