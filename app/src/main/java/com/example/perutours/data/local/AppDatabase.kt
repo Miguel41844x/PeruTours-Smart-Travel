@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [DestinationEntity::class], version = 2, exportSchema = true)
+@Database(entities = [DestinationEntity::class], version = 3, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun destinationDao(): DestinationDao
@@ -38,6 +38,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migración de versión 2 a 3: el catálogo proviene de Firestore, por
+        // lo que la fila local ahora guarda el destino de origen y sus
+        // coordenadas para consultar puntos de interés cercanos.
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE destinations ADD COLUMN destinationId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE destinations ADD COLUMN summary TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE destinations ADD COLUMN latitude REAL NOT NULL DEFAULT 0.0")
+                db.execSQL("ALTER TABLE destinations ADD COLUMN longitude REAL NOT NULL DEFAULT 0.0")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -45,7 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "perutours_db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance

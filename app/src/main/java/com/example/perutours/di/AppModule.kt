@@ -188,10 +188,10 @@ val appModule = module {
         NetworkClient.getApiService(androidContext())
     }
 
-    // Repositorio de destinos
+    // Repositorio de catálogo del cliente (Firestore -> Room)
     single {
         DestinationRepository(
-            apiService = get(),
+            packageRepository = get(),
             destinationDao = get()
         )
     }
