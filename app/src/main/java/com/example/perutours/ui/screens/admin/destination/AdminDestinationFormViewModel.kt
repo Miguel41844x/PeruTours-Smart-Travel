@@ -1,9 +1,11 @@
 package com.example.perutours.ui.screens.admin.destination
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.CatalogStatus
 import com.example.perutours.data.model.TourDestination
+import com.example.perutours.data.repository.CatalogImageRepository
 import com.example.perutours.data.repository.DestinationCatalogRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.launch
 data class AdminDestinationFormUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
+    val isUploadingImage: Boolean = false,
     val destinationId: String = "",
     val name: String = "",
     val department: String = "",
@@ -45,6 +48,7 @@ data class AdminDestinationFormUiState(
  */
 class AdminDestinationFormViewModel(
     private val repository: DestinationCatalogRepository,
+    private val imageRepository: CatalogImageRepository,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -133,6 +137,51 @@ class AdminDestinationFormViewModel(
     fun save(shouldPublish: Boolean = false) {
         val destination = buildValidatedDestination(shouldPublish) ?: return
         viewModelScope.launch { persist(destination) }
+    }
+
+    /**
+     * Sube la imagen elegida por el administrador a Firebase Storage.
+     * Si el destino aún no existe se guarda primero un borrador, porque la
+     * ruta destination_images/{destinationId}/... necesita el ID real.
+     */
+    fun onCoverImagePicked(imageUri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingImage = true, errorMessage = null) }
+
+            var destinationId = _uiState.value.destinationId
+            if (destinationId.isBlank()) {
+                val draft = buildValidatedDestination(shouldPublish = false)
+                if (draft == null) {
+                    _uiState.update { it.copy(isUploadingImage = false) }
+                    return@launch
+                }
+                destinationId = persist(draft)?.id.orEmpty()
+            }
+
+            if (destinationId.isBlank()) {
+                _uiState.update { it.copy(isUploadingImage = false) }
+                return@launch
+            }
+
+            val result = runCatching {
+                imageRepository.uploadDestinationCover(destinationId, imageUri)
+            }
+            result.fold(
+                onSuccess = { url ->
+                    _uiState.update {
+                        it.copy(isUploadingImage = false, coverImageUrl = url)
+                    }
+                },
+                onFailure = {
+                    _uiState.update {
+                        it.copy(
+                            isUploadingImage = false,
+                            errorMessage = "No se pudo subir la imagen (máximo 5 MB, JPG/PNG/WebP)."
+                        )
+                    }
+                }
+            )
+        }
     }
 
     /** Valida el formulario y construye el modelo a persistir. */

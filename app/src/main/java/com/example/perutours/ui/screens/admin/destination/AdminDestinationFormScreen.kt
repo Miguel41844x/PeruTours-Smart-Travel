@@ -1,5 +1,7 @@
 package com.example.perutours.ui.screens.admin.destination
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,9 +32,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -50,6 +57,12 @@ fun AdminDestinationFormScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let(viewModel::onCoverImagePicked)
+    }
 
     LaunchedEffect(destinationId) { viewModel.load(destinationId) }
 
@@ -162,6 +175,33 @@ fun AdminDestinationFormScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // HU catálogo: la imagen se sube a Firebase Storage y su URL
+            // pública queda guardada en el documento del destino.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(onClick = { imagePicker.launch("image/*") }, enabled = !uiState.isUploadingImage) {
+                    Text("Subir imagen")
+                }
+                if (uiState.isUploadingImage) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+            }
+
+            if (uiState.coverImageUrl.isNotBlank()) {
+                AsyncImage(
+                    model = uiState.coverImageUrl,
+                    contentDescription = "Imagen de portada del destino",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(MaterialTheme.shapes.medium),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             OutlinedTextField(
                 value = uiState.categoriesText,

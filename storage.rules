@@ -16,6 +16,27 @@ service firebase.storage {
                    && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
     }
 
+    // HU catálogo turístico: imágenes de portada de destinos y paquetes.
+    // El cliente solo las lee; el administrador (verificado contra su
+    // documento en Firestore) es el único que puede subirlas.
+    match /destination_images/{destinationId}/{fileName} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+                    && firestore.get(
+                         /databases/(default)/documents/users/$(request.auth.uid)
+                       ).data.role == 'administrador'
+                    && destinationId.size() > 0
+                    && destinationId.size() <= 128
+                    && fileName.size() > 0
+                    && fileName.size() <= 160
+                    && request.resource.size <= 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+      allow delete: if request.auth != null
+                    && firestore.get(
+                         /databases/(default)/documents/users/$(request.auth.uid)
+                       ).data.role == 'administrador';
+    }
+
     match /payment_vouchers/{userId}/{reservationId}/{fileName} {
       // HU07: el comprobante lo ve el cliente que lo envió y el agente
       // asignado a la reserva, verificado contra Firestore.

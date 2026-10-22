@@ -5,6 +5,7 @@ import com.example.perutours.data.location.LocationDataSource
 import com.example.perutours.data.location.LocationRepository
 import com.example.perutours.data.repository.AuthRepository
 import com.example.perutours.data.repository.AdminDashboardRepository
+import com.example.perutours.data.repository.CatalogImageRepository
 import com.example.perutours.data.repository.DestinationCatalogRepository
 import com.example.perutours.data.repository.PackageRepository
 import com.example.perutours.data.repository.ProfileRepository
@@ -132,6 +133,14 @@ val appModule = module {
     single {
         TourProviderRepository(
             firestore = get(),
+            auth = get()
+        )
+    }
+
+    // HU catálogo: imágenes de portada en Firebase Storage
+    single {
+        CatalogImageRepository(
+            storage = get(),
             auth = get()
         )
     }
@@ -313,6 +322,7 @@ val appModule = module {
     viewModel {
         AdminDestinationFormViewModel(
             repository = get(),
+            imageRepository = get(),
             auth = get()
         )
     }
