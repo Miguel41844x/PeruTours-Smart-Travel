@@ -60,7 +60,7 @@ class PointsOfInterestRepository(
             }
 
             val response = api.nearbyPlaces(
-                filter = "circle:$latitude,$longitude,$radiusMeters",
+                filter = "circle:$longitude,$latitude,$radiusMeters",
                 categories = TOURISM_CATEGORIES,
                 limit = maxResults
             )
@@ -124,7 +124,7 @@ class PointsOfInterestRepository(
          * parques, esparcimiento y gastronomía.
          */
         const val TOURISM_CATEGORIES =
-            "tourism.sights,tourism.attraction,tourism.museum,leisure.park,entertainment,restaurant"
+            "tourism.sights,tourism.attraction,leisure.park,entertainment,catering.restaurant"
 
         /** Distancia en metros entre dos puntos (fórmula de Haversine). */
         fun distanceInMeters(

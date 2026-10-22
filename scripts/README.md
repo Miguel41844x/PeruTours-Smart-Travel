@@ -30,9 +30,17 @@ node import-catalog.mjs --dry-run    # vista previa sin escribir nada
 node import-catalog.mjs              # escritura real
 ```
 
+En **PowerShell** (Windows) el export de credenciales se hace así:
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\ruta\completa\serviceAccount.json"
+```
+
 ### Geocodificación
 
-Si defines `GEOAPIFY_API_KEY` el script valida cada departamento con la API de
+El script lee la clave de Geoapify de `local.properties` (propiedad
+`GEOAPIFY_API_KEY`, la misma que usa la app) o de la variable de entorno
+`GEOAPIFY_API_KEY`. Con ella valida cada departamento con la API de
 Geoapify y guarda las coordenadas reales más el identificador externo del
 lugar. Sin la clave usa coordenadas de respaldo por departamento, que puedes
 corregir después desde la pantalla de destinos del administrador.

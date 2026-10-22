@@ -15,7 +15,7 @@ import retrofit2.http.Query
  */
 interface GeoapifyApiService {
 
-    @GET("v1/geocoding/search")
+    @GET("v1/geocode/search")
     suspend fun geocode(
         @Query("text") text: String,
         @Query("lang") lang: String = "es",
@@ -26,7 +26,7 @@ interface GeoapifyApiService {
 
     @GET("v2/places")
     suspend fun nearbyPlaces(
-        /** Filtro circular: circle:latitud,longitud,radioEnMetros. */
+        /** Filtro circular de Geoapify: circle:longitud,latitud,radioEnMetros. */
         @Query("filter") filter: String,
         @Query("categories") categories: String,
         @Query("lang") lang: String = "es",

@@ -18,7 +18,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { initializeApplicationDefault, getApps } from "firebase-admin/app";
+import { initializeApp, getApps, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -65,12 +65,30 @@ function slugify(text) {
     .slice(0, 60);
 }
 
+/**
+ * La clave de Geoapify se toma de la variable de entorno o, en su defecto,
+ * de local.properties de la app (la misma que usa el BuildConfig). Así no
+ * hace falta configurar nada extra para ejecutar la migración.
+ */
+function readGeoapifyKey() {
+  const fromEnv = process.env.GEOAPIFY_API_KEY;
+  if (fromEnv && fromEnv.trim()) return fromEnv.trim();
+
+  try {
+    const properties = readFileSync(resolve(SCRIPT_DIR, "..", "local.properties"), "utf8");
+    const match = properties.match(/^GEOAPIFY_API_KEY\s*=\s*(.*)$/m);
+    return match ? match[1].trim() : "";
+  } catch {
+    return "";
+  }
+}
+
 async function geocodeWithGeoapify(name, department) {
-  const apiKey = process.env.GEOAPIFY_API_KEY;
+  const apiKey = readGeoapifyKey();
   if (!apiKey) return null;
 
   const query = encodeURIComponent(`${name}, ${department}, Perú`);
-  const url = `https://api.geoapify.com/v1/geocoding/search?text=${query}&lang=es&limit=1&apiKey=${apiKey}`;
+  const url = `https://api.geoapify.com/v1/geocode/search?text=${query}&lang=es&limit=1&filter=countrycode:pe&apiKey=${apiKey}`;
   const response = await fetch(url);
   if (!response.ok) return null;
 
@@ -100,7 +118,7 @@ function fallbackCoordinates(department) {
 
 async function main() {
   if (getApps().length === 0) {
-    initializeApplicationDefault();
+    initializeApp({ credential: applicationDefault() });
   }
   const db = getFirestore();
 
