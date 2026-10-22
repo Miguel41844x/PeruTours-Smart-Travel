@@ -72,7 +72,21 @@ fun RoleRouterScreen(
 
             when (profile.role.lowercase()) {
 
-                "gerente", "administrador" -> {
+                // HU catálogo turístico: el administrador administra
+                // destinos, proveedores y paquetes desde su propio panel.
+                "administrador" -> {
+
+                    navController.navigate("admin_dashboard") {
+
+                        popUpTo("role_router") {
+                            inclusive = true
+                        }
+
+                        launchSingleTop = true
+                    }
+                }
+
+                "gerente" -> {
 
                     navController.navigate("sales_dashboard") {
 

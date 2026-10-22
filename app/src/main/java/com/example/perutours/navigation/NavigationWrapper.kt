@@ -41,6 +41,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import com.google.firebase.auth.FirebaseAuth
 import com.example.perutours.ui.screens.agent.AgentHomeScreen
+import com.example.perutours.ui.screens.admin.AdminDashboardScreen
+import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormScreen
+import com.example.perutours.ui.screens.admin.destination.AdminDestinationsScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
@@ -164,6 +167,48 @@ fun NavigationWrapper(
                         }
                     }
                 }
+            )
+        }
+
+        // HU08: panel del administrador y gestión del catálogo turístico
+        composable(route = "admin_dashboard") {
+            AdminDashboardScreen(
+                onManageDestinations = { navHostController.navigate("admin_destinations") },
+                onManagePackages = { navHostController.navigate("admin_packages") },
+                onManageProviders = { navHostController.navigate("admin_providers") },
+                onNavigateBack = { navHostController.popBackStack() }
+            )
+        }
+
+        composable(route = "admin_destinations") {
+            AdminDestinationsScreen(
+                onNavigateBack = { navHostController.popBackStack() },
+                onCreateDestination = {
+                    navHostController.navigate("admin_destination_form")
+                },
+                onEditDestination = { destinationId ->
+                    navHostController.navigate(
+                        "admin_destination_form?destinationId=${Uri.encode(destinationId)}"
+                    )
+                }
+            )
+        }
+
+        composable(
+            route = "admin_destination_form?destinationId={destinationId}",
+            arguments = listOf(
+                navArgument("destinationId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
+            AdminDestinationFormScreen(
+                destinationId = backStackEntry.arguments
+                    ?.getString("destinationId")
+                    .orEmpty(),
+                onNavigateBack = { navHostController.popBackStack() },
+                onSaved = { navHostController.popBackStack() }
             )
         }
 

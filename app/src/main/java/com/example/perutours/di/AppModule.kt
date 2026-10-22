@@ -4,6 +4,7 @@ import com.example.perutours.data.messaging.FCMTokenManager
 import com.example.perutours.data.location.LocationDataSource
 import com.example.perutours.data.location.LocationRepository
 import com.example.perutours.data.repository.AuthRepository
+import com.example.perutours.data.repository.AdminDashboardRepository
 import com.example.perutours.data.repository.DestinationCatalogRepository
 import com.example.perutours.data.repository.PackageRepository
 import com.example.perutours.data.repository.ProfileRepository
@@ -28,6 +29,9 @@ import org.koin.dsl.module
 import com.example.perutours.ui.screens.login.LoginViewModel
 import com.example.perutours.ui.screens.signup.SignUpViewModel
 import com.example.perutours.ui.screens.profile.ProfileViewModel
+import com.example.perutours.ui.screens.admin.AdminDashboardViewModel
+import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormViewModel
+import com.example.perutours.ui.screens.admin.destination.AdminDestinationsViewModel
 import com.example.perutours.ui.screens.agent.AgentRequestsViewModel
 import com.example.perutours.ui.screens.agent.AgentHomeViewModel
 import com.example.perutours.ui.screens.agent.AgentPaymentViewModel
@@ -109,6 +113,12 @@ val appModule = module {
         DestinationCatalogRepository(
             firestore = get(),
             auth = get()
+        )
+    }
+
+    single {
+        AdminDashboardRepository(
+            firestore = get()
         )
     }
 
@@ -284,6 +294,26 @@ val appModule = module {
     viewModel {
         SalesDashboardViewModel(
             repository = get()
+        )
+    }
+
+    // HU08 / catálogo turístico: panel y pantallas del administrador
+    viewModel {
+        AdminDashboardViewModel(
+            repository = get()
+        )
+    }
+
+    viewModel {
+        AdminDestinationsViewModel(
+            repository = get()
+        )
+    }
+
+    viewModel {
+        AdminDestinationFormViewModel(
+            repository = get(),
+            auth = get()
         )
     }
 }

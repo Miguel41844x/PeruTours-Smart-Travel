@@ -1,0 +1,224 @@
+package com.example.perutours.ui.screens.admin.destination
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.model.CatalogStatus
+import com.example.perutours.data.model.TourDestination
+import com.example.perutours.data.repository.DestinationCatalogRepository
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class AdminDestinationFormUiState(
+    val isLoading: Boolean = false,
+    val isSaving: Boolean = false,
+    val destinationId: String = "",
+    val name: String = "",
+    val department: String = "",
+    val summary: String = "",
+    val latitudeText: String = "",
+    val longitudeText: String = "",
+    val coverImageUrl: String = "",
+    val categoriesText: String = "",
+    val externalPlaceId: String = "",
+    val status: CatalogStatus = CatalogStatus.BORRADOR,
+    val createdBy: String = "",
+    val createdAtMillis: Long = 0L,
+    val nameError: String? = null,
+    val departmentError: String? = null,
+    val coordinatesError: String? = null,
+    val imageUrlError: String? = null,
+    val errorMessage: String? = null,
+    val savedDestinationId: String? = null
+) {
+    val isEditing: Boolean get() = destinationId.isNotBlank()
+}
+
+/**
+ * Formulario de creación/edición de destinos.
+ *
+ * Proceso del catálogo: registrar el destino, guardar sus coordenadas
+ * (validadas con geocodificación) y decidir su estado de publicación.
+ */
+class AdminDestinationFormViewModel(
+    private val repository: DestinationCatalogRepository,
+    private val auth: FirebaseAuth
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(AdminDestinationFormUiState())
+    val uiState: StateFlow<AdminDestinationFormUiState> = _uiState.asStateFlow()
+
+    private var existingDestination: TourDestination? = null
+
+    fun load(destinationId: String) {
+        if (destinationId.isBlank()) return
+        if (_uiState.value.destinationId == destinationId && existingDestination != null) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val result = runCatching { repository.getDestination(destinationId) }
+            result.fold(
+                onSuccess = { destination ->
+                    if (destination == null) {
+                        _uiState.update {
+                            it.copy(isLoading = false, errorMessage = "El destino ya no existe.")
+                        }
+                    } else {
+                        existingDestination = destination
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                destinationId = destination.id,
+                                name = destination.name,
+                                department = destination.department,
+                                summary = destination.summary,
+                                latitudeText = destination.latitude.takeIf { lat -> lat != 0.0 }
+                                    ?.toString().orEmpty(),
+                                longitudeText = destination.longitude.takeIf { lng -> lng != 0.0 }
+                                    ?.toString().orEmpty(),
+                                coverImageUrl = destination.coverImageUrl,
+                                categoriesText = destination.categories.joinToString(", "),
+                                externalPlaceId = destination.externalPlaceId,
+                                status = CatalogStatus.from(destination.status),
+                                createdBy = destination.createdBy,
+                                createdAtMillis = destination.createdAtMillis
+                            )
+                        }
+                    }
+                },
+                onFailure = {
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = "No se pudo abrir el destino.")
+                    }
+                }
+            )
+        }
+    }
+
+    fun onNameChange(value: String) = _uiState.update {
+        it.copy(name = value, nameError = null, savedDestinationId = null)
+    }
+
+    fun onDepartmentChange(value: String) = _uiState.update {
+        it.copy(department = value, departmentError = null, savedDestinationId = null)
+    }
+
+    fun onSummaryChange(value: String) = _uiState.update {
+        it.copy(summary = value, savedDestinationId = null)
+    }
+
+    fun onLatitudeChange(value: String) = _uiState.update {
+        it.copy(latitudeText = value, coordinatesError = null, savedDestinationId = null)
+    }
+
+    fun onLongitudeChange(value: String) = _uiState.update {
+        it.copy(longitudeText = value, coordinatesError = null, savedDestinationId = null)
+    }
+
+    fun onImageUrlChange(value: String) = _uiState.update {
+        it.copy(coverImageUrl = value, imageUrlError = null, savedDestinationId = null)
+    }
+
+    fun onCategoriesChange(value: String) = _uiState.update {
+        it.copy(categoriesText = value, savedDestinationId = null)
+    }
+
+    fun onExternalPlaceIdChange(value: String) = _uiState.update {
+        it.copy(externalPlaceId = value, savedDestinationId = null)
+    }
+
+    /** Guarda el destino validando los campos antes de escribir en Firestore. */
+    fun save(shouldPublish: Boolean = false) {
+        val destination = buildValidatedDestination(shouldPublish) ?: return
+        viewModelScope.launch { persist(destination) }
+    }
+
+    /** Valida el formulario y construye el modelo a persistir. */
+    private fun buildValidatedDestination(shouldPublish: Boolean): TourDestination? {
+        val state = _uiState.value
+        val nameError = DestinationFormValidator.validateName(state.name)
+        val departmentError = DestinationFormValidator.validateDepartment(state.department)
+        val summaryError = DestinationFormValidator.validateSummary(state.summary)
+        val imageUrlError = DestinationFormValidator.validateImageUrl(state.coverImageUrl)
+        val coordinatesError = if (shouldPublish) {
+            DestinationFormValidator.validateForPublish(state.latitudeText, state.longitudeText)
+        } else {
+            DestinationFormValidator.validateCoordinates(state.latitudeText, state.longitudeText)
+        }
+
+        if (nameError != null || departmentError != null || summaryError != null ||
+            imageUrlError != null || coordinatesError != null
+        ) {
+            _uiState.update {
+                it.copy(
+                    nameError = nameError,
+                    departmentError = departmentError,
+                    coordinatesError = coordinatesError,
+                    imageUrlError = imageUrlError,
+                    errorMessage = summaryError
+                )
+            }
+            return null
+        }
+
+        val targetStatus = if (shouldPublish) CatalogStatus.PUBLICADO else state.status
+        return DestinationFormValidator.buildDestination(
+            existing = existingDestination,
+            name = state.name,
+            department = state.department,
+            summary = state.summary,
+            latitudeText = state.latitudeText,
+            longitudeText = state.longitudeText,
+            coverImageUrl = state.coverImageUrl,
+            categoriesText = state.categoriesText,
+            externalPlaceId = state.externalPlaceId,
+            status = targetStatus,
+            createdBy = state.createdBy.ifBlank { auth.currentUser?.uid.orEmpty() },
+            nowMillis = System.currentTimeMillis()
+        )
+    }
+
+    private suspend fun persist(destination: TourDestination): TourDestination? {
+        _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+        val result = runCatching { repository.saveDestination(destination) }
+        return result.fold(
+            onSuccess = { saved ->
+                existingDestination = saved
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        destinationId = saved.id,
+                        status = CatalogStatus.from(saved.status),
+                        createdAtMillis = saved.createdAtMillis,
+                        savedDestinationId = saved.id
+                    )
+                }
+                saved
+            },
+            onFailure = {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        errorMessage = "No se pudo guardar. Revisa los permisos y tu conexión."
+                    )
+                }
+                null
+            }
+        )
+    }
+
+    /** Fija coordenadas ya resueltas por geocodificación externa. */
+    fun applyCoordinates(latitude: Double, longitude: Double, placeId: String?) {
+        _uiState.update {
+            it.copy(
+                latitudeText = latitude.toString(),
+                longitudeText = longitude.toString(),
+                externalPlaceId = placeId?.takeIf { id -> id.isNotBlank() } ?: it.externalPlaceId,
+                coordinatesError = null,
+                savedDestinationId = null
+            )
+        }
+    }
+}
