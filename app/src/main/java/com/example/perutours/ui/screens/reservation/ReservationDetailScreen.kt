@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,6 +56,7 @@ fun ReservationDetailScreen(
     reservation: Reservation,
     onNavigateBack: () -> Unit,
     onNavigateToPayment: () -> Unit = {},
+    onOpenTrip: () -> Unit = {},
     payment: Payment? = null
 ) {
     Scaffold(
@@ -128,6 +130,22 @@ fun ReservationDetailScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                    }
+                }
+            }
+
+            if (reservation.status == Reservation.STATUS_PAID) {
+                item {
+                    Button(
+                        onClick = onOpenTrip,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp)
+                            .height(52.dp)
+                    ) {
+                        Icon(Icons.Default.Explore, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Abrir Mi viaje", fontWeight = FontWeight.Bold)
                     }
                 }
             }

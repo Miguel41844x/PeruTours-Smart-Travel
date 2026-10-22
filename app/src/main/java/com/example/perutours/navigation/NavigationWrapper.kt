@@ -52,6 +52,7 @@ import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
 import com.example.perutours.ui.screens.sales.SalesDashboardScreen
 import com.example.perutours.ui.screens.trip.TripListScreen
+import com.example.perutours.ui.screens.trip.TripDetailScreen
 import org.koin.compose.koinInject
 
 @Composable
@@ -552,6 +553,13 @@ fun NavigationWrapper(
             )
         }
 
+        composable(route = "trip/{reservationId}") { backStackEntry ->
+            TripDetailScreen(
+                reservationId = backStackEntry.arguments?.getString("reservationId").orEmpty(),
+                onNavigateBack = { navHostController.popBackStack() }
+            )
+        }
+
         composable(route = "customer_reservation/{reservationId}") { backStackEntry ->
             val reservationId = backStackEntry.arguments?.getString("reservationId").orEmpty()
             val reservationViewModel: CustomerReservationViewModel = koinViewModel()
@@ -571,6 +579,9 @@ fun NavigationWrapper(
                         navHostController.navigate(
                             "payment/${reservation.quotationId}/${reservation.id}/${reservation.totalAmount}/${reservation.currency}"
                         )
+                    },
+                    onOpenTrip = {
+                        navHostController.navigate("trip/${reservation.id}")
                     }
                 )
             } else {
