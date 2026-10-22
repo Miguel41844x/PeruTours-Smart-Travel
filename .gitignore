@@ -13,3 +13,11 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Secretos locales: la API key de Geoapify vive en local.properties
+# (propiedad GEOAPIFY_API_KEY) y jamás se commitea.
+geoapify.properties
+.env
+*.jks
+*.keystore
+/app/release/
