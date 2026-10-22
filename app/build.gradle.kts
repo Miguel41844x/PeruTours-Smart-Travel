@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -21,6 +23,18 @@ android {
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
+
+        // Clave de la API externa de Geoapify.
+        // Se lee de local.properties (ignorado por git) y se inyecta en
+        // BuildConfig.GEOAPIFY_API_KEY: la clave jamás se commitea.
+        val geoapifyApiKey = Properties().apply {
+            val propertiesFile = rootProject.file("local.properties")
+            if (propertiesFile.exists()) {
+                propertiesFile.inputStream().use { stream -> load(stream) }
+            }
+        }.getProperty("GEOAPIFY_API_KEY", "")
+
+        buildConfigField("String", "GEOAPIFY_API_KEY", "\"$geoapifyApiKey\"")
     }
 
     buildTypes {
@@ -36,6 +50,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
