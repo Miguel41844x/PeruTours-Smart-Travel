@@ -179,7 +179,17 @@ fun NavigationWrapper(
                 onManageDestinations = { navHostController.navigate("admin_destinations") },
                 onManagePackages = { navHostController.navigate("admin_packages") },
                 onManageProviders = { navHostController.navigate("admin_providers") },
-                onNavigateBack = { navHostController.popBackStack() }
+                // Si el panel es el único destino en la pila (sesión persistida),
+                // popBackStack lo dejaría vacío: volvemos a la pantalla inicial.
+                onNavigateBack = {
+                    if (navHostController.previousBackStackEntry != null) {
+                        navHostController.popBackStack()
+                    } else {
+                        navHostController.navigate("initial") {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
             )
         }
 

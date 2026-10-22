@@ -55,7 +55,7 @@ fun AdminDashboardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Administración del catálogo (HU08)") },
+                title = { Text("Administración del catálogo") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
