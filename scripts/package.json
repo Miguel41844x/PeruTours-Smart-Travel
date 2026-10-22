@@ -1,0 +1,17 @@
+{
+  "name": "perutours-scripts",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Scripts de mantenimiento del catálogo turístico de PeruTours",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "import-catalog": "node import-catalog.mjs",
+    "import-catalog:dry": "node import-catalog.mjs --dry-run"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}

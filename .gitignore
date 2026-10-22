@@ -21,3 +21,5 @@ geoapify.properties
 *.jks
 *.keystore
 /app/release/
+scripts/serviceAccount*.json
+scripts/node_modules/
