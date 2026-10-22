@@ -42,15 +42,21 @@ class DestinationCatalogRepository(
     suspend fun saveDestination(destination: TourDestination): TourDestination {
         val uid = auth.currentUser?.uid.orEmpty()
         val now = System.currentTimeMillis()
+        val isNew = destination.id.isBlank()
         val id = destination.id.ifBlank {
             firestore.collection(COLLECTION_DESTINATIONS).document().id
+        }
+        val createdAtMillis = if (isNew) {
+            now
+        } else {
+            destination.createdAtMillis.takeIf { it > 0L } ?: now
         }
         val persisted = destination.copy(
             id = id,
             // El creador no se pisa al editar un destino existente.
             createdBy = destination.createdBy.ifBlank { uid },
-            createdAtMillis = destination.createdAtMillis.takeIf { it > 0L } ?: now,
-            updatedAtMillis = now
+            createdAtMillis = createdAtMillis,
+            updatedAtMillis = if (isNew) createdAtMillis else now
         )
         firestore.collection(COLLECTION_DESTINATIONS)
             .document(id)

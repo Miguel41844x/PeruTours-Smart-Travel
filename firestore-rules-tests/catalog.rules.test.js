@@ -174,6 +174,21 @@ describe('destinations (catálogo turístico)', () => {
     );
   });
 
+  it('un destino publicado necesita geocodificación válida', async () => {
+    await assertFails(
+      setDoc(
+        doc(dbAs(ADMIN_UID), 'destinations', 'dest_sin_geocodificar'),
+        validDestination({
+          id: 'dest_sin_geocodificar',
+          status: 'PUBLICADO',
+          latitude: 0,
+          longitude: 0,
+          externalPlaceId: ''
+        })
+      )
+    );
+  });
+
   it('no se puede reescribir el autor ni la fecha de creación', async () => {
     await assertFails(
       updateDoc(doc(dbAs(ADMIN_UID), 'destinations', DESTINATION_ID), {
@@ -243,12 +258,22 @@ describe('packages (ofertas vendibles)', () => {
     );
   });
 
-  it('el administrador puede publicar un paquete', async () => {
+  it('solo publica paquetes cuyo destino ya está publicado', async () => {
     await setDoc(doc(dbAs(ADMIN_UID), 'packages', PACKAGE_ID), validPackage());
-    await assertSucceeds(
+    await assertFails(
       updateDoc(doc(dbAs(ADMIN_UID), 'packages', PACKAGE_ID), {
         status: 'PUBLICADO',
         updatedAtMillis: 2_000
+      })
+    );
+    await updateDoc(doc(dbAs(ADMIN_UID), 'destinations', DESTINATION_ID), {
+      status: 'PUBLICADO',
+      updatedAtMillis: 2_000
+    });
+    await assertSucceeds(
+      updateDoc(doc(dbAs(ADMIN_UID), 'packages', PACKAGE_ID), {
+        status: 'PUBLICADO',
+        updatedAtMillis: 3_000
       })
     );
   });

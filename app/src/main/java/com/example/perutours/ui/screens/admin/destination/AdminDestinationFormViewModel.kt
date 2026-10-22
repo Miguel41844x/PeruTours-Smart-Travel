@@ -105,11 +105,27 @@ class AdminDestinationFormViewModel(
     }
 
     fun onNameChange(value: String) = _uiState.update {
-        it.copy(name = value, nameError = null, savedDestinationId = null)
+        val locationChanged = value.trim() != it.name.trim()
+        it.copy(
+            name = value,
+            nameError = null,
+            latitudeText = if (locationChanged) "" else it.latitudeText,
+            longitudeText = if (locationChanged) "" else it.longitudeText,
+            externalPlaceId = if (locationChanged) "" else it.externalPlaceId,
+            savedDestinationId = null
+        )
     }
 
     fun onDepartmentChange(value: String) = _uiState.update {
-        it.copy(department = value, departmentError = null, savedDestinationId = null)
+        val locationChanged = value.trim() != it.department.trim()
+        it.copy(
+            department = value,
+            departmentError = null,
+            latitudeText = if (locationChanged) "" else it.latitudeText,
+            longitudeText = if (locationChanged) "" else it.longitudeText,
+            externalPlaceId = if (locationChanged) "" else it.externalPlaceId,
+            savedDestinationId = null
+        )
     }
 
     fun onSummaryChange(value: String) = _uiState.update {
@@ -194,8 +210,12 @@ class AdminDestinationFormViewModel(
         val departmentError = DestinationFormValidator.validateDepartment(state.department)
         val summaryError = DestinationFormValidator.validateSummary(state.summary)
         val imageUrlError = DestinationFormValidator.validateImageUrl(state.coverImageUrl)
-        val coordinatesError = if (shouldPublish) {
-            DestinationFormValidator.validateForPublish(state.latitudeText, state.longitudeText)
+        val coordinatesError = if (shouldPublish || state.status == CatalogStatus.PUBLICADO) {
+            DestinationFormValidator.validateForPublish(
+                state.latitudeText,
+                state.longitudeText,
+                state.externalPlaceId
+            )
         } else {
             DestinationFormValidator.validateCoordinates(state.latitudeText, state.longitudeText)
         }

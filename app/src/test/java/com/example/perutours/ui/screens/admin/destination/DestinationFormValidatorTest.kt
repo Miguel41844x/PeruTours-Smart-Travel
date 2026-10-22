@@ -60,8 +60,16 @@ class DestinationFormValidatorTest {
 
     @Test
     fun `publicar exige coordenadas`() {
-        assertNotNull(DestinationFormValidator.validateForPublish("", ""))
-        assertNull(DestinationFormValidator.validateForPublish("-13.53", "-71.96"))
+        assertNotNull(DestinationFormValidator.validateForPublish("", "", ""))
+        assertNotNull(DestinationFormValidator.validateForPublish("0", "0", "geoapify-place-id"))
+        assertNotNull(DestinationFormValidator.validateForPublish("-13.53", "-71.96", ""))
+        assertNull(
+            DestinationFormValidator.validateForPublish(
+                "-13.53",
+                "-71.96",
+                "geoapify-place-id"
+            )
+        )
     }
 
     @Test

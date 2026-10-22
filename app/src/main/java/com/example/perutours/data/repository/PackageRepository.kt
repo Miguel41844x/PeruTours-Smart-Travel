@@ -35,6 +35,15 @@ class PackageRepository(
             .await()
             .toObjects(TourPackage::class.java)
 
+    suspend fun getPublishedPackagesByDestination(destinationId: String): List<TourPackage> =
+        firestore
+            .collection(COLLECTION_PACKAGES)
+            .whereEqualTo(FIELD_DESTINATION_ID, destinationId)
+            .whereEqualTo(FIELD_STATUS, CatalogStatus.PUBLICADO.name)
+            .get()
+            .await()
+            .toObjects(TourPackage::class.java)
+
     suspend fun getPublishedPackages(): List<TourPackage> = firestore
         .collection(COLLECTION_PACKAGES)
         .whereEqualTo(FIELD_STATUS, CatalogStatus.PUBLICADO.name)
@@ -68,15 +77,21 @@ class PackageRepository(
     suspend fun savePackage(tourPackage: TourPackage): TourPackage {
         val uid = auth.currentUser?.uid.orEmpty()
         val now = System.currentTimeMillis()
+        val isNew = tourPackage.id.isBlank()
         val id = tourPackage.id.ifBlank {
             firestore.collection(COLLECTION_PACKAGES).document().id
+        }
+        val createdAtMillis = if (isNew) {
+            now
+        } else {
+            tourPackage.createdAtMillis.takeIf { it > 0L } ?: now
         }
         val persisted = tourPackage.copy(
             id = id,
             durationDays = tourPackage.durationDays.coerceAtLeast(1),
             createdBy = tourPackage.createdBy.ifBlank { uid },
-            createdAtMillis = tourPackage.createdAtMillis.takeIf { it > 0L } ?: now,
-            updatedAtMillis = now
+            createdAtMillis = createdAtMillis,
+            updatedAtMillis = if (isNew) createdAtMillis else now
         )
         firestore.collection(COLLECTION_PACKAGES)
             .document(id)

@@ -26,14 +26,20 @@ class TourProviderRepository(
 
     suspend fun saveProvider(provider: TourProvider): TourProvider {
         val now = System.currentTimeMillis()
+        val isNew = provider.id.isBlank()
         val id = provider.id.ifBlank {
             firestore.collection(COLLECTION_PROVIDERS).document().id
         }
+        val createdAtMillis = if (isNew) {
+            now
+        } else {
+            provider.createdAtMillis.takeIf { it > 0L } ?: now
+        }
         val persisted = provider.copy(
             id = id,
-            createdBy = auth.currentUser?.uid.orEmpty(),
-            createdAtMillis = provider.createdAtMillis.takeIf { it > 0L } ?: now,
-            updatedAtMillis = now
+            createdBy = if (isNew) auth.currentUser?.uid.orEmpty() else provider.createdBy,
+            createdAtMillis = createdAtMillis,
+            updatedAtMillis = if (isNew) createdAtMillis else now
         )
         firestore.collection(COLLECTION_PROVIDERS)
             .document(id)

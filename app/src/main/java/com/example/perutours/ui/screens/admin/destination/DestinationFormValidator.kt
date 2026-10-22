@@ -69,15 +69,23 @@ object DestinationFormValidator {
     }
 
     /** Publicar exige coordenadas válidas para consultar puntos de interés. */
-    fun validateForPublish(latitudeText: String, longitudeText: String): String? {
+    fun validateForPublish(
+        latitudeText: String,
+        longitudeText: String,
+        externalPlaceId: String
+    ): String? {
         val coordinatesError = validateCoordinates(latitudeText, longitudeText)
         if (coordinatesError != null) return coordinatesError
         val latitude = parseCoordinate(latitudeText)
         val longitude = parseCoordinate(longitudeText)
-        return if (latitude == null || longitude == null) {
-            "Para publicar necesitas validar las coordenadas del destino."
-        } else {
-            null
+        return when {
+            latitude == null || longitude == null ->
+                "Para publicar necesitas validar las coordenadas del destino."
+            latitude == 0.0 && longitude == 0.0 ->
+                "Las coordenadas del destino todavía no fueron validadas."
+            externalPlaceId.isBlank() ->
+                "Valida el destino con Geoapify antes de publicarlo."
+            else -> null
         }
     }
 
@@ -108,8 +116,8 @@ object DestinationFormValidator {
             name = name.trim(),
             department = department.trim(),
             summary = summary.trim(),
-            latitude = parseCoordinate(latitudeText) ?: base.latitude,
-            longitude = parseCoordinate(longitudeText) ?: base.longitude,
+            latitude = parseCoordinate(latitudeText) ?: 0.0,
+            longitude = parseCoordinate(longitudeText) ?: 0.0,
             coverImageUrl = coverImageUrl.trim(),
             categories = parseCategories(categoriesText),
             externalPlaceId = externalPlaceId.trim(),

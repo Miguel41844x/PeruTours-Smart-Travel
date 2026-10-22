@@ -52,18 +52,26 @@ class PointsOfInterestRepository(
                 return@runCatching emptyList<NearbyPlace>()
             }
 
+            val cached = placeDao.getPlacesForDestination(destinationId)
             if (!forceRefresh && isCacheFresh(destinationId)) {
-                val cached = placeDao.getPlacesForDestination(destinationId)
                 if (cached.isNotEmpty()) {
                     return@runCatching cached.map { it.toDomain() }
                 }
             }
 
-            val response = api.nearbyPlaces(
-                filter = "circle:$longitude,$latitude,$radiusMeters",
-                categories = TOURISM_CATEGORIES,
-                limit = maxResults
-            )
+            val response = try {
+                api.nearbyPlaces(
+                    filter = "circle:$longitude,$latitude,$radiusMeters",
+                    bias = "proximity:$longitude,$latitude",
+                    categories = TOURISM_CATEGORIES,
+                    limit = maxResults
+                )
+            } catch (error: Exception) {
+                if (cached.isNotEmpty()) {
+                    return@runCatching cached.map { it.toDomain() }
+                }
+                throw error
+            }
 
             val entities = response.features
                 .mapNotNull { feature -> feature.toEntity(destinationId, latitude, longitude) }

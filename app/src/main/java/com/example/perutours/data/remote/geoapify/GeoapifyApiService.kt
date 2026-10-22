@@ -28,10 +28,10 @@ interface GeoapifyApiService {
     suspend fun nearbyPlaces(
         /** Filtro circular de Geoapify: circle:longitud,latitud,radioEnMetros. */
         @Query("filter") filter: String,
+        @Query("bias") bias: String,
         @Query("categories") categories: String,
         @Query("lang") lang: String = "es",
         @Query("limit") limit: Int = 20,
-        @Query("sort") sort: String = "distance",
         @Query("apiKey") apiKey: String = BuildConfig.GEOAPIFY_API_KEY
     ): GeoapifyFeatureCollection
 }

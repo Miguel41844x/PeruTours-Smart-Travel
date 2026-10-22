@@ -469,6 +469,13 @@ service cloud.firestore {
       return value in ['BORRADOR', 'PUBLICADO', 'ARCHIVADO'];
     }
 
+    function isValidPublishedDestination(data) {
+      return data.status != 'PUBLICADO' || (
+        (data.latitude != 0 || data.longitude != 0)
+        && validString(data.externalPlaceId, 1, 128)
+      );
+    }
+
     function isValidCatalogTimestamps(data) {
       return data.createdAtMillis is int
         && data.createdAtMillis > 0
@@ -504,6 +511,7 @@ service cloud.firestore {
         && data.externalPlaceId is string
         && data.externalPlaceId.size() <= 128
         && isValidCatalogStatus(data.status)
+        && isValidPublishedDestination(data)
         && validString(data.createdBy, 1, 128)
         && isValidCatalogTimestamps(data);
     }
@@ -1162,7 +1170,9 @@ service cloud.firestore {
       allow update: if isAdmin()
         && isValidPackage(request.resource.data)
         && catalogIdentityPinned(packageId)
-        && exists(/databases/$(database)/documents/destinations/$(request.resource.data.destinationId));
+        && exists(/databases/$(database)/documents/destinations/$(request.resource.data.destinationId))
+        && (request.resource.data.status != 'PUBLICADO'
+          || get(/databases/$(database)/documents/destinations/$(request.resource.data.destinationId)).data.status == 'PUBLICADO');
 
       allow delete: if false;
 

@@ -133,7 +133,15 @@ class AdminPackagesViewModel(
     fun changeStatus(tourPackage: TourPackage, status: CatalogStatus) {
         viewModelScope.launch {
             _uiState.update { it.copy(feedbackMessage = null, errorMessage = null) }
-            val result = runCatching { packageRepository.updateStatus(tourPackage.id, status) }
+            val result = runCatching {
+                if (status == CatalogStatus.PUBLICADO) {
+                    val destination = destinationRepository.getDestination(tourPackage.destinationId)
+                    require(destination?.published == true) {
+                        "Publica primero el destino asociado al paquete."
+                    }
+                }
+                packageRepository.updateStatus(tourPackage.id, status)
+            }
             result.fold(
                 onSuccess = {
                     _uiState.update {
@@ -150,9 +158,13 @@ class AdminPackagesViewModel(
                     }
                     load()
                 },
-                onFailure = {
+                onFailure = { error ->
                     _uiState.update {
-                        it.copy(errorMessage = "No se pudo cambiar el estado del paquete.")
+                        it.copy(
+                            errorMessage = error.message
+                                ?.takeIf { message -> message.isNotBlank() }
+                                ?: "No se pudo cambiar el estado del paquete."
+                        )
                     }
                 }
             )

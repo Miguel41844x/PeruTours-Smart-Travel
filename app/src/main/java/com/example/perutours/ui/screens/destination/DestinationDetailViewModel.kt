@@ -2,7 +2,6 @@ package com.example.perutours.ui.screens.destination
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.perutours.data.model.CatalogStatus
 import com.example.perutours.data.model.TourDestination
 import com.example.perutours.data.model.TourPackage
 import com.example.perutours.data.repository.DestinationCatalogRepository
@@ -66,8 +65,7 @@ class DestinationDetailViewModel(
                     _uiState.update { it.copy(destination = destination) }
 
                     val packagesResult = runCatching {
-                        packageRepository.getPackagesByDestination(destinationId)
-                            .filter { pkg -> CatalogStatus.from(pkg.status) == CatalogStatus.PUBLICADO }
+                        packageRepository.getPublishedPackagesByDestination(destinationId)
                     }
                     _uiState.update { state ->
                         state.copy(

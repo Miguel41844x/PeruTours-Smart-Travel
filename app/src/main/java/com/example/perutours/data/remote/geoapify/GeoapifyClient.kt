@@ -2,7 +2,6 @@ package com.example.perutours.data.remote.geoapify
 
 import okhttp3.Cache
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
@@ -31,15 +30,10 @@ object GeoapifyClient {
     private fun buildService(cacheDirectory: File): GeoapifyApiService {
         val cache = Cache(File(cacheDirectory, "geoapify_cache"), 10L * 1024L * 1024L)
 
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
-        }
-
         val okHttpClient = OkHttpClient.Builder()
             .cache(cache)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
-            .addInterceptor(loggingInterceptor)
             // Caché en disco de 1 hora para no repetir consultas de lugares.
             .addNetworkInterceptor { chain ->
                 val response = chain.proceed(chain.request())
