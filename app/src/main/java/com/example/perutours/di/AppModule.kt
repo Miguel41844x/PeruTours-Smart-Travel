@@ -18,6 +18,10 @@ import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TourProviderRepository
 import com.example.perutours.data.repository.TravelRequestRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
+import com.example.perutours.data.repository.FirestoreTripRemoteDataSource
+import com.example.perutours.data.repository.TripDataSource
+import com.example.perutours.data.repository.TripRemoteDataSource
+import com.example.perutours.data.repository.TripRepository
 import com.example.perutours.data.repository.PaymentRepository
 import com.example.perutours.data.repository.PaymentReviewDataSource
 import com.example.perutours.data.repository.PaymentReviewRepository
@@ -201,6 +205,21 @@ val appModule = module {
 
     single {
         get<AppDatabase>().tripDao()
+    }
+
+    // Centro de viaje: Firestore como origen y Room como lectura offline.
+    single<TripRemoteDataSource> {
+        FirestoreTripRemoteDataSource(
+            auth = get(),
+            firestore = get()
+        )
+    }
+
+    single<TripDataSource> {
+        TripRepository(
+            remote = get(),
+            tripDao = get()
+        )
     }
 
     // HU catálogo: puntos de interés cercanos (Geoapify + caché Room)
