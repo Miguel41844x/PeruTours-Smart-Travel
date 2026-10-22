@@ -92,6 +92,7 @@ fun HomeScreen(
     navigateToTravelRequest: (DestinationDto?) -> Unit = {},
     navigateToQuotations: () -> Unit = {},
     navigateToReservations: () -> Unit = {},
+    navigateToTrips: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
     navigateToDetail: (String) -> Unit = {},
     navigateToInitial: () -> Unit,
@@ -198,9 +199,9 @@ fun HomeScreen(
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = navigateToReservations,
+                    onClick = navigateToTrips,
                     icon = { Icon(Icons.Default.Luggage, contentDescription = null) },
-                    label = { Text("Reservas") }
+                    label = { Text("Viajes") }
                 )
                 NavigationBarItem(
                     selected = false,

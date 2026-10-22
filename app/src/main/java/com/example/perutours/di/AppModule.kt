@@ -50,6 +50,7 @@ import com.example.perutours.ui.screens.quotation.CustomerQuotationViewModel
 import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
 import com.example.perutours.ui.screens.payment.PaymentViewModel
 import com.example.perutours.ui.screens.sales.SalesDashboardViewModel
+import com.example.perutours.ui.screens.trip.TripListViewModel
 
 import android.app.Application
 import androidx.work.WorkManager
@@ -358,6 +359,10 @@ val appModule = module {
         SalesDashboardViewModel(
             repository = get()
         )
+    }
+
+    viewModel {
+        TripListViewModel(repository = get())
     }
 
     // HU08 / catálogo turístico: panel y pantallas del administrador

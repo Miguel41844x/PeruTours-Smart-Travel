@@ -51,6 +51,7 @@ import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
 import com.example.perutours.ui.screens.agent.AgentRequestsScreen
 import com.example.perutours.ui.screens.sales.SalesDashboardScreen
+import com.example.perutours.ui.screens.trip.TripListScreen
 import org.koin.compose.koinInject
 
 @Composable
@@ -303,6 +304,9 @@ fun NavigationWrapper(
                 navigateToReservations = {
                     navHostController.navigate(route = "customer_reservations")
                 },
+                navigateToTrips = {
+                    navHostController.navigate(route = "trips")
+                },
                 navigateToProfile = {
                     navHostController.navigate(route = "profile")
                 },
@@ -532,6 +536,18 @@ fun NavigationWrapper(
                 onNavigateBack = { navHostController.popBackStack() },
                 onReservationSelected = { reservationId ->
                     navHostController.navigate("customer_reservation/$reservationId")
+                }
+            )
+        }
+
+        composable(route = "trips") {
+            TripListScreen(
+                onNavigateBack = { navHostController.popBackStack() },
+                onTripSelected = { reservationId ->
+                    navHostController.navigate("trip/$reservationId")
+                },
+                onViewReservations = {
+                    navHostController.navigate("customer_reservations")
                 }
             )
         }
