@@ -28,6 +28,9 @@ object PackageFormValidator {
         .toDoubleOrNull()
 
     fun validatePrice(priceText: String): String? {
+        if (priceText.trim().startsWith("-")) {
+            return "El precio no puede ser negativo."
+        }
         val amount = parsePrice(priceText)
         return when {
             amount == null -> "Indica el precio del paquete."
