@@ -89,6 +89,23 @@ fun NavigationWrapper(
         // cliente para ver el resultado del comprobante.
         val paymentReservationId = pendingReservationId?.takeIf { it.isNotBlank() }
         if (
+            pendingNotificationType in setOf(
+                MyFirebaseMessagingService.TYPE_TRIP_INCIDENT,
+                MyFirebaseMessagingService.TYPE_TRIP_INCIDENT_RESPONSE
+            ) && paymentReservationId != null
+        ) {
+            val route = if (
+                pendingNotificationType == MyFirebaseMessagingService.TYPE_TRIP_INCIDENT
+            ) {
+                "agent_trip/$paymentReservationId"
+            } else {
+                "trip/$paymentReservationId"
+            }
+            navHostController.navigate(route) { launchSingleTop = true }
+            onPendingQuotationConsumed()
+            return@LaunchedEffect
+        }
+        if (
             pendingNotificationType == MyFirebaseMessagingService.TYPE_PAYMENT_REVIEW &&
             paymentReservationId != null
         ) {

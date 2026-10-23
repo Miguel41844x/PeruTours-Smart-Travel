@@ -1,6 +1,5 @@
 package com.example.perutours.service
 
-import android.content.Context
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
@@ -16,7 +15,6 @@ interface TripBackgroundScheduler {
 }
 
 class TripWorkScheduler(
-    private val context: Context,
     private val workManager: WorkManager
 ) : TripBackgroundScheduler {
 

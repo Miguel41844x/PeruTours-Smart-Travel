@@ -84,6 +84,25 @@ service cloud.firestore {
     //   'Pendiente'; only the assigned agent may move it to 'Aprobado'
     //   or 'Rechazado' with a mandatory reason.
     //
+    // trip_itinerary_items/{itemId}
+    //   id, reservationId, clientId, agentId, title, description,
+    //   category, locationName, latitude, longitude, startAtMillis,
+    //   endAtMillis, dayIndex, sortOrder, providerName, status, notes,
+    //   source, createdAtMillis, updatedAtMillis. Only the agent assigned
+    //   to a paid reservation manages the confirmed itinerary.
+    //
+    // trip_checklist_items/{itemId}
+    //   id, reservationId, clientId, title, category, isCompleted,
+    //   createdAtMillis, updatedAtMillis. Private preparation list owned
+    //   by the client of a paid reservation.
+    //
+    // trip_incidents/{incidentId}
+    //   id, reservationId, clientId, agentId, category, priority,
+    //   status, description, locationName, latitude, longitude,
+    //   agentResponse, createdAtMillis, updatedAtMillis,
+    //   resolvedAtMillis. The client creates it; only the assigned agent
+    //   may add a response and move it to En revisión or Resuelta.
+    //
     // fcm_push_logs/{logId}
     //   toToken, title, body, quotationId, status, timestamp.
     //
@@ -829,6 +848,122 @@ service cloud.firestore {
         );
     }
 
+    function isValidStoredMillis(value) {
+      return value is int
+        && value > 0
+        && value <= request.time.toMillis() + 300000;
+    }
+
+    function isValidTripCoordinates(latitude, longitude) {
+      return latitude is number
+        && longitude is number
+        && latitude >= -90
+        && latitude <= 90
+        && longitude >= -180
+        && longitude <= 180;
+    }
+
+    function isValidTripItineraryItem(data) {
+      return hasRequiredFields(data, [
+          'id', 'reservationId', 'clientId', 'agentId', 'title',
+          'description', 'category', 'locationName', 'latitude',
+          'longitude', 'startAtMillis', 'endAtMillis', 'dayIndex',
+          'sortOrder', 'providerName', 'status', 'notes', 'source',
+          'createdAtMillis', 'updatedAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'reservationId', 'clientId', 'agentId', 'title',
+          'description', 'category', 'locationName', 'latitude',
+          'longitude', 'startAtMillis', 'endAtMillis', 'dayIndex',
+          'sortOrder', 'providerName', 'status', 'notes', 'source',
+          'createdAtMillis', 'updatedAtMillis'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.reservationId, 1, 128)
+        && validString(data.clientId, 1, 128)
+        && validString(data.agentId, 1, 128)
+        && validString(data.title, 3, 120)
+        && data.description is string
+        && data.description.size() <= 1500
+        && data.category in [
+          'Actividad', 'Transporte', 'Alojamiento', 'Alimentación', 'Otro'
+        ]
+        && data.locationName is string
+        && data.locationName.size() <= 160
+        && isValidTripCoordinates(data.latitude, data.longitude)
+        && data.startAtMillis is int
+        && data.startAtMillis > 0
+        && data.endAtMillis is int
+        && data.endAtMillis >= data.startAtMillis
+        && data.dayIndex is int
+        && data.dayIndex >= 1
+        && data.dayIndex <= 365
+        && data.sortOrder is int
+        && data.sortOrder >= 0
+        && data.providerName is string
+        && data.providerName.size() <= 120
+        && data.status in ['Programado', 'Completado', 'Cancelado']
+        && data.notes is string
+        && data.notes.size() <= 500
+        && data.source == 'agent'
+        && isValidStoredMillis(data.createdAtMillis)
+        && isValidStoredMillis(data.updatedAtMillis)
+        && data.updatedAtMillis >= data.createdAtMillis;
+    }
+
+    function isValidTripChecklistItem(data) {
+      return hasRequiredFields(data, [
+          'id', 'reservationId', 'clientId', 'title', 'category',
+          'isCompleted', 'createdAtMillis', 'updatedAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'reservationId', 'clientId', 'title', 'category',
+          'isCompleted', 'createdAtMillis', 'updatedAtMillis'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.reservationId, 1, 128)
+        && validString(data.clientId, 1, 128)
+        && validString(data.title, 1, 100)
+        && data.category in ['Equipaje', 'Documentos', 'Salud', 'Dinero', 'Otros']
+        && data.isCompleted is bool
+        && isValidStoredMillis(data.createdAtMillis)
+        && isValidStoredMillis(data.updatedAtMillis)
+        && data.updatedAtMillis >= data.createdAtMillis;
+    }
+
+    function isValidTripIncident(data) {
+      return hasRequiredFields(data, [
+          'id', 'reservationId', 'clientId', 'agentId', 'category',
+          'priority', 'status', 'description', 'locationName',
+          'latitude', 'longitude', 'agentResponse', 'createdAtMillis',
+          'updatedAtMillis', 'resolvedAtMillis'
+        ])
+        && hasOnlyAllowedFields(data, [
+          'id', 'reservationId', 'clientId', 'agentId', 'category',
+          'priority', 'status', 'description', 'locationName',
+          'latitude', 'longitude', 'agentResponse', 'createdAtMillis',
+          'updatedAtMillis', 'resolvedAtMillis'
+        ])
+        && validString(data.id, 1, 128)
+        && validString(data.reservationId, 1, 128)
+        && validString(data.clientId, 1, 128)
+        && validString(data.agentId, 1, 128)
+        && data.category in ['Transporte', 'Alojamiento', 'Actividad', 'Salud', 'Otro']
+        && data.priority in ['Baja', 'Media', 'Alta', 'Urgente']
+        && data.status in ['Abierta', 'En revisión', 'Resuelta', 'Cerrada']
+        && validString(data.description, 10, 1000)
+        && data.locationName is string
+        && data.locationName.size() <= 160
+        && isValidTripCoordinates(data.latitude, data.longitude)
+        && data.agentResponse is string
+        && data.agentResponse.size() <= 1000
+        && isValidStoredMillis(data.createdAtMillis)
+        && isValidStoredMillis(data.updatedAtMillis)
+        && data.updatedAtMillis >= data.createdAtMillis
+        && (data.resolvedAtMillis == null
+          || isValidStoredMillis(data.resolvedAtMillis));
+    }
+
     // ===============================================================
     // Relationship and transition helpers
     // ===============================================================
@@ -847,6 +982,18 @@ service cloud.firestore {
 
     function paymentPath(paymentId) {
       return /databases/$(database)/documents/payments/$(paymentId);
+    }
+
+    function paidReservationBelongsToClient(reservationId, clientId) {
+      return exists(reservationPath(reservationId))
+        && get(reservationPath(reservationId)).data.clientId == clientId
+        && get(reservationPath(reservationId)).data.status == 'Pagado';
+    }
+
+    function paidReservationAssignedToAgent(reservationId, agentId) {
+      return exists(reservationPath(reservationId))
+        && get(reservationPath(reservationId)).data.agentId == agentId
+        && get(reservationPath(reservationId)).data.status == 'Pagado';
     }
 
     function quotationBelongsToRequester(quotationId) {
@@ -1395,6 +1542,137 @@ service cloud.firestore {
       match /{subcollection=**} {
         allow read, write: if false;
       }
+    }
+
+    // Centro de viaje: el itinerario oficial pertenece a una reserva
+    // pagada y solo puede ser gestionado por el agente asignado.
+    match /trip_itinerary_items/{itemId} {
+      allow read: if isAuthenticated()
+        && (
+          resource.data.clientId == request.auth.uid
+          || (isAgent() && resource.data.agentId == request.auth.uid)
+        );
+
+      allow create: if isAgent()
+        && isValidTripItineraryItem(request.resource.data)
+        && request.resource.data.id == itemId
+        && request.resource.data.agentId == request.auth.uid
+        && paidReservationAssignedToAgent(
+          request.resource.data.reservationId,
+          request.auth.uid
+        )
+        && get(reservationPath(request.resource.data.reservationId)).data.clientId
+          == request.resource.data.clientId;
+
+      allow update: if isAgent()
+        && resource.data.agentId == request.auth.uid
+        && isValidTripItineraryItem(request.resource.data)
+        && request.resource.data.id == itemId
+        && areImmutableFieldsUnchanged([
+          'id', 'reservationId', 'clientId', 'agentId', 'source',
+          'createdAtMillis'
+        ])
+        && paidReservationAssignedToAgent(
+          resource.data.reservationId,
+          request.auth.uid
+        );
+
+      allow delete: if isAgent()
+        && resource.data.agentId == request.auth.uid
+        && paidReservationAssignedToAgent(
+          resource.data.reservationId,
+          request.auth.uid
+        );
+    }
+
+    // El checklist es privado del viajero. El agente no necesita leerlo
+    // para programar el itinerario ni para atender una incidencia.
+    match /trip_checklist_items/{itemId} {
+      allow read: if isAuthenticated()
+        && resource.data.clientId == request.auth.uid;
+
+      allow create: if isClient()
+        && isValidTripChecklistItem(request.resource.data)
+        && request.resource.data.id == itemId
+        && request.resource.data.clientId == request.auth.uid
+        && paidReservationBelongsToClient(
+          request.resource.data.reservationId,
+          request.auth.uid
+        );
+
+      allow update: if isClient()
+        && resource.data.clientId == request.auth.uid
+        && isValidTripChecklistItem(request.resource.data)
+        && request.resource.data.id == itemId
+        && areImmutableFieldsUnchanged([
+          'id', 'reservationId', 'clientId', 'createdAtMillis'
+        ])
+        && paidReservationBelongsToClient(
+          resource.data.reservationId,
+          request.auth.uid
+        );
+
+      allow delete: if isClient()
+        && resource.data.clientId == request.auth.uid
+        && paidReservationBelongsToClient(
+          resource.data.reservationId,
+          request.auth.uid
+        );
+    }
+
+    // El cliente abre una incidencia. El agente asignado solo puede
+    // responder y avanzar su estado, sin alterar autoría ni descripción.
+    match /trip_incidents/{incidentId} {
+      allow read: if isAuthenticated()
+        && (
+          resource.data.clientId == request.auth.uid
+          || (isAgent() && resource.data.agentId == request.auth.uid)
+        );
+
+      allow create: if isClient()
+        && isValidTripIncident(request.resource.data)
+        && request.resource.data.id == incidentId
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.status == 'Abierta'
+        && request.resource.data.agentResponse == ''
+        && request.resource.data.resolvedAtMillis == null
+        && paidReservationBelongsToClient(
+          request.resource.data.reservationId,
+          request.auth.uid
+        )
+        && get(reservationPath(request.resource.data.reservationId)).data.agentId
+          == request.resource.data.agentId;
+
+      allow update: if isAgent()
+        && resource.data.agentId == request.auth.uid
+        && isValidTripIncident(request.resource.data)
+        && request.resource.data.id == incidentId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'agentResponse', 'status', 'updatedAtMillis', 'resolvedAtMillis'
+        ])
+        && validString(request.resource.data.agentResponse, 5, 1000)
+        && (
+          (resource.data.status == 'Abierta'
+            && request.resource.data.status in ['En revisión', 'Resuelta'])
+          || (resource.data.status == 'En revisión'
+            && request.resource.data.status in ['En revisión', 'Resuelta'])
+          || (resource.data.status == 'Resuelta'
+            && request.resource.data.status == 'Resuelta')
+        )
+        && (request.resource.data.status == 'Resuelta'
+          ? request.resource.data.resolvedAtMillis is int
+          : request.resource.data.resolvedAtMillis == null)
+        && areImmutableFieldsUnchanged([
+          'id', 'reservationId', 'clientId', 'agentId', 'category',
+          'priority', 'description', 'locationName', 'latitude',
+          'longitude', 'createdAtMillis'
+        ])
+        && paidReservationAssignedToAgent(
+          resource.data.reservationId,
+          request.auth.uid
+        );
+
+      allow delete: if false;
     }
 
     // Default deny for every path not explicitly covered above.

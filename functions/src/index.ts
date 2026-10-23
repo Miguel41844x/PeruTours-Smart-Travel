@@ -234,3 +234,96 @@ export const notificarRevisionPago = onDocumentUpdated(
     console.log(`Pago ${after.status} notificado al cliente.`);
   }
 );
+
+// Centro de viaje: una incidencia nueva avisa al agente responsable para
+// que pueda abrir directamente el seguimiento de esa reserva.
+export const notificarNuevaIncidencia = onDocumentCreated(
+  "trip_incidents/{incidentId}",
+  async (event) => {
+    const incident = event.data?.data();
+
+    if (!incident?.agentId || !incident?.reservationId) {
+      console.log("La incidencia no tiene agente o reserva.");
+      return;
+    }
+
+    const agentDocument = await db
+      .collection("users")
+      .doc(incident.agentId)
+      .get();
+    const agentToken = agentDocument.data()?.fcmToken;
+
+    if (!agentToken) {
+      console.log(`El agente ${incident.agentId} no tiene fcmToken.`);
+      return;
+    }
+
+    await messaging.send({
+      token: agentToken,
+      notification: {
+        title: `Nueva incidencia ${incident.priority || ""}`.trim(),
+        body: incident.description ||
+          "Un viajero solicitó ayuda durante su viaje.",
+      },
+      data: {
+        reservationId: incident.reservationId,
+        incidentId: event.params.incidentId,
+        type: "trip_incident",
+        status: incident.status || "Abierta",
+      },
+    });
+
+    console.log(`Incidencia notificada al agente ${incident.agentId}.`);
+  }
+);
+
+// Cuando el agente responde o resuelve la incidencia, el cliente recibe la
+// actualización y puede abrir el centro de su viaje desde la notificación.
+export const notificarRespuestaIncidencia = onDocumentUpdated(
+  "trip_incidents/{incidentId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+
+    if (!before || !after || !after.clientId || !after.reservationId) {
+      return;
+    }
+
+    const responseChanged = before.agentResponse !== after.agentResponse;
+    const statusChanged = before.status !== after.status;
+    if (!responseChanged && !statusChanged) {
+      return;
+    }
+
+    const clientDocument = await db
+      .collection("users")
+      .doc(after.clientId)
+      .get();
+    const clientToken = clientDocument.data()?.fcmToken;
+
+    if (!clientToken) {
+      console.log(`El cliente ${after.clientId} no tiene fcmToken.`);
+      return;
+    }
+
+    const resolved = after.status === "Resuelta";
+    await messaging.send({
+      token: clientToken,
+      notification: {
+        title: resolved ?
+          "Tu incidencia fue resuelta" :
+          "Tu agente respondió la incidencia",
+        body: after.agentResponse ||
+          `La solicitud ahora está ${after.status || "en revisión"}.`,
+      },
+      data: {
+        reservationId: after.reservationId,
+        incidentId: event.params.incidentId,
+        type: "trip_incident_response",
+        status: after.status || "En revisión",
+      },
+    });
+
+    console.log(`Respuesta de incidencia notificada a ${after.clientId}.`);
+  }
+);

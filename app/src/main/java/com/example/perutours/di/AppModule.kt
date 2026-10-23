@@ -184,7 +184,6 @@ val appModule = module {
 
     single<TripBackgroundScheduler> {
         TripWorkScheduler(
-            context = androidContext(),
             workManager = get()
         )
     }

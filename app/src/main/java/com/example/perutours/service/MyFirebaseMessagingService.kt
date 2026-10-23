@@ -112,5 +112,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         const val TYPE_QUOTATION = "quotation"
         const val TYPE_QUOTATION_RESPONSE = "quotation_response"
         const val TYPE_PAYMENT_REVIEW = "payment_review"
+        const val TYPE_TRIP_INCIDENT = "trip_incident"
+        const val TYPE_TRIP_INCIDENT_RESPONSE = "trip_incident_response"
     }
 }
