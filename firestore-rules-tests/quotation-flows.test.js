@@ -41,6 +41,70 @@ const RETURN = BASE_TIME + 2 * 86_400_000;
 
 const dbAs = (uid) => testEnv.authenticatedContext(uid).firestore();
 
+const quotationServices = (count) => Array.from({ length: count }, (_, index) => {
+  const unitCost = 100 + index * 10;
+  return {
+    id: `svc_${index + 1}`,
+    name: `Servicio turistico ${index + 1}`,
+    category: index % 2 === 0 ? 'Tours' : 'Alojamiento',
+    unitCost,
+    commercialCost: 0,
+    supplierName: '',
+    quantity: 1,
+    subtotal: unitCost
+  };
+});
+
+const agentCreateQuotationTx = async (
+  db,
+  serviceCount,
+  quotationId,
+  quotationOverrides = {}
+) => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), 'travel_requests', REQUEST_ID), {
+      status: 'Pendiente de cotizacion',
+      quotationId: ''
+    });
+  });
+
+  const services = quotationServices(serviceCount);
+  const baseCost = services.reduce((total, service) => total + service.subtotal, 0);
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'cotizaciones', quotationId), {
+    id: quotationId,
+    requestId: REQUEST_ID,
+    clientId: CLIENT_UID,
+    clientName: 'Fabian',
+    clientEmail: 'fabianevs123@gmail.com',
+    destination: 'Nazca, Nazca Province, Ica',
+    travelerCount: 4,
+    services,
+    baseCost,
+    marginPercent: 15,
+    totalAmount: baseCost * 1.15,
+    currency: 'PEN',
+    validityDate: '2026-10-28',
+    validUntilMillis: Date.now() + 11 * 86_400_000,
+    conditions: 'Tarifa garantizada hasta fecha de validez.',
+    status: 'Cotizado',
+    agentId: AGENT_UID,
+    agentName: 'Ismael Villegas',
+    version: 1,
+    parentQuotationId: '',
+    createdAtMillis: Date.now(),
+    respondedAtMillis: null,
+    latestObservation: '',
+    reservationId: '',
+    ...quotationOverrides
+  });
+  batch.update(doc(db, 'travel_requests', REQUEST_ID), {
+    status: 'Cotizado',
+    quotationId
+  });
+  return batch.commit();
+};
+
 const seedQuoted = () =>
   testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
@@ -228,50 +292,72 @@ describe('HU05/HU06: cotizaciones y reservas (flujo completo)', () => {
   it('agente guarda una cotizacion nueva y la solicitud pasa a Cotizado', async () => {
     // Replicar saveQuotation: la cotización se CREA (no se actualiza) y la
     // solicitud, que está 'Pendiente de cotizacion', pasa a 'Cotizado'.
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      const db = context.firestore();
-      await updateDoc(doc(db, 'travel_requests', REQUEST_ID), {
-        status: 'Pendiente de cotizacion',
-        quotationId: ''
-      });
-    });
-    const db = dbAs(AGENT_UID);
-    const batch = writeBatch(db);
-    batch.set(doc(db, 'cotizaciones', 'cot_new'), {
-      id: 'cot_new',
-      requestId: REQUEST_ID,
-      clientId: CLIENT_UID,
-      clientName: 'Fabian',
-      clientEmail: 'fabianevs123@gmail.com',
-      destination: 'Nazca, Nazca Province, Ica',
-      travelerCount: 4,
-      services: [{
-        id: 'svc_1', name: 'Tour Nasca Lines', category: 'Tours',
-        unitCost: 145, commercialCost: 0, supplierName: '',
-        quantity: 4, subtotal: 580
-      }],
-      baseCost: 580,
-      marginPercent: 15,
-      totalAmount: 667,
-      currency: 'PEN',
-      validityDate: '2026-10-28',
-      validUntilMillis: Date.now() + 11 * 86_400_000,
-      conditions: 'Tarifa garantizada hasta fecha de validez.',
-      status: 'Cotizado',
-      agentId: AGENT_UID,
-      agentName: 'Ismael Villegas',
-      version: 1,
-      parentQuotationId: '',
-      createdAtMillis: Date.now(),
-      respondedAtMillis: null,
-      latestObservation: '',
-      reservationId: ''
-    });
-    batch.update(doc(db, 'travel_requests', REQUEST_ID), {
-      status: 'Cotizado',
-      quotationId: 'cot_new'
-    });
-    await assertSucceeds(batch.commit());
+    await assertSucceeds(agentCreateQuotationTx(
+      dbAs(AGENT_UID), 1, 'cot_new'
+    ));
+  });
+
+  it('agente guarda una cotizacion con 2 servicios en el mismo batch', async () => {
+    await assertSucceeds(agentCreateQuotationTx(
+      dbAs(AGENT_UID), 2, 'cot_two_services'
+    ));
+  });
+
+  it('agente guarda una cotizacion con el maximo de 5 servicios', async () => {
+    await assertSucceeds(agentCreateQuotationTx(
+      dbAs(AGENT_UID), 5, 'cot_five_services'
+    ));
+  });
+
+  it('rechaza una cotizacion que supera el maximo de 5 servicios', async () => {
+    await assertFails(agentCreateQuotationTx(
+      dbAs(AGENT_UID), 6, 'cot_six_services'
+    ));
+  });
+
+  it('rechaza campos no permitidos en el segundo servicio', async () => {
+    const services = quotationServices(2);
+    services[1] = { ...services[1], extraData: 'no permitido' };
+    await assertFails(agentCreateQuotationTx(
+      dbAs(AGENT_UID), 2, 'cot_polluted_service', { services }
+    ));
+  });
+
+  it('rechaza un tipo invalido en el segundo servicio', async () => {
+    const services = quotationServices(2);
+    services[1] = {
+      ...services[1],
+      unitCost: '110',
+      subtotal: 110
+    };
+    await assertFails(agentCreateQuotationTx(
+      dbAs(AGENT_UID), 2, 'cot_invalid_service_type', { services }
+    ));
+  });
+
+  it('rechaza un rango invalido en el segundo servicio', async () => {
+    const services = quotationServices(2);
+    services[1] = {
+      ...services[1],
+      unitCost: -10,
+      subtotal: -10
+    };
+    await assertFails(agentCreateQuotationTx(
+      dbAs(AGENT_UID), 2, 'cot_invalid_service_range', { services }
+    ));
+  });
+
+  it('rechaza vincular la cotizacion con otro propietario', async () => {
+    await assertFails(agentCreateQuotationTx(
+      dbAs(AGENT_UID),
+      2,
+      'cot_wrong_owner',
+      {
+        clientId: OUTSIDER_UID,
+        clientName: 'Otro',
+        clientEmail: 'otro@x.com'
+      }
+    ));
   });
 
   it('agente revisa la cotizacion observada (nueva version)', async () => {
