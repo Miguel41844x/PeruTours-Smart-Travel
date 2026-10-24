@@ -21,6 +21,7 @@ import java.util.Locale
 import com.example.perutours.data.repository.ProfileRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
+import com.google.firebase.firestore.FirebaseFirestoreException
 
 class QuotationViewModel(
     private val repository: QuotationRepository,
@@ -47,6 +48,7 @@ class QuotationViewModel(
     val catalogLoading: StateFlow<Boolean> =
         _catalogLoading.asStateFlow()
 
+    private var allCatalogServices: List<CatalogService> = emptyList()
 
     fun loadCatalogServices() {
         viewModelScope.launch {
@@ -55,7 +57,8 @@ class QuotationViewModel(
                 // Para actualizar/subir los servicios a Firestore
                 // catalogRepository.syncCatalog()
 
-                _catalogServices.value = catalogRepository.getServices()
+                allCatalogServices = catalogRepository.getServices()
+                filterCatalogForCurrentDestination()
             } catch (_: Exception) {
                 _uiState.value =
                     QuotationUiState.Error(
@@ -100,6 +103,7 @@ class QuotationViewModel(
                         travelerCount = request.travelerCount
                     )
                 }
+                filterCatalogForCurrentDestination()
 
                 // Ya cargamos correctamente la solicitud.
                 _uiState.value = QuotationUiState.Idle
@@ -157,6 +161,7 @@ class QuotationViewModel(
                     validityDays = DEFAULT_REVISION_VALIDITY_DAYS,
                     conditions = quotation.conditions
                 )
+                filterCatalogForCurrentDestination()
                 _uiState.value = QuotationUiState.Idle
             } catch (exception: IllegalStateException) {
                 _uiState.value = QuotationUiState.Error(
@@ -303,13 +308,35 @@ class QuotationViewModel(
                     repository.reviseObservedQuotation(quotation)
                 }
                 _uiState.value = QuotationUiState.Success(saved)
-            } catch (e: Exception) {
-                Log.e("HU05", "save failed", e)
+            } catch (error: Exception) {
+                Log.e("HU05", "save failed", error)
                 _uiState.value = QuotationUiState.Error(
-                    "No pudimos guardar la cotización. Inténtalo nuevamente."
+                    quotationSaveErrorMessage(error)
                 )
             }
         }
+    }
+
+    private fun filterCatalogForCurrentDestination() {
+        _catalogServices.value = QuotationCatalogFilter.forDestination(
+            services = allCatalogServices,
+            destination = _formState.value.destination
+        )
+    }
+
+    private fun quotationSaveErrorMessage(error: Exception): String = when {
+        error is FirebaseFirestoreException &&
+            error.code == FirebaseFirestoreException.Code.PERMISSION_DENIED -> {
+            "La solicitud cambió o ya fue cotizada. Actualiza la lista e inténtalo nuevamente."
+        }
+        error is FirebaseFirestoreException &&
+            error.code == FirebaseFirestoreException.Code.UNAVAILABLE -> {
+            "No hay conexión con Firebase. Revisa tu red e inténtalo nuevamente."
+        }
+        error is IllegalArgumentException || error is IllegalStateException -> {
+            error.message ?: "No pudimos guardar la cotización."
+        }
+        else -> "No pudimos guardar la cotización. Inténtalo nuevamente."
     }
 
     companion object {

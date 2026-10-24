@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.perutours.data.model.CatalogService
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.SectionHeading
 import com.example.perutours.ui.screens.quotation.components.AddCustomServiceDialog
@@ -63,6 +64,22 @@ fun CreateQuotationScreen(
     val catalogServices by viewModel.catalogServices.collectAsState()
     val catalogLoading by viewModel.catalogLoading.collectAsState()
     var showCustomDialog by remember { mutableStateOf(false) }
+    val displayedServices = remember(catalogServices, formState.selectedServices, formState.destination) {
+        val selectedOutsideCatalog = formState.selectedServices.map { selected ->
+            CatalogService(
+                id = selected.id,
+                name = selected.name,
+                city = QuotationCatalogFilter.destinationLabel(formState.destination),
+                category = selected.category,
+                unitCost = selected.unitCost,
+                commercialCost = selected.commercialCost,
+                supplierName = selected.supplierName,
+                description = "Servicio agregado a esta cotización.",
+                defaultQuantity = selected.quantity
+            )
+        }
+        (catalogServices + selectedOutsideCatalog).distinctBy { it.id }
+    }
     val baseCost = formState.selectedServices.sumOf { it.unitCost * it.quantity }
     val totalAmount = Math.round(
         baseCost * (1.0 + formState.marginPercent / 100.0) * 100.0
@@ -223,18 +240,26 @@ fun CreateQuotationScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .widthIn(max = 900.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
                     SectionHeading(
                         title = "Servicios",
-                        supportingText = "Toca un servicio para incluirlo o quitarlo."
+                        supportingText = "Toca un servicio para incluirlo o quitarlo.",
+                        modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        text = "${formState.selectedServices.size} seleccionados",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = "${formState.selectedServices.size}/${QuotationValidator.MAX_SERVICES} servicios",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
+                        )
+                    }
                 }
             }
 
@@ -242,8 +267,25 @@ fun CreateQuotationScreen(
                 item {
                     CircularProgressIndicator(modifier = Modifier.padding(28.dp))
                 }
+            } else if (displayedServices.isEmpty()) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 900.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(
+                            text = "No hay servicios configurados para ${QuotationCatalogFilter.destinationLabel(formState.destination)}. Usa + para agregar un servicio personalizado.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
             } else {
-                items(items = catalogServices, key = { service -> service.id }) { service ->
+                items(items = displayedServices, key = { service -> service.id }) { service ->
                     val isSelected = formState.selectedServices.any { it.id == service.id }
                     ServiceCatalogItemCard(
                         catalogService = service,

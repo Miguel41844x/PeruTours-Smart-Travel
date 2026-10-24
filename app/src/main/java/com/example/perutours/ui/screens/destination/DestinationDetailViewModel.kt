@@ -113,11 +113,18 @@ class DestinationDetailViewModel(
                         )
                     }
                 },
-                onFailure = {
+                onFailure = { error ->
+                    val message = if (
+                        error.message == PointsOfInterestRepository.ERROR_MISSING_GEOAPIFY_KEY
+                    ) {
+                        "El servicio de lugares cercanos no está configurado en esta compilación."
+                    } else {
+                        "No se pudieron cargar los lugares cercanos."
+                    }
                     _uiState.update {
                         it.copy(
                             arePlacesLoading = false,
-                            placesErrorMessage = "No se pudieron cargar los lugares cercanos."
+                            placesErrorMessage = message
                         )
                     }
                 }

@@ -1,5 +1,6 @@
 package com.example.perutours.data.repository
 
+import com.example.perutours.BuildConfig
 import com.example.perutours.data.local.PlaceDao
 import com.example.perutours.data.local.PlaceEntity
 import com.example.perutours.data.remote.geoapify.GeoapifyApiService
@@ -48,6 +49,9 @@ class PointsOfInterestRepository(
         forceRefresh: Boolean = false
     ): Result<List<NearbyPlace>> = withContext(Dispatchers.IO) {
         runCatching {
+            check(BuildConfig.GEOAPIFY_API_KEY.isNotBlank()) {
+                ERROR_MISSING_GEOAPIFY_KEY
+            }
             if (destinationId.isBlank() || (latitude == 0.0 && longitude == 0.0)) {
                 return@runCatching emptyList<NearbyPlace>()
             }
@@ -127,6 +131,8 @@ class PointsOfInterestRepository(
     )
 
     companion object {
+        const val ERROR_MISSING_GEOAPIFY_KEY = "missing_geoapify_api_key"
+
         /**
          * Categorías de Geoapify para turismo: atracciones, museos,
          * parques, esparcimiento y gastronomía.
