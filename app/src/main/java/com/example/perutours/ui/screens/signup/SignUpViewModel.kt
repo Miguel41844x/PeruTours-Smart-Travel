@@ -2,6 +2,8 @@ package com.example.perutours.ui.screens.signup
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.repository.AuthErrorTranslator
+import com.example.perutours.data.repository.AuthOperation
 import com.example.perutours.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -92,11 +94,9 @@ class SignUpViewModel(
                     it.copy(isLoading = false, showVerificationDialog = true)
                 }
             }.onFailure { error ->
-                val errorMsg = error.localizedMessage.orEmpty()
-                val friendly = when {
-                    errorMsg.contains("already in use", true) -> "Este correo electrónico ya está registrado."
-                    else -> "Error al registrarse: $errorMsg"
-                }
+                // El repositorio ya tradujo el error; solo nos aseguramos de no mostrar vacío.
+                val friendly = error.message?.takeIf { it.isNotBlank() }
+                    ?: AuthErrorTranslator.translate(error, AuthOperation.REGISTRO)
                 _uiState.update { it.copy(isLoading = false, generalError = friendly) }
             }
         }

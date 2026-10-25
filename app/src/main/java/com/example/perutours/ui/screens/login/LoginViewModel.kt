@@ -3,6 +3,8 @@ package com.example.perutours.ui.screens.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.messaging.FCMTokenManager
+import com.example.perutours.data.repository.AuthErrorTranslator
+import com.example.perutours.data.repository.AuthOperation
 import com.example.perutours.data.repository.AuthRepository
 import com.example.perutours.data.repository.LoginResult
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,11 +52,11 @@ class LoginViewModel(
                     }
                 }
                 .onFailure { e ->
+                    // El repositorio ya tradujo el error; solo nos aseguramos de no mostrar vacío.
+                    val message = e.message?.takeIf { it.isNotBlank() }
+                        ?: AuthErrorTranslator.translate(e, AuthOperation.RESTABLECER_CONTRASENA)
                     _uiState.update {
-                        it.copy(
-                            isSuccessMessage = false,
-                            infoMessage = "Error: ${e.localizedMessage}"
-                        )
+                        it.copy(isSuccessMessage = false, infoMessage = message)
                     }
                 }
         }
@@ -89,13 +91,12 @@ class LoginViewModel(
                     }
                 }
                 is LoginResult.Error -> {
-                    val friendly = when {
-                        result.message.contains("invalid-credential", true) -> "Correo o contraseña incorrectos."
-                        result.message.contains("badly formatted", true) -> "El formato de correo no es válido."
-                        else -> "Error: ${result.message}"
-                    }
                     _uiState.update {
-                        it.copy(isLoading = false, isSuccessMessage = false, infoMessage = friendly)
+                        it.copy(
+                            isLoading = false,
+                            isSuccessMessage = false,
+                            infoMessage = result.message
+                        )
                     }
                 }
             }
