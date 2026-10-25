@@ -28,7 +28,7 @@ class AuthRepository(
         email: String,
         password: String,
         phone: String
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = try {
         val cleanEmail = email.trim()
         val cleanPass = password.trim()
         val cleanName = name.trim()
@@ -60,6 +60,10 @@ class AuthRepository(
         // 3. Enviar correo de verificación y desloguear por seguridad
         user.sendEmailVerification().await()
         auth.signOut()
+
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(AuthException(AuthErrorTranslator.translate(e, AuthOperation.REGISTRO), e))
     }
 
     /**
@@ -81,7 +85,7 @@ class AuthRepository(
                 LoginResult.Success(user)
             }
         } catch (e: Exception) {
-            LoginResult.Error(e.localizedMessage ?: "Error al iniciar sesión.")
+            LoginResult.Error(AuthErrorTranslator.translate(e, AuthOperation.LOGIN), e)
         }
     }
 
@@ -111,8 +115,13 @@ class AuthRepository(
         }
     }
 
-    suspend fun sendPasswordReset(email: String): Result<Unit> = runCatching {
+    suspend fun sendPasswordReset(email: String): Result<Unit> = try {
         auth.sendPasswordResetEmail(email.trim()).await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(
+            AuthException(AuthErrorTranslator.translate(e, AuthOperation.RESTABLECER_CONTRASENA), e)
+        )
     }
 
     fun logout() {
@@ -150,5 +159,16 @@ class AuthRepository(
 sealed interface LoginResult {
     data class Success(val user: FirebaseUser) : LoginResult
     object EmailNotVerified : LoginResult
-    data class Error(val message: String) : LoginResult
+
+    /**
+     * @param message mensaje ya traducido al español y pensado para mostrarse en pantalla.
+     * @param cause error original de Firebase, para los registros de error.
+     */
+    data class Error(val message: String, val cause: Throwable? = null) : LoginResult
 }
+
+/**
+ * Error de autenticación cuyo mensaje ya fue traducido al español para la persona
+ * que usa la app; conserva el error original en la causa.
+ */
+class AuthException(message: String, cause: Throwable) : Exception(message, cause)
