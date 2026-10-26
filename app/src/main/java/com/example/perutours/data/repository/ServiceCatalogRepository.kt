@@ -1290,6 +1290,90 @@ class ServiceCatalogRepository(
                 description = "Servicio de transporte turístico dentro de Tarapoto y alrededores.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // IQUITOS
+            // =========================
+
+            CatalogService(
+                id = "iquitos_01",
+                name = "City Tour Iquitos",
+                city = "Iquitos",
+                category = "Tours",
+                unitCost = 40.0,
+                description = "Recorrido por la Plaza de Armas, el malecón y la arquitectura histórica de Iquitos.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "iquitos_02",
+                name = "Excursión por el Río Amazonas",
+                city = "Iquitos",
+                category = "Tours",
+                unitCost = 90.0,
+                description = "Paseo fluvial guiado por sectores turísticos del río Amazonas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "iquitos_03",
+                name = "Reserva Nacional Pacaya Samiria",
+                city = "Iquitos",
+                category = "Tours",
+                unitCost = 150.0,
+                description = "Excursión de naturaleza con operadores autorizados y logística local.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "iquitos_04",
+                name = "Visita a Comunidad Amazónica",
+                city = "Iquitos",
+                category = "Experiencias",
+                unitCost = 75.0,
+                description = "Experiencia cultural organizada con una comunidad local participante.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "iquitos_05",
+                name = "Observación de Fauna Amazónica",
+                city = "Iquitos",
+                category = "Aventura",
+                unitCost = 85.0,
+                description = "Actividad de observación de fauna en su hábitat natural con guía.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "iquitos_06",
+                name = "Isla de los Monos",
+                city = "Iquitos",
+                category = "Tours",
+                unitCost = 65.0,
+                description = "Visita a un centro de conservación de primates y educación ambiental.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "iquitos_07",
+                name = "Hotel en Iquitos",
+                city = "Iquitos",
+                category = "Alojamiento",
+                unitCost = 80.0,
+                description = "Alojamiento turístico por noche en Iquitos.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "iquitos_08",
+                name = "Transporte Turístico Iquitos",
+                city = "Iquitos",
+                category = "Transporte",
+                unitCost = 35.0,
+                description = "Traslados turísticos terrestres y coordinación de transporte fluvial local.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
