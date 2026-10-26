@@ -2046,6 +2046,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos dentro de Cerro de Pasco y hacia atractivos cercanos.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // ILO
+            // =========================
+
+            CatalogService(
+                id = "ilo_01",
+                name = "City Tour Ilo",
+                city = "Ilo",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por el malecón, el puerto y los principales atractivos de Ilo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ilo_02",
+                name = "Paseo en Bote por la Costa",
+                city = "Ilo",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Paseo marítimo turístico sujeto a condiciones del mar.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ilo_03",
+                name = "Playa Pozo de Lisas",
+                city = "Ilo",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Visita a la playa Pozo de Lisas y su entorno costero.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ilo_04",
+                name = "Punta Coles",
+                city = "Ilo",
+                category = "Tours",
+                unitCost = 60.0,
+                description = "Excursión para observar paisajes costeros y fauna marina desde zonas permitidas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ilo_05",
+                name = "Kayak en la Costa de Ilo",
+                city = "Ilo",
+                category = "Aventura",
+                unitCost = 55.0,
+                description = "Actividad recreativa en kayak sujeta a condiciones marítimas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ilo_06",
+                name = "Ruta Gastronómica Marina",
+                city = "Ilo",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Experiencia culinaria con pescados y mariscos de la costa de Ilo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ilo_07",
+                name = "Hotel en Ilo",
+                city = "Ilo",
+                category = "Alojamiento",
+                unitCost = 65.0,
+                description = "Alojamiento turístico por noche en Ilo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ilo_08",
+                name = "Transporte Turístico Ilo",
+                city = "Ilo",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Traslados turísticos dentro de Ilo y sus playas cercanas.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
