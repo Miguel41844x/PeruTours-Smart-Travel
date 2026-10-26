@@ -870,6 +870,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos dentro de Tumbes y sus playas cercanas.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // CAJAMARCA
+            // =========================
+
+            CatalogService(
+                id = "cajamarca_01",
+                name = "City Tour Cajamarca",
+                city = "Cajamarca",
+                category = "Tours",
+                unitCost = 40.0,
+                description = "Recorrido por la Plaza de Armas, la Catedral y el centro histórico.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cajamarca_02",
+                name = "Ventanillas de Otuzco",
+                city = "Cajamarca",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Visita guiada al conjunto funerario de Ventanillas de Otuzco.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cajamarca_03",
+                name = "Complejo Arqueológico Cumbemayo",
+                city = "Cajamarca",
+                category = "Tours",
+                unitCost = 60.0,
+                description = "Excursión por el bosque de piedras y los canales prehispánicos de Cumbemayo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cajamarca_04",
+                name = "Cuarto del Rescate",
+                city = "Cajamarca",
+                category = "Tours",
+                unitCost = 30.0,
+                description = "Visita cultural al histórico Cuarto del Rescate.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cajamarca_05",
+                name = "Ruta de Queserías Cajamarquinas",
+                city = "Cajamarca",
+                category = "Experiencias",
+                unitCost = 50.0,
+                description = "Visita a productores locales para conocer la elaboración de quesos.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cajamarca_06",
+                name = "Ruta Gastronómica Cajamarquina",
+                city = "Cajamarca",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Experiencia culinaria con especialidades tradicionales de Cajamarca.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cajamarca_07",
+                name = "Hotel en Cajamarca",
+                city = "Cajamarca",
+                category = "Alojamiento",
+                unitCost = 70.0,
+                description = "Alojamiento turístico por noche en Cajamarca.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cajamarca_08",
+                name = "Transporte Turístico Cajamarca",
+                city = "Cajamarca",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de transporte turístico para recorridos locales.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
