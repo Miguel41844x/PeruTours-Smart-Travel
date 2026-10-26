@@ -1122,6 +1122,90 @@ class ServiceCatalogRepository(
                 description = "Servicio de transporte turístico para recorridos locales.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // HUARAZ
+            // =========================
+
+            CatalogService(
+                id = "huaraz_01",
+                name = "City Tour Huaraz",
+                city = "Huaraz",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por la Plaza de Armas, museos y atractivos urbanos de Huaraz.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huaraz_02",
+                name = "Laguna 69",
+                city = "Huaraz",
+                category = "Aventura",
+                unitCost = 95.0,
+                description = "Excursión de trekking hacia la famosa Laguna 69, sujeta a condiciones climáticas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huaraz_03",
+                name = "Laguna de Llanganuco",
+                city = "Huaraz",
+                category = "Tours",
+                unitCost = 65.0,
+                description = "Visita a las lagunas de Llanganuco dentro del Parque Nacional Huascarán.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huaraz_04",
+                name = "Nevado Pastoruri",
+                city = "Huaraz",
+                category = "Aventura",
+                unitCost = 75.0,
+                description = "Excursión al sector turístico del nevado Pastoruri.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huaraz_05",
+                name = "Complejo Arqueológico Chavín",
+                city = "Huaraz",
+                category = "Tours",
+                unitCost = 85.0,
+                description = "Visita guiada al sitio arqueológico de Chavín de Huántar.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huaraz_06",
+                name = "Trekking por la Cordillera Blanca",
+                city = "Huaraz",
+                category = "Aventura",
+                unitCost = 100.0,
+                description = "Caminata guiada por rutas seleccionadas de la Cordillera Blanca.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huaraz_07",
+                name = "Hotel en Huaraz",
+                city = "Huaraz",
+                category = "Alojamiento",
+                unitCost = 70.0,
+                description = "Alojamiento turístico por noche en Huaraz.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huaraz_08",
+                name = "Transporte Turístico Huaraz",
+                city = "Huaraz",
+                category = "Transporte",
+                unitCost = 35.0,
+                description = "Traslados turísticos en Huaraz y puntos de inicio de excursiones.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
