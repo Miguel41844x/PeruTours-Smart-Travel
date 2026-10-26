@@ -1962,6 +1962,90 @@ class ServiceCatalogRepository(
                 description = "Servicio de traslados turísticos dentro de Huánuco y alrededores.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // CERRO DE PASCO
+            // =========================
+
+            CatalogService(
+                id = "cerro_de_pasco_01",
+                name = "City Tour Cerro de Pasco",
+                city = "Cerro de Pasco",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por los principales espacios urbanos e históricos de Cerro de Pasco.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cerro_de_pasco_02",
+                name = "Laguna de Patarcocha",
+                city = "Cerro de Pasco",
+                category = "Tours",
+                unitCost = 30.0,
+                description = "Visita turística a la laguna de Patarcocha.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cerro_de_pasco_03",
+                name = "Santuario Nacional de Huayllay",
+                city = "Cerro de Pasco",
+                category = "Tours",
+                unitCost = 65.0,
+                description = "Excursión por las formaciones rocosas del Bosque de Piedras de Huayllay.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cerro_de_pasco_04",
+                name = "Trekking en Huayllay",
+                city = "Cerro de Pasco",
+                category = "Aventura",
+                unitCost = 70.0,
+                description = "Caminata guiada por rutas señalizadas del santuario.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cerro_de_pasco_05",
+                name = "Ruta Cultural de Pasco",
+                city = "Cerro de Pasco",
+                category = "Experiencias",
+                unitCost = 40.0,
+                description = "Actividad para conocer las tradiciones y la cultura regional de Pasco.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cerro_de_pasco_06",
+                name = "Ruta Gastronómica Pasqueña",
+                city = "Cerro de Pasco",
+                category = "Experiencias",
+                unitCost = 40.0,
+                description = "Degustación de platos tradicionales de la región.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cerro_de_pasco_07",
+                name = "Hotel en Cerro de Pasco",
+                city = "Cerro de Pasco",
+                category = "Alojamiento",
+                unitCost = 60.0,
+                description = "Alojamiento turístico por noche en Cerro de Pasco.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "cerro_de_pasco_08",
+                name = "Transporte Turístico Pasco",
+                city = "Cerro de Pasco",
+                category = "Transporte",
+                unitCost = 35.0,
+                description = "Traslados turísticos dentro de Cerro de Pasco y hacia atractivos cercanos.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
