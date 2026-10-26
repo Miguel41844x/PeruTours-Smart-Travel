@@ -1038,6 +1038,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos dentro de Ayacucho y sus alrededores.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // HUANCAVELICA
+            // =========================
+
+            CatalogService(
+                id = "huancavelica_01",
+                name = "City Tour Huancavelica",
+                city = "Huancavelica",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por la Plaza de Armas, iglesias y principales espacios históricos.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huancavelica_02",
+                name = "Complejo Termal de San Cristóbal",
+                city = "Huancavelica",
+                category = "Tours",
+                unitCost = 40.0,
+                description = "Visita a los baños termales de San Cristóbal.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huancavelica_03",
+                name = "Ruta de las Iglesias Coloniales",
+                city = "Huancavelica",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Recorrido cultural por iglesias históricas de Huancavelica.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huancavelica_04",
+                name = "Caminata por Paisajes Altoandinos",
+                city = "Huancavelica",
+                category = "Aventura",
+                unitCost = 55.0,
+                description = "Caminata guiada por paisajes altoandinos de la región.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huancavelica_05",
+                name = "Ruta de Artesanía Huancavelicana",
+                city = "Huancavelica",
+                category = "Experiencias",
+                unitCost = 40.0,
+                description = "Encuentro con artesanos locales y sus técnicas tradicionales.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huancavelica_06",
+                name = "Ruta Gastronómica Huancavelicana",
+                city = "Huancavelica",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Experiencia culinaria con platos típicos de Huancavelica.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huancavelica_07",
+                name = "Hotel en Huancavelica",
+                city = "Huancavelica",
+                category = "Alojamiento",
+                unitCost = 60.0,
+                description = "Alojamiento turístico por noche en Huancavelica.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huancavelica_08",
+                name = "Transporte Turístico Huancavelica",
+                city = "Huancavelica",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de transporte turístico para recorridos locales.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
