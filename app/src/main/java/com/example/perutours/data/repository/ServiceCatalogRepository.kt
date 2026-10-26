@@ -1794,6 +1794,90 @@ class ServiceCatalogRepository(
                 description = "Servicio de traslados turísticos dentro de Pucallpa y alrededores.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // ABANCAY
+            // =========================
+
+            CatalogService(
+                id = "abancay_01",
+                name = "City Tour Abancay",
+                city = "Abancay",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por la plaza principal y los atractivos urbanos de Abancay.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "abancay_02",
+                name = "Santuario Nacional de Ampay",
+                city = "Abancay",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Excursión de naturaleza por senderos autorizados del Santuario Nacional de Ampay.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "abancay_03",
+                name = "Complejo Arqueológico Saywite",
+                city = "Abancay",
+                category = "Tours",
+                unitCost = 50.0,
+                description = "Visita guiada al complejo arqueológico de Saywite.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "abancay_04",
+                name = "Mirador de Taraccasa",
+                city = "Abancay",
+                category = "Tours",
+                unitCost = 30.0,
+                description = "Visita al mirador para disfrutar de las vistas panorámicas de Abancay.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "abancay_05",
+                name = "Caminata por el Valle de Abancay",
+                city = "Abancay",
+                category = "Aventura",
+                unitCost = 50.0,
+                description = "Caminata guiada por paisajes naturales del valle.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "abancay_06",
+                name = "Ruta Gastronómica Apurimeña",
+                city = "Abancay",
+                category = "Experiencias",
+                unitCost = 40.0,
+                description = "Experiencia culinaria con platos tradicionales de Apurímac.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "abancay_07",
+                name = "Hotel en Abancay",
+                city = "Abancay",
+                category = "Alojamiento",
+                unitCost = 60.0,
+                description = "Alojamiento turístico por noche en Abancay.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "abancay_08",
+                name = "Transporte Turístico Abancay",
+                city = "Abancay",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Traslados turísticos dentro de Abancay y atractivos cercanos.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
