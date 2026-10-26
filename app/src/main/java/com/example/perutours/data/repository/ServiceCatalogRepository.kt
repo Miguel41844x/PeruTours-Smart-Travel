@@ -1374,6 +1374,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos terrestres y coordinación de transporte fluvial local.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // PUERTO MALDONADO
+            // =========================
+
+            CatalogService(
+                id = "puerto_maldonado_01",
+                name = "City Tour Puerto Maldonado",
+                city = "Puerto Maldonado",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por los principales atractivos urbanos de Puerto Maldonado.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puerto_maldonado_02",
+                name = "Lago Sandoval",
+                city = "Puerto Maldonado",
+                category = "Tours",
+                unitCost = 85.0,
+                description = "Excursión guiada al lago Sandoval en la Reserva Nacional Tambopata.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puerto_maldonado_03",
+                name = "Reserva Nacional Tambopata",
+                city = "Puerto Maldonado",
+                category = "Tours",
+                unitCost = 120.0,
+                description = "Experiencia de naturaleza en sectores autorizados de Tambopata.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puerto_maldonado_04",
+                name = "Caminata por la Selva Amazónica",
+                city = "Puerto Maldonado",
+                category = "Aventura",
+                unitCost = 70.0,
+                description = "Caminata interpretativa por senderos naturales con guía local.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puerto_maldonado_05",
+                name = "Visita a Centro de Rescate de Fauna",
+                city = "Puerto Maldonado",
+                category = "Experiencias",
+                unitCost = 55.0,
+                description = "Visita educativa a un centro autorizado de rescate de fauna silvestre.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puerto_maldonado_06",
+                name = "Paseo por el Río Madre de Dios",
+                city = "Puerto Maldonado",
+                category = "Tours",
+                unitCost = 60.0,
+                description = "Recorrido fluvial turístico por el río Madre de Dios.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puerto_maldonado_07",
+                name = "Hotel en Puerto Maldonado",
+                city = "Puerto Maldonado",
+                category = "Alojamiento",
+                unitCost = 75.0,
+                description = "Alojamiento turístico por noche en Puerto Maldonado.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puerto_maldonado_08",
+                name = "Transporte Turístico Puerto Maldonado",
+                city = "Puerto Maldonado",
+                category = "Transporte",
+                unitCost = 35.0,
+                description = "Traslados turísticos dentro de la ciudad y puntos de excursión.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
