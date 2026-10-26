@@ -1878,6 +1878,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos dentro de Abancay y atractivos cercanos.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // HUÁNUCO
+            // =========================
+
+            CatalogService(
+                id = "huanuco_01",
+                name = "City Tour Huánuco",
+                city = "Huánuco",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por el centro histórico y los principales atractivos de Huánuco.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huanuco_02",
+                name = "Complejo Arqueológico de Kotosh",
+                city = "Huánuco",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Visita guiada al sitio arqueológico conocido por el Templo de las Manos Cruzadas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huanuco_03",
+                name = "Parque Nacional Tingo María",
+                city = "Huánuco",
+                category = "Tours",
+                unitCost = 70.0,
+                description = "Excursión de naturaleza por sectores turísticos autorizados del parque.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huanuco_04",
+                name = "Cueva de las Lechuzas",
+                city = "Huánuco",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Visita guiada a la cueva y su entorno natural en Tingo María.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huanuco_05",
+                name = "Caminata al Mirador de la Bella Durmiente",
+                city = "Huánuco",
+                category = "Aventura",
+                unitCost = 50.0,
+                description = "Caminata por rutas seleccionadas con vistas al paisaje de Tingo María.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huanuco_06",
+                name = "Ruta Gastronómica Huanuqueña",
+                city = "Huánuco",
+                category = "Experiencias",
+                unitCost = 40.0,
+                description = "Degustación de platos tradicionales de Huánuco.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huanuco_07",
+                name = "Hotel en Huánuco",
+                city = "Huánuco",
+                category = "Alojamiento",
+                unitCost = 60.0,
+                description = "Alojamiento turístico por noche en Huánuco.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "huanuco_08",
+                name = "Transporte Turístico Huánuco",
+                city = "Huánuco",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de traslados turísticos dentro de Huánuco y alrededores.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
