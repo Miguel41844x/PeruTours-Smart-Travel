@@ -396,6 +396,7 @@ service cloud.firestore {
         ])
         && hasOnlyAllowedFields(data, [
           'id', 'name', 'city', 'category', 'unitCost',
+          'commercialCost', 'supplierName',
           'description', 'defaultQuantity', 'active'
         ])
         && validString(data.id, 1, 128)
@@ -403,6 +404,9 @@ service cloud.firestore {
         && validString(data.city, 1, 100)
         && validString(data.category, 1, 80)
         && isPositiveBoundedNumber(data.unitCost, 1000000)
+        && isPositiveBoundedNumber(data.commercialCost, 1000000)
+        && data.supplierName is string
+        && data.supplierName.size() <= 120
         && data.description is string
         && data.description.size() <= 1000
         && data.defaultQuantity is int
