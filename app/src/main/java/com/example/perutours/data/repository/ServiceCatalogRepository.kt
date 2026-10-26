@@ -702,6 +702,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos dentro de Chiclayo y zonas cercanas.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // PIURA
+            // =========================
+
+            CatalogService(
+                id = "piura_01",
+                name = "City Tour Piura",
+                city = "Piura",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por la Plaza de Armas, la catedral y el centro histórico de Piura.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "piura_02",
+                name = "Excursión a Catacaos",
+                city = "Piura",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Visita al pueblo artesanal de Catacaos y sus talleres tradicionales.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "piura_03",
+                name = "Tour a las Playas de Colán",
+                city = "Piura",
+                category = "Tours",
+                unitCost = 60.0,
+                description = "Excursión turística a la playa de Colán.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "piura_04",
+                name = "Ruta Cultural de Narihualá",
+                city = "Piura",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Visita al complejo arqueológico y museo de Narihualá.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "piura_05",
+                name = "Paseo en Bicicleta por la Costa",
+                city = "Piura",
+                category = "Aventura",
+                unitCost = 50.0,
+                description = "Recorrido recreativo en bicicleta por rutas costeras seleccionadas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "piura_06",
+                name = "Ruta Gastronómica Piurana",
+                city = "Piura",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Experiencia culinaria con platos típicos de Piura.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "piura_07",
+                name = "Hotel en Piura",
+                city = "Piura",
+                category = "Alojamiento",
+                unitCost = 65.0,
+                description = "Alojamiento turístico por noche en Piura.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "piura_08",
+                name = "Transporte Turístico Piura",
+                city = "Piura",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de traslados turísticos en Piura y alrededores.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
