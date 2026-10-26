@@ -533,6 +533,90 @@ class ServiceCatalogRepository(
                 unitCost = 30.0,
                 description = "Traslados turísticos dentro de Puno y sus alrededores.",
                 defaultQuantity = 1
+            ),
+
+            // =========================
+            // TRUJILLO
+            // =========================
+
+            CatalogService(
+                id = "trujillo_01",
+                name = "City Tour Trujillo",
+                city = "Trujillo",
+                category = "Tours",
+                unitCost = 40.0,
+                description = "Recorrido por el centro histórico y los principales atractivos de Trujillo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "trujillo_02",
+                name = "Complejo Arqueológico Chan Chan",
+                city = "Trujillo",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Visita guiada a la antigua ciudad de adobe de Chan Chan.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "trujillo_03",
+                name = "Huacas del Sol y de la Luna",
+                city = "Trujillo",
+                category = "Tours",
+                unitCost = 60.0,
+                description = "Recorrido arqueológico por las huacas y su museo de sitio.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "trujillo_04",
+                name = "Tour a Huanchaco",
+                city = "Trujillo",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Visita al balneario de Huanchaco y sus tradicionales caballitos de totora.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "trujillo_05",
+                name = "Ruta Gastronómica Trujillana",
+                city = "Trujillo",
+                category = "Experiencias",
+                unitCost = 50.0,
+                description = "Experiencia culinaria con platos tradicionales de La Libertad.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "trujillo_06",
+                name = "Taller de Artesanía Moche",
+                city = "Trujillo",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Actividad cultural para conocer técnicas artesanales inspiradas en la cultura Moche.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "trujillo_07",
+                name = "Hotel en Trujillo",
+                city = "Trujillo",
+                category = "Alojamiento",
+                unitCost = 70.0,
+                description = "Alojamiento turístico por noche en Trujillo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "trujillo_08",
+                name = "Transporte Turístico Trujillo",
+                city = "Trujillo",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de transporte turístico dentro de Trujillo y sus alrededores.",
+                defaultQuantity = 1
             )
         )
 
