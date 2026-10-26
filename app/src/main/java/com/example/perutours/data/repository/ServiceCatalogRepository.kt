@@ -1710,6 +1710,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos dentro de Chachapoyas y hacia atractivos cercanos.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // PUCALLPA
+            // =========================
+
+            CatalogService(
+                id = "pucallpa_01",
+                name = "City Tour Pucallpa",
+                city = "Pucallpa",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por la Plaza de Armas y los principales atractivos de Pucallpa.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "pucallpa_02",
+                name = "Laguna Yarinacocha",
+                city = "Pucallpa",
+                category = "Tours",
+                unitCost = 50.0,
+                description = "Paseo turístico por la laguna Yarinacocha.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "pucallpa_03",
+                name = "Ruta de Arte Shipibo-Konibo",
+                city = "Pucallpa",
+                category = "Experiencias",
+                unitCost = 55.0,
+                description = "Encuentro cultural para conocer el arte y los diseños tradicionales Shipibo-Konibo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "pucallpa_04",
+                name = "Parque Natural de Pucallpa",
+                city = "Pucallpa",
+                category = "Tours",
+                unitCost = 40.0,
+                description = "Visita al parque natural y sus espacios de conservación.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "pucallpa_05",
+                name = "Paseo en Canoa por Yarinacocha",
+                city = "Pucallpa",
+                category = "Aventura",
+                unitCost = 55.0,
+                description = "Paseo en canoa por zonas autorizadas de la laguna.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "pucallpa_06",
+                name = "Ruta Gastronómica Amazónica",
+                city = "Pucallpa",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Degustación de platos y productos típicos de la Amazonía ucayalina.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "pucallpa_07",
+                name = "Hotel en Pucallpa",
+                city = "Pucallpa",
+                category = "Alojamiento",
+                unitCost = 65.0,
+                description = "Alojamiento turístico por noche en Pucallpa.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "pucallpa_08",
+                name = "Transporte Turístico Pucallpa",
+                city = "Pucallpa",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de traslados turísticos dentro de Pucallpa y alrededores.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
