@@ -617,7 +617,91 @@ class ServiceCatalogRepository(
                 unitCost = 30.0,
                 description = "Servicio de transporte turístico dentro de Trujillo y sus alrededores.",
                 defaultQuantity = 1
-            )
+            ),
+
+            // =========================
+            // CHICLAYO
+            // =========================
+
+            CatalogService(
+                id = "chiclayo_01",
+                name = "City Tour Chiclayo",
+                city = "Chiclayo",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por el centro de Chiclayo y sus principales atractivos.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chiclayo_02",
+                name = "Museo Tumbas Reales de Sipán",
+                city = "Chiclayo",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Visita cultural al museo dedicado al Señor de Sipán.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chiclayo_03",
+                name = "Complejo Arqueológico Túcume",
+                city = "Chiclayo",
+                category = "Tours",
+                unitCost = 60.0,
+                description = "Excursión por las pirámides y el museo de sitio de Túcume.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chiclayo_04",
+                name = "Santuario Histórico Bosque de Pómac",
+                city = "Chiclayo",
+                category = "Tours",
+                unitCost = 65.0,
+                description = "Recorrido por el bosque seco y sus atractivos arqueológicos.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chiclayo_05",
+                name = "Ruta Gastronómica Lambayecana",
+                city = "Chiclayo",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Degustación de platos típicos de Lambayeque.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chiclayo_06",
+                name = "Taller de Cerámica Tradicional",
+                city = "Chiclayo",
+                category = "Experiencias",
+                unitCost = 40.0,
+                description = "Actividad para conocer la cerámica y artesanía tradicional de la región.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chiclayo_07",
+                name = "Hotel en Chiclayo",
+                city = "Chiclayo",
+                category = "Alojamiento",
+                unitCost = 65.0,
+                description = "Alojamiento turístico por noche en Chiclayo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chiclayo_08",
+                name = "Transporte Turístico Chiclayo",
+                city = "Chiclayo",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Traslados turísticos dentro de Chiclayo y zonas cercanas.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
