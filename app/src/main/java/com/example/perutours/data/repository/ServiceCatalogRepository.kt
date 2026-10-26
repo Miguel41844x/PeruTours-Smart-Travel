@@ -1458,6 +1458,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos dentro de la ciudad y puntos de excursión.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // TACNA
+            // =========================
+
+            CatalogService(
+                id = "tacna_01",
+                name = "City Tour Tacna",
+                city = "Tacna",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por el centro histórico y los principales monumentos de Tacna.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tacna_02",
+                name = "Complejo Monumental Alto de la Alianza",
+                city = "Tacna",
+                category = "Tours",
+                unitCost = 40.0,
+                description = "Visita cultural al complejo monumental y museo de sitio.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tacna_03",
+                name = "Ruta del Pisco Tacneño",
+                city = "Tacna",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Visita a productores locales para conocer la elaboración de pisco.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tacna_04",
+                name = "Paseo a Boca del Río",
+                city = "Tacna",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Excursión al balneario Boca del Río.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tacna_05",
+                name = "Ruta Gastronómica Tacneña",
+                city = "Tacna",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Experiencia culinaria con platos típicos de Tacna.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tacna_06",
+                name = "Circuito de Petroglifos de Miculla",
+                city = "Tacna",
+                category = "Experiencias",
+                unitCost = 50.0,
+                description = "Visita guiada al sitio arqueológico de Miculla.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tacna_07",
+                name = "Hotel en Tacna",
+                city = "Tacna",
+                category = "Alojamiento",
+                unitCost = 65.0,
+                description = "Alojamiento turístico por noche en Tacna.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tacna_08",
+                name = "Transporte Turístico Tacna",
+                city = "Tacna",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de traslados turísticos dentro de Tacna y alrededores.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
