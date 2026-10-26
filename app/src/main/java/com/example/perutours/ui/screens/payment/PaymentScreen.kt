@@ -210,7 +210,7 @@ fun PaymentScreen(
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Cámara (CameraX)")
+                    Text("Cámara")
                 }
 
                 OutlinedButton(
@@ -332,7 +332,7 @@ fun PaymentScreen(
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Text(
-                            text = "Tu reserva quedó en estado 'Pago enviado'. El agente verificará el pago y te notificaremos la decisión.",
+                            text = "Se ha emviado correctamente el comprobante. El agente verificará el pago y te notificaremos la decisión.",
                             fontSize = 12.sp,
                             color = Color(0xFF047857),
                             modifier = Modifier.padding(top = 4.dp)
