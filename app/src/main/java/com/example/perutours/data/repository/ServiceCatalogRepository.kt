@@ -2132,18 +2132,16 @@ class ServiceCatalogRepository(
             ),
         )
 
-        val batch = firestore.batch()
-
-        services.forEach { service ->
-
-            val reference = firestore
-                .collection(COLLECTION_SERVICES)
-                .document(service.id)
-
-            batch.set(reference, service)
+        services.chunked(100).forEach { chunk ->
+            val batch = firestore.batch()
+            chunk.forEach { service ->
+                val reference = firestore
+                    .collection(COLLECTION_SERVICES)
+                    .document(service.id)
+                batch.set(reference, service)
+            }
+            batch.commit().await()
         }
-
-        batch.commit().await()
     }
 
     companion object {
