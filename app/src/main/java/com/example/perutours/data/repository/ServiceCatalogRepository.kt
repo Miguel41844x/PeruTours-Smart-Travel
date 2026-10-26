@@ -1542,6 +1542,90 @@ class ServiceCatalogRepository(
                 description = "Servicio de traslados turísticos dentro de Tacna y alrededores.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // MOQUEGUA
+            // =========================
+
+            CatalogService(
+                id = "moquegua_01",
+                name = "City Tour Moquegua",
+                city = "Moquegua",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por la plaza principal, casonas y monumentos de Moquegua.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "moquegua_02",
+                name = "Ruta de Bodegas de Moquegua",
+                city = "Moquegua",
+                category = "Tours",
+                unitCost = 50.0,
+                description = "Visita a bodegas tradicionales y productores locales.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "moquegua_03",
+                name = "Cerro Baúl",
+                city = "Moquegua",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Excursión al sitio arqueológico de Cerro Baúl.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "moquegua_04",
+                name = "Ruta de los Geoglifos de Chen Chen",
+                city = "Moquegua",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Recorrido cultural para conocer los geoglifos de Chen Chen.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "moquegua_05",
+                name = "Ruta Gastronómica Moqueguana",
+                city = "Moquegua",
+                category = "Experiencias",
+                unitCost = 40.0,
+                description = "Degustación de platos y productos tradicionales de Moquegua.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "moquegua_06",
+                name = "Caminata por el Valle de Moquegua",
+                city = "Moquegua",
+                category = "Aventura",
+                unitCost = 50.0,
+                description = "Caminata turística por paisajes y zonas rurales del valle.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "moquegua_07",
+                name = "Hotel en Moquegua",
+                city = "Moquegua",
+                category = "Alojamiento",
+                unitCost = 60.0,
+                description = "Alojamiento turístico por noche en Moquegua.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "moquegua_08",
+                name = "Transporte Turístico Moquegua",
+                city = "Moquegua",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Traslados turísticos dentro de Moquegua y sus alrededores.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
