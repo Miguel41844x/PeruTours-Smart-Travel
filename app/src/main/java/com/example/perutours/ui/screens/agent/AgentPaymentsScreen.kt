@@ -33,6 +33,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import com.example.perutours.ui.theme.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -349,7 +350,7 @@ fun AgentPaymentDetailScreen(
                             .widthIn(max = 720.dp)
                             .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+                        colors = ButtonDefaults.buttonColors(containerColor = PeruValley)
                     ) {
                         if (uiState.isSubmitting) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
@@ -392,7 +393,7 @@ fun AgentPaymentDetailScreen(
                 uiState.resolutionMessage?.let { message ->
                     Text(
                         text = message,
-                        color = Color(0xFF047857),
+                        color = PeruValleyDark,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -424,7 +425,7 @@ private fun PaymentResolutionCard(payment: Payment) {
             .fillMaxWidth()
             .widthIn(max = 720.dp),
         shape = RoundedCornerShape(12.dp),
-        color = if (approved) Color(0xFFECFDF5) else MaterialTheme.colorScheme.errorContainer
+        color = if (approved) PeruValleyContainer else MaterialTheme.colorScheme.errorContainer
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -433,14 +434,14 @@ private fun PaymentResolutionCard(payment: Payment) {
             Icon(
                 if (approved) Icons.Default.CheckCircle else Icons.Default.Cancel,
                 contentDescription = null,
-                tint = if (approved) Color(0xFF059669) else MaterialTheme.colorScheme.onErrorContainer
+                tint = if (approved) PeruValley else MaterialTheme.colorScheme.onErrorContainer
             )
             Spacer(Modifier.width(10.dp))
             Column {
                 Text(
                     text = if (approved) "Pago aprobado" else "Pago rechazado",
                     fontWeight = FontWeight.Bold,
-                    color = if (approved) Color(0xFF065F46) else MaterialTheme.colorScheme.onErrorContainer
+                    color = if (approved) PeruValleyDark else MaterialTheme.colorScheme.onErrorContainer
                 )
                 if (!approved && payment.rejectionReason.isNotBlank()) {
                     Text(
@@ -452,7 +453,7 @@ private fun PaymentResolutionCard(payment: Payment) {
                     Text(
                         text = "La reserva del cliente quedó en estado Pagado.",
                         fontSize = 12.sp,
-                        color = Color(0xFF047857)
+                        color = PeruValleyDark
                     )
                 }
             }

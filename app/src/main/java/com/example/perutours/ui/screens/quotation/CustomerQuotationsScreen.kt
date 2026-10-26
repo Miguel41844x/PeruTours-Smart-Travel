@@ -29,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
+import com.example.perutours.ui.theme.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -297,16 +298,16 @@ private fun CustomerQuotationCard(
 @Composable
 internal fun QuotationStatusPill(status: String) {
     val (container, content) = when (status) {
-        Quotation.STATUS_ACCEPTED -> Color(0xFFD1FAE5) to Color(0xFF047857) // Verde
-        Quotation.STATUS_OBSERVED -> Color(0xFFFFEDD5) to Color(0xFFC2410C) // Naranja
-        Quotation.STATUS_CANCELLED -> Color(0xFFF1F5F9) to Color(0xFF64748B) // Gris
-        Quotation.STATUS_QUOTED -> Color(0xFFE0F2FE) to Color(0xFF0369A1) // Azul
+        Quotation.STATUS_ACCEPTED -> PeruValleyContainer to PeruValleyDark // Verde
+        Quotation.STATUS_OBSERVED -> PeruMaizeContainer to StatusPending // Naranja/Ámbar
+        Quotation.STATUS_CANCELLED -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant // Gris
+        Quotation.STATUS_QUOTED -> PeruValleyContainer to PeruValley // Verde/Azul de la paleta
         else -> {
             when {
-                status.contains("Aceptad", ignoreCase = true) -> Color(0xFFD1FAE5) to Color(0xFF047857)
-                status.contains("Observad", ignoreCase = true) || status.contains("Cambios", ignoreCase = true) -> Color(0xFFFFEDD5) to Color(0xFFC2410C)
-                status.contains("Cancelad", ignoreCase = true) -> Color(0xFFF1F5F9) to Color(0xFF64748B)
-                else -> Color(0xFFE0F2FE) to Color(0xFF0369A1)
+                status.contains("Aceptad", ignoreCase = true) -> PeruValleyContainer to PeruValleyDark
+                status.contains("Observad", ignoreCase = true) || status.contains("Cambios", ignoreCase = true) -> PeruMaizeContainer to StatusPending
+                status.contains("Cancelad", ignoreCase = true) -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+                else -> PeruValleyContainer to PeruValley
             }
         }
     }

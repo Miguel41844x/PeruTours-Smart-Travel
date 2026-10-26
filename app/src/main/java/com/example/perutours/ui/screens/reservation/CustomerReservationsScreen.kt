@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.example.perutours.ui.theme.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -204,8 +205,8 @@ internal fun ConfirmedStatusPill(status: String) {
             contentColor = MaterialTheme.colorScheme.onErrorContainer
         }
         Reservation.STATUS_PAID -> {
-            containerColor = Color(0xFFD1FAE5)
-            contentColor = Color(0xFF065F46)
+            containerColor = PeruValleyContainer
+            contentColor = PeruValleyDark
         }
         else -> {
             containerColor = MaterialTheme.colorScheme.tertiaryContainer

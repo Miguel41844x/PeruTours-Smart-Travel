@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import com.example.perutours.ui.theme.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -232,8 +233,8 @@ fun PaymentScreen(
                     .fillMaxWidth()
                     .height(240.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFFF3F4F6))
-                    .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(14.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (uiState.voucherUri != null) {
@@ -318,29 +319,29 @@ fun PaymentScreen(
                 PaymentUploadState.Uploaded -> Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFECFDF5))
+                    colors = CardDefaults.cardColors(containerColor = PeruValleyContainer)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669))
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PeruValleyDark)
                         Text(
                             text = "Comprobante enviado",
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF065F46),
+                            color = PeruValleyDark,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Text(
                             text = "Se ha emviado correctamente el comprobante. El agente verificará el pago y te notificaremos la decisión.",
                             fontSize = 12.sp,
-                            color = Color(0xFF047857),
+                            color = PeruValleyDark,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         Button(
                             onClick = onPaymentSuccess,
                             modifier = Modifier.padding(top = 12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+                            colors = ButtonDefaults.buttonColors(containerColor = PeruValley)
                         ) {
                             Text("Aceptar y Volver")
                         }

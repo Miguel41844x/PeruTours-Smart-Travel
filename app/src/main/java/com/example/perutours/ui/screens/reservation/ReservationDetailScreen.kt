@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.example.perutours.ui.theme.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -271,9 +272,9 @@ fun ReservationDetailScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 when (reservation.status) {
                     Reservation.STATUS_PAID -> PaymentStatusCard(
-                        containerColor = Color(0xFFECFDF5),
+                        containerColor = PeruValleyContainer,
                         icon = {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF059669))
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PeruValleyDark)
                         },
                         title = "Pago aprobado",
                         subtitle = "El agente verificó tu comprobante. ¡Reserva lista!"

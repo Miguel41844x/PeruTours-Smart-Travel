@@ -34,6 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import com.example.perutours.ui.theme.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Icon
@@ -393,10 +394,10 @@ private fun RequestFact(icon: @Composable () -> Unit, text: String) {
 @Composable
 private fun getFilterColors(filter: RequestFilter, selected: Boolean) = run {
     val (container, content) = when (filter) {
-        RequestFilter.PENDING -> Color(0xFFFEF3C7) to Color(0xFFB45309) // Ámbar
-        RequestFilter.QUOTED -> Color(0xFFE0F2FE) to Color(0xFF0369A1) // Azul
-        RequestFilter.ACCEPTED -> Color(0xFFD1FAE5) to Color(0xFF047857) // Verde
-        RequestFilter.OBSERVED -> Color(0xFFFFEDD5) to Color(0xFFC2410C) // Naranja
+        RequestFilter.PENDING -> PeruMaizeContainer to StatusPending // Ámbar
+        RequestFilter.QUOTED -> PeruValleyContainer to StatusReview // Azul
+        RequestFilter.ACCEPTED -> PeruValleyContainer to StatusApproved // Verde
+        RequestFilter.OBSERVED -> PeruMaizeContainer to StatusPending // Naranja
         RequestFilter.ALL -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
 
@@ -413,15 +414,15 @@ private fun getFilterColors(filter: RequestFilter, selected: Boolean) = run {
 private fun RequestStatus(status: String, isPending: Boolean) {
     val (container, content) = when {
         isPending || status.contains("Pendiente", ignoreCase = true) ->
-            Color(0xFFFEF3C7) to Color(0xFFB45309) // Ámbar
+            PeruMaizeContainer to StatusPending // Ámbar
         status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || status.contains("Aceptad", ignoreCase = true) ->
-            Color(0xFFD1FAE5) to Color(0xFF047857) // Verde
+            PeruValleyContainer to StatusApproved // Verde
         status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || status.contains("Observad", ignoreCase = true) || status.contains("Cambios", ignoreCase = true) ->
-            Color(0xFFFFEDD5) to Color(0xFFC2410C) // Naranja
+            PeruMaizeContainer to StatusPending // Naranja
         status.equals(Quotation.STATUS_CANCELLED, ignoreCase = true) || status.contains("Cancelad", ignoreCase = true) ->
-            Color(0xFFF1F5F9) to Color(0xFF64748B) // Gris
+            MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant // Gris
         else ->
-            Color(0xFFE0F2FE) to Color(0xFF0369A1) // Azul
+            PeruValleyContainer to StatusReview // Azul
     }
     val label = when {
         isPending || status.contains("Pendiente", ignoreCase = true) -> "Pendiente"
