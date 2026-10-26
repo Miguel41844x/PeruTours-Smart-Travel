@@ -449,6 +449,90 @@ class ServiceCatalogRepository(
                 unitCost = 30.0,
                 description = "Servicio de transporte turístico para traslados y excursiones en Junín.",
                 defaultQuantity = 1
+            ),
+
+            // =========================
+            // PUNO
+            // =========================
+
+            CatalogService(
+                id = "puno_01",
+                name = "City Tour Puno",
+                city = "Puno",
+                category = "Tours",
+                unitCost = 40.0,
+                description = "Recorrido por la Plaza de Armas, la Catedral y los principales atractivos de Puno.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puno_02",
+                name = "Islas Flotantes de los Uros",
+                city = "Puno",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Visita guiada a las tradicionales islas flotantes del lago Titicaca.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puno_03",
+                name = "Isla Taquile",
+                city = "Puno",
+                category = "Tours",
+                unitCost = 85.0,
+                description = "Excursión a la isla Taquile para conocer sus paisajes y tradiciones textiles.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puno_04",
+                name = "Experiencia Cultural Aymara",
+                city = "Puno",
+                category = "Experiencias",
+                unitCost = 50.0,
+                description = "Actividad cultural para conocer costumbres y tradiciones locales.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puno_05",
+                name = "Kayak en el Lago Titicaca",
+                city = "Puno",
+                category = "Aventura",
+                unitCost = 70.0,
+                description = "Paseo en kayak por sectores autorizados del lago Titicaca.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puno_06",
+                name = "Ruta Gastronómica Puneña",
+                city = "Puno",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Degustación de platos tradicionales de la región de Puno.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puno_07",
+                name = "Hotel en Puno",
+                city = "Puno",
+                category = "Alojamiento",
+                unitCost = 75.0,
+                description = "Alojamiento turístico por noche en Puno.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "puno_08",
+                name = "Transporte Turístico Puno",
+                city = "Puno",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Traslados turísticos dentro de Puno y sus alrededores.",
+                defaultQuantity = 1
             )
         )
 
