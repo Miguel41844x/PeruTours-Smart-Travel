@@ -1626,6 +1626,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos dentro de Moquegua y sus alrededores.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // CHACHAPOYAS
+            // =========================
+
+            CatalogService(
+                id = "chachapoyas_01",
+                name = "City Tour Chachapoyas",
+                city = "Chachapoyas",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por el centro histórico y los principales atractivos de Chachapoyas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chachapoyas_02",
+                name = "Fortaleza de Kuélap",
+                city = "Chachapoyas",
+                category = "Tours",
+                unitCost = 100.0,
+                description = "Excursión a la fortaleza de Kuélap, sujeta a disponibilidad y condiciones de acceso.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chachapoyas_03",
+                name = "Catarata de Gocta",
+                city = "Chachapoyas",
+                category = "Tours",
+                unitCost = 85.0,
+                description = "Caminata guiada hacia la catarata de Gocta.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chachapoyas_04",
+                name = "Sarcófagos de Karajía",
+                city = "Chachapoyas",
+                category = "Tours",
+                unitCost = 65.0,
+                description = "Visita guiada al conjunto funerario de Karajía.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chachapoyas_05",
+                name = "Caverna de Quiocta",
+                city = "Chachapoyas",
+                category = "Tours",
+                unitCost = 60.0,
+                description = "Excursión guiada a la caverna de Quiocta.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chachapoyas_06",
+                name = "Ruta Gastronómica Chachapoyana",
+                city = "Chachapoyas",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Experiencia culinaria con productos y platos típicos de Amazonas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chachapoyas_07",
+                name = "Hotel en Chachapoyas",
+                city = "Chachapoyas",
+                category = "Alojamiento",
+                unitCost = 65.0,
+                description = "Alojamiento turístico por noche en Chachapoyas.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "chachapoyas_08",
+                name = "Transporte Turístico Chachapoyas",
+                city = "Chachapoyas",
+                category = "Transporte",
+                unitCost = 35.0,
+                description = "Traslados turísticos dentro de Chachapoyas y hacia atractivos cercanos.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
