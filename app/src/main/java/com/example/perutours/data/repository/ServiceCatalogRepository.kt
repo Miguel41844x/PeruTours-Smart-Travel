@@ -954,6 +954,90 @@ class ServiceCatalogRepository(
                 description = "Servicio de transporte turístico para recorridos locales.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // AYACUCHO
+            // =========================
+
+            CatalogService(
+                id = "ayacucho_01",
+                name = "City Tour Ayacucho",
+                city = "Ayacucho",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por plazas, iglesias y casonas del centro histórico de Ayacucho.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ayacucho_02",
+                name = "Complejo Arqueológico Wari",
+                city = "Ayacucho",
+                category = "Tours",
+                unitCost = 50.0,
+                description = "Visita guiada al complejo arqueológico de la cultura Wari.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ayacucho_03",
+                name = "Pampa de Ayacucho",
+                city = "Ayacucho",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Excursión al Santuario Histórico de la Pampa de Ayacucho.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ayacucho_04",
+                name = "Cascadas de Millpu",
+                city = "Ayacucho",
+                category = "Tours",
+                unitCost = 85.0,
+                description = "Excursión a las pozas y cascadas de Millpu.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ayacucho_05",
+                name = "Taller de Retablos Ayacuchanos",
+                city = "Ayacucho",
+                category = "Experiencias",
+                unitCost = 50.0,
+                description = "Actividad artesanal para conocer la elaboración de retablos ayacuchanos.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ayacucho_06",
+                name = "Ruta Gastronómica Ayacuchana",
+                city = "Ayacucho",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Degustación de platos tradicionales de Ayacucho.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ayacucho_07",
+                name = "Hotel en Ayacucho",
+                city = "Ayacucho",
+                category = "Alojamiento",
+                unitCost = 65.0,
+                description = "Alojamiento turístico por noche en Ayacucho.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "ayacucho_08",
+                name = "Transporte Turístico Ayacucho",
+                city = "Ayacucho",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Traslados turísticos dentro de Ayacucho y sus alrededores.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
