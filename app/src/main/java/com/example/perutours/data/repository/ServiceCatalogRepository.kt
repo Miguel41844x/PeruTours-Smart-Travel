@@ -786,6 +786,90 @@ class ServiceCatalogRepository(
                 description = "Servicio de traslados turísticos en Piura y alrededores.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // TUMBES
+            // =========================
+
+            CatalogService(
+                id = "tumbes_01",
+                name = "City Tour Tumbes",
+                city = "Tumbes",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por los principales atractivos urbanos e históricos de Tumbes.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tumbes_02",
+                name = "Santuario Nacional Los Manglares",
+                city = "Tumbes",
+                category = "Tours",
+                unitCost = 65.0,
+                description = "Excursión guiada por los manglares y su entorno natural.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tumbes_03",
+                name = "Tour a Punta Sal",
+                city = "Tumbes",
+                category = "Tours",
+                unitCost = 55.0,
+                description = "Visita turística a la playa de Punta Sal.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tumbes_04",
+                name = "Tour a Puerto Pizarro",
+                city = "Tumbes",
+                category = "Tours",
+                unitCost = 50.0,
+                description = "Paseo turístico por Puerto Pizarro y sus paisajes costeros.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tumbes_05",
+                name = "Paseo en Kayak por Manglares",
+                city = "Tumbes",
+                category = "Aventura",
+                unitCost = 60.0,
+                description = "Actividad en kayak por zonas permitidas de los manglares.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tumbes_06",
+                name = "Ruta Gastronómica Tumbesina",
+                city = "Tumbes",
+                category = "Experiencias",
+                unitCost = 45.0,
+                description = "Degustación de platos tradicionales y productos marinos de Tumbes.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tumbes_07",
+                name = "Hotel en Tumbes",
+                city = "Tumbes",
+                category = "Alojamiento",
+                unitCost = 70.0,
+                description = "Alojamiento turístico por noche en Tumbes.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tumbes_08",
+                name = "Transporte Turístico Tumbes",
+                city = "Tumbes",
+                category = "Transporte",
+                unitCost = 35.0,
+                description = "Traslados turísticos dentro de Tumbes y sus playas cercanas.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
