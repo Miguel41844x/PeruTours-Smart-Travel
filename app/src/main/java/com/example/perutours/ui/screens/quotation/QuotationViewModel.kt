@@ -55,7 +55,7 @@ class QuotationViewModel(
             _catalogLoading.value = true
             try {
                 // Para actualizar/subir los servicios a Firestore
-                catalogRepository.syncCatalog()
+                // catalogRepository.syncCatalog()
 
                 allCatalogServices = catalogRepository.getServices()
                 filterCatalogForCurrentDestination()
