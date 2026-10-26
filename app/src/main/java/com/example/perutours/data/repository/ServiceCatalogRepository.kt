@@ -1206,6 +1206,90 @@ class ServiceCatalogRepository(
                 description = "Traslados turísticos en Huaraz y puntos de inicio de excursiones.",
                 defaultQuantity = 1
             ),
+
+            // =========================
+            // TARAPOTO
+            // =========================
+
+            CatalogService(
+                id = "tarapoto_01",
+                name = "City Tour Tarapoto",
+                city = "Tarapoto",
+                category = "Tours",
+                unitCost = 35.0,
+                description = "Recorrido por los principales atractivos urbanos de Tarapoto.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tarapoto_02",
+                name = "Laguna Azul de Sauce",
+                city = "Tarapoto",
+                category = "Tours",
+                unitCost = 75.0,
+                description = "Excursión a la Laguna Azul y sus paisajes naturales.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tarapoto_03",
+                name = "Catarata de Ahuashiyacu",
+                city = "Tarapoto",
+                category = "Tours",
+                unitCost = 45.0,
+                description = "Visita a la catarata de Ahuashiyacu y su entorno natural.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tarapoto_04",
+                name = "Canotaje en el Río Mayo",
+                city = "Tarapoto",
+                category = "Aventura",
+                unitCost = 65.0,
+                description = "Actividad recreativa de canotaje en sectores autorizados del río Mayo.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tarapoto_05",
+                name = "Lamas y Castillo de Lamas",
+                city = "Tarapoto",
+                category = "Tours",
+                unitCost = 50.0,
+                description = "Recorrido cultural por Lamas y sus atractivos locales.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tarapoto_06",
+                name = "Ruta del Cacao y Chocolate",
+                city = "Tarapoto",
+                category = "Experiencias",
+                unitCost = 55.0,
+                description = "Visita a productores locales para conocer el proceso del cacao.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tarapoto_07",
+                name = "Hotel en Tarapoto",
+                city = "Tarapoto",
+                category = "Alojamiento",
+                unitCost = 70.0,
+                description = "Alojamiento turístico por noche en Tarapoto.",
+                defaultQuantity = 1
+            ),
+
+            CatalogService(
+                id = "tarapoto_08",
+                name = "Transporte Turístico Tarapoto",
+                city = "Tarapoto",
+                category = "Transporte",
+                unitCost = 30.0,
+                description = "Servicio de transporte turístico dentro de Tarapoto y alrededores.",
+                defaultQuantity = 1
+            ),
         )
 
         val batch = firestore.batch()
