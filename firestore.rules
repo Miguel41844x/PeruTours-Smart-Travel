@@ -1373,7 +1373,8 @@ service cloud.firestore {
     match /reservations/{reservationId} {
       allow read: if isAuthenticated()
         && (resource.data.clientId == request.auth.uid
-          || (isAgent() && resource.data.agentId == request.auth.uid));
+          || (isAgent() && resource.data.agentId == request.auth.uid)
+          || isManager());
 
       allow create: if !exists(reservationPath(reservationId))
         && isClient()
