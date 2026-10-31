@@ -8,6 +8,6 @@ class AdminDashboardViewModelTest {
     @Test
     fun testConstants() {
         assertEquals(15, AdminDashboardConstants.DEFAULT_PAGE_SIZE)
-        assertEquals(4, AdminDashboardConstants.AVAILABLE_FILTERS.size)
+        assertEquals(5, AdminDashboardConstants.AVAILABLE_FILTERS.size)
     }
 }
