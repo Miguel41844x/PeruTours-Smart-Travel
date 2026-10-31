@@ -145,13 +145,16 @@ service cloud.firestore {
     }
 
     function isManager() {
-      return hasRole('gerente') || hasRole('administrador');
+      return (isAuthenticated() && request.auth.token.email == 'adminperutours@gmail.com')
+        || hasRole('gerente')
+        || hasRole('administrador');
     }
 
     // HU catálogo turístico: la gestión de destinos, proveedores y
     // paquetes está reservada al administrador del caso de negocio.
     function isAdmin() {
-      return hasRole('administrador');
+      return (isAuthenticated() && request.auth.token.email == 'adminperutours@gmail.com')
+        || hasRole('administrador');
     }
 
     // Verify UID has not been tampered with on create.
