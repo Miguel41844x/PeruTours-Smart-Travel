@@ -135,7 +135,8 @@ val appModule = module {
 
     single {
         AdminDashboardRepository(
-            firestore = get()
+            firestore = get(),
+            adminCacheDao = get()
         )
     }
 
@@ -218,6 +219,10 @@ val appModule = module {
 
     single {
         get<AppDatabase>().tripDao()
+    }
+
+    single {
+        get<AppDatabase>().adminCacheDao()
     }
 
     // Centro de viaje: Firestore como origen y Room como lectura offline.

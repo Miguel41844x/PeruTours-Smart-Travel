@@ -5,5 +5,7 @@ data class AdminMetrics(
     val totalReservations: Int = 0,
     val activeCustomers: Int = 0,
     val statusSummary: Map<String, Int> = emptyMap(),
+    val monthlyRevenue: Map<String, Double> = emptyMap(),
+    val isCached: Boolean = false,
     val updatedAtMillis: Long = System.currentTimeMillis()
 )
