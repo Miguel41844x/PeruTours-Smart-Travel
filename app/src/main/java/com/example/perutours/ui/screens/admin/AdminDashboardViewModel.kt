@@ -5,11 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.AdminMetrics
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.data.repository.AdminDashboardRepository
+import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class AdminDashboardUiState(
     val isLoading: Boolean = false,
@@ -19,7 +23,14 @@ data class AdminDashboardUiState(
     val isLoadingMore: Boolean = false,
     val endReached: Boolean = false,
     val errorMessage: String? = null
-)
+) {
+    val formattedUpdatedAt: String
+        get() {
+            if (metrics.updatedAtMillis <= 0L) return "hace un momento"
+            val peruLocale = Locale.Builder().setLanguage("es").setRegion("PE").build()
+            return SimpleDateFormat("dd MMM, HH:mm", peruLocale).format(Date(metrics.updatedAtMillis))
+        }
+}
 
 class AdminDashboardViewModel(
     private val repository: AdminDashboardRepository
@@ -27,6 +38,8 @@ class AdminDashboardViewModel(
 
     private val _uiState = MutableStateFlow(AdminDashboardUiState())
     val uiState: StateFlow<AdminDashboardUiState> = _uiState.asStateFlow()
+
+    private var lastDocumentSnapshot: DocumentSnapshot? = null
 
     init {
         loadData()
@@ -37,16 +50,18 @@ class AdminDashboardViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 val metrics = repository.fetchAdminMetrics()
-                val reservations = repository.fetchReservations(
-                    limit = 15,
-                    statusFilter = _uiState.value.selectedFilterStatus
+                val (reservations, lastDoc) = repository.fetchReservations(
+                    limit = AdminDashboardConstants.DEFAULT_PAGE_SIZE.toLong(),
+                    statusFilter = _uiState.value.selectedFilterStatus,
+                    lastDocument = null
                 )
+                lastDocumentSnapshot = lastDoc
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         metrics = metrics,
                         reservations = reservations,
-                        endReached = reservations.size < 15
+                        endReached = reservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE
                     )
                 }
             } catch (e: Exception) {
@@ -67,16 +82,19 @@ class AdminDashboardViewModel(
     fun setFilterStatus(status: String) {
         if (_uiState.value.selectedFilterStatus == status) return
         _uiState.update { it.copy(selectedFilterStatus = status, endReached = false) }
+        lastDocumentSnapshot = null
         viewModelScope.launch {
             try {
-                val reservations = repository.fetchReservations(
-                    limit = 15,
-                    statusFilter = status
+                val (reservations, lastDoc) = repository.fetchReservations(
+                    limit = AdminDashboardConstants.DEFAULT_PAGE_SIZE.toLong(),
+                    statusFilter = status,
+                    lastDocument = null
                 )
+                lastDocumentSnapshot = lastDoc
                 _uiState.update {
                     it.copy(
                         reservations = reservations,
-                        endReached = reservations.size < 15
+                        endReached = reservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE
                     )
                 }
             } catch (e: Exception) {
@@ -92,17 +110,17 @@ class AdminDashboardViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMore = true) }
             try {
-                val lastCreatedAt = state.reservations.lastOrNull()?.createdAtMillis
-                val moreReservations = repository.fetchReservations(
-                    limit = 15,
+                val (moreReservations, lastDoc) = repository.fetchReservations(
+                    limit = AdminDashboardConstants.DEFAULT_PAGE_SIZE.toLong(),
                     statusFilter = state.selectedFilterStatus,
-                    lastCreatedAt = lastCreatedAt
+                    lastDocument = lastDocumentSnapshot
                 )
+                lastDocumentSnapshot = lastDoc
                 _uiState.update {
                     it.copy(
                         isLoadingMore = false,
                         reservations = state.reservations + moreReservations,
-                        endReached = moreReservations.isEmpty()
+                        endReached = moreReservations.isEmpty() || moreReservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE
                     )
                 }
             } catch (e: Exception) {

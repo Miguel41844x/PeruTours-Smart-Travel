@@ -15,9 +15,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         TripItineraryEntity::class,
         TripChecklistEntity::class,
         TripIncidentEntity::class,
-        AdminMetricsEntity::class
+        AdminMetricsEntity::class,
+        ReservationEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
 
     abstract fun adminCacheDao(): AdminCacheDao
+
+    abstract fun reservationCacheDao(): ReservationCacheDao
 
     companion object {
         @Volatile
@@ -249,6 +252,39 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migración de versión 6 a 7: caché local de reservas para el dashboard admin.
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS reservation_cache (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        quotationId TEXT NOT NULL,
+                        requestId TEXT NOT NULL,
+                        clientId TEXT NOT NULL,
+                        agentId TEXT NOT NULL,
+                        destination TEXT NOT NULL,
+                        originCity TEXT NOT NULL,
+                        departureAtMillis INTEGER NOT NULL,
+                        returnAtMillis INTEGER NOT NULL,
+                        travelerCount INTEGER NOT NULL,
+                        totalAmount REAL NOT NULL,
+                        currency TEXT NOT NULL,
+                        validityDate TEXT NOT NULL,
+                        conditions TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        createdAtMillis INTEGER NOT NULL,
+                        paymentId TEXT NOT NULL,
+                        paymentVoucherUrl TEXT NOT NULL,
+                        paymentMethod TEXT NOT NULL,
+                        paidAtMillis INTEGER,
+                        cachedAtMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -261,7 +297,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_2_3,
                         MIGRATION_3_4,
                         MIGRATION_4_5,
-                        MIGRATION_5_6
+                        MIGRATION_5_6,
+                        MIGRATION_6_7
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()

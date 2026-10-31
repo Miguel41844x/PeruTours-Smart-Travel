@@ -2,6 +2,7 @@ package com.example.perutours.ui.screens.admin
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -51,7 +52,7 @@ fun AdminDashboardScreen(
                     Column {
                         Text("Dashboard administrativo")
                         Text(
-                            text = "Indicadores y gestión del negocio",
+                            text = "Indicadores y analítica del negocio",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -133,7 +134,7 @@ fun AdminDashboardScreen(
                         ) {
                             Icon(Icons.Default.CloudOff, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
                             Text(
-                                text = "Modo sin conexión: Mostrando datos en caché local (Room).",
+                                text = "Sin conexión. Mostrando la última información guardada, actualizada el ${uiState.formattedUpdatedAt}.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
@@ -142,11 +143,257 @@ fun AdminDashboardScreen(
                 }
             }
 
-            // Catalog Access Cards
+            // --- Section: KPI Summary Cards ---
             item {
                 Text(
-                    text = "Catálogo y gestión",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "Indicadores clave (KPIs)",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Wide Revenue Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = "Ingresos totales (Pagados)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Text(
+                                    text = formatCurrency(uiState.metrics.totalRevenue),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.Payments,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
+
+                    // Two Smaller Cards for Reservations and Active Customers
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        KpiCard(
+                            title = "Total reservas",
+                            value = uiState.metrics.totalReservations.toString(),
+                            icon = Icons.Default.Bookmark,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        KpiCard(
+                            title = "Clientes activos",
+                            value = uiState.metrics.activeCustomers.toString(),
+                            icon = Icons.Default.Group,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // --- Section: Numerical Summary by Status ---
+            item {
+                Text(
+                    text = "Resumen de resultados por estado",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (uiState.metrics.statusSummary.isEmpty()) {
+                            Text("No hay reservas registradas aún.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            val total = uiState.metrics.totalReservations.coerceAtLeast(1)
+                            uiState.metrics.statusSummary.forEach { (status, count) ->
+                                val progress = count.toFloat() / total.toFloat()
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                 Row(
+                                     modifier = Modifier.fillMaxWidth(),
+                                     horizontalArrangement = Arrangement.SpaceBetween,
+                                     verticalAlignment = Alignment.CenterVertically
+                                 ) {
+                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                         Surface(
+                                             shape = RoundedCornerShape(4.dp),
+                                             color = getStatusColor(status)
+                                         ) {
+                                             Box(modifier = Modifier.size(10.dp))
+                                         }
+                                         Text(status, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                     }
+                                     Text("$count (${(progress * 100).toInt()}%)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                 }
+                                    LinearProgressIndicator(
+                                        progress = { progress },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp),
+                                        color = getStatusColor(status),
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- Section: Charts ---
+            item {
+                Text(
+                    text = "Comportamiento e ingresos",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Ingresos por mes (Pagados)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        MonthlyRevenueChart(monthlyData = uiState.metrics.monthlyRevenue)
+                    }
+                }
+            }
+
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Distribución de reservas por estado", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        ReservationStatusChart(statusData = uiState.metrics.statusSummary)
+                    }
+                }
+            }
+
+            // --- Section: Paginated Reservations List with Horizontal Filter Chips ---
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Listado de reservas",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${uiState.reservations.size} visibles",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            item {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(AdminDashboardConstants.AVAILABLE_FILTERS) { filter ->
+                        FilterChip(
+                            selected = uiState.selectedFilterStatus == filter,
+                            onClick = { viewModel.setFilterStatus(filter) },
+                            label = { Text(filter) }
+                        )
+                    }
+                }
+            }
+
+            if (uiState.reservations.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("No se encontraron reservas con este filtro.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedButton(onClick = { viewModel.setFilterStatus("Todos") }) {
+                                Text("Limpiar filtro")
+                            }
+                        }
+                    }
+                }
+            } else {
+                items(uiState.reservations, key = { it.id }) { reservation ->
+                    ReservationItemCard(reservation = reservation)
+                }
+
+                if (!uiState.endReached) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (uiState.isLoadingMore) {
+                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            } else {
+                                OutlinedButton(onClick = viewModel::loadMoreReservations) {
+                                    Text("Cargar más reservas")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- Section: Catalog Management Shortcuts (Bottom) ---
+            item {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Gestión del catálogo",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -174,194 +421,6 @@ fun AdminDashboardScreen(
                         modifier = Modifier.weight(1f),
                         onClick = onManageProviders
                     )
-                }
-            }
-
-            // KPI Summary Cards
-            item {
-                Text(
-                    text = "Indicadores clave (KPIs)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    KpiCard(
-                        title = "Ingresos",
-                        value = formatCurrency(uiState.metrics.totalRevenue),
-                        icon = Icons.Default.Payments,
-                        accent = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "Reservas",
-                        value = uiState.metrics.totalReservations.toString(),
-                        icon = Icons.Default.Bookmark,
-                        accent = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "Clientes",
-                        value = uiState.metrics.activeCustomers.toString(),
-                        icon = Icons.Default.Group,
-                        accent = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            // Numerical Summary by Status
-            item {
-                Text(
-                    text = "Resumen de resultados por estado",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (uiState.metrics.statusSummary.isEmpty()) {
-                            Text("No hay reservas registradas aún.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            uiState.metrics.statusSummary.forEach { (status, count) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Surface(
-                                            shape = RoundedCornerShape(4.dp),
-                                            color = getStatusColor(status)
-                                        ) {
-                                            Box(modifier = Modifier.size(10.dp))
-                                        }
-                                        Text(status, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                                    }
-                                    Badge { Text(count.toString()) }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Charts Section
-            item {
-                Text(
-                    text = "Comportamiento e ingresos",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text("Ingresos por mes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        MonthlyRevenueChart(monthlyData = uiState.metrics.monthlyRevenue)
-                    }
-                }
-            }
-
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text("Reservas por estado", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        ReservationStatusChart(statusData = uiState.metrics.statusSummary)
-                    }
-                }
-            }
-
-            // Paginated Reservations List with Filters
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Listado de reservas",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${uiState.reservations.size} visibles",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item {
-                // Filter Chips
-                val filters = listOf("Todos", "Confirmada", "Pago enviado", "Pagado", "Pago rechazado")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    filters.forEach { filter ->
-                        FilterChip(
-                            selected = uiState.selectedFilterStatus == filter,
-                            onClick = { viewModel.setFilterStatus(filter) },
-                            label = { Text(filter, maxLines = 1) }
-                        )
-                    }
-                }
-            }
-
-            if (uiState.reservations.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No se encontraron reservas con este filtro.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            } else {
-                items(uiState.reservations, key = { it.id }) { reservation ->
-                    ReservationItemCard(reservation = reservation)
-                }
-
-                if (!uiState.endReached) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (uiState.isLoadingMore) {
-                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                            } else {
-                                OutlinedButton(onClick = viewModel::loadMoreReservations) {
-                                    Text("Cargar más reservas")
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -398,25 +457,27 @@ private fun KpiCard(
     title: String,
     value: String,
     icon: ImageVector,
-    accent: Color,
+    containerColor: Color,
+    contentColor: Color,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.height(100.dp),
+        modifier = modifier.height(96.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         shape = MaterialTheme.shapes.medium
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp),
+                .padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
+                Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, style = MaterialTheme.typography.labelSmall, color = contentColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, color = contentColor)
         }
     }
 }
@@ -429,7 +490,7 @@ private fun ReservationItemCard(reservation: Reservation) {
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -447,14 +508,9 @@ private fun ReservationItemCard(reservation: Reservation) {
                 Badge(
                     containerColor = getStatusColor(reservation.status)
                 ) {
-                    Text(reservation.status, color = Color.White)
+                    Text(reservation.status, color = MaterialTheme.colorScheme.onError)
                 }
             }
-            Text(
-                text = "ID: ${reservation.id.take(8)}... • Pasajeros: ${reservation.travelerCount}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -462,7 +518,7 @@ private fun ReservationItemCard(reservation: Reservation) {
                 Text(
                     text = formatCurrency(reservation.totalAmount),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
@@ -484,7 +540,7 @@ private fun MonthlyRevenueChart(monthlyData: Map<String, Double>) {
                 .height(200.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text("No hay datos de ingresos mensuales.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("No hay datos de ingresos pagados.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
@@ -525,11 +581,19 @@ private fun MonthlyRevenueChart(monthlyData: Map<String, Double>) {
                 setDrawValues(false)
                 setDrawFilled(true)
                 fillColor = primaryColor
-                fillAlpha = 30
+                fillAlpha = 35
             }
 
             chart.axisLeft.textColor = axisColor
             chart.axisLeft.gridColor = gridColor
+            chart.axisLeft.valueFormatter = object : ValueFormatter() {
+                override fun getFormattedValue(value: Float): String {
+                    if (value >= 1000f) {
+                        return String.format(Locale.US, "S/ %.1fk", value / 1000f)
+                    }
+                    return "S/ ${value.toInt()}"
+                }
+            }
             chart.xAxis.textColor = axisColor
             chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
             chart.data = LineData(dataSet)
@@ -547,7 +611,7 @@ private fun ReservationStatusChart(statusData: Map<String, Int>) {
                 .height(200.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text("No hay estados de reservas para graficar.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("No hay reservas para comparar.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
@@ -555,10 +619,10 @@ private fun ReservationStatusChart(statusData: Map<String, Int>) {
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
     val gridColor = MaterialTheme.colorScheme.outlineVariant.toArgb()
     val barColors = listOf(
-        Color(0xFF2E7D32).toArgb(),
-        Color(0xFFEF6C00).toArgb(),
-        Color(0xFF1565C0).toArgb(),
-        Color(0xFFC62828).toArgb()
+        MaterialTheme.colorScheme.tertiary.toArgb(),
+        MaterialTheme.colorScheme.secondary.toArgb(),
+        MaterialTheme.colorScheme.primary.toArgb(),
+        MaterialTheme.colorScheme.error.toArgb()
     )
 
     val entries = statusData.entries.mapIndexed { index, entry ->
@@ -606,13 +670,14 @@ private fun ReservationStatusChart(statusData: Map<String, Int>) {
     )
 }
 
+@Composable
 private fun getStatusColor(status: String): Color {
     return when (status) {
-        "Pagado" -> Color(0xFF2E7D32)
-        "Pago enviado" -> Color(0xFFEF6C00)
-        "Confirmada" -> Color(0xFF1565C0)
-        "Pago rechazado" -> Color(0xFFC62828)
-        else -> Color(0xFF757575)
+        "Pagado" -> MaterialTheme.colorScheme.tertiary
+        "Pago enviado" -> MaterialTheme.colorScheme.secondary
+        "Confirmada" -> MaterialTheme.colorScheme.primary
+        "Pago rechazado" -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.outline
     }
 }
 
