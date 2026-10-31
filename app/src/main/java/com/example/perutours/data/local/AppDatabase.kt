@@ -14,9 +14,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         TripEntity::class,
         TripItineraryEntity::class,
         TripChecklistEntity::class,
-        TripIncidentEntity::class
+        TripIncidentEntity::class,
+        AdminMetricsEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +27,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun placeDao(): PlaceDao
 
     abstract fun tripDao(): TripDao
+
+    abstract fun adminCacheDao(): AdminCacheDao
 
     companion object {
         @Volatile
@@ -227,6 +230,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migración de versión 5 a 6: caché local de métricas del dashboard de administración.
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS admin_metrics_cache (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        totalRevenue REAL NOT NULL,
+                        totalReservations INTEGER NOT NULL,
+                        activeCustomers INTEGER NOT NULL,
+                        statusSummaryEncoded TEXT NOT NULL,
+                        monthlyRevenueEncoded TEXT NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -238,7 +260,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_1_2,
                         MIGRATION_2_3,
                         MIGRATION_3_4,
-                        MIGRATION_4_5
+                        MIGRATION_4_5,
+                        MIGRATION_5_6
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
