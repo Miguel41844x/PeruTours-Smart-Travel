@@ -105,11 +105,12 @@ class AdminDashboardRepository(
     ): Pair<List<Reservation>, DocumentSnapshot?> {
         return try {
             var query: Query = firestore.collection("reservations")
-                .orderBy("status")
-                .orderBy("createdAtMillis", Query.Direction.DESCENDING)
 
-            if (!statusFilter.isNullOrBlank() && statusFilter != "Todos") {
-                query = query.whereEqualTo("status", statusFilter)
+            query = if (!statusFilter.isNullOrBlank() && statusFilter != "Todos") {
+                query.whereEqualTo("status", statusFilter)
+                    .orderBy("createdAtMillis", Query.Direction.DESCENDING)
+            } else {
+                query.orderBy("createdAtMillis", Query.Direction.DESCENDING)
             }
 
             if (lastDocument != null) {
@@ -133,12 +134,11 @@ class AdminDashboardRepository(
             val cachedEntities = reservationCacheDao?.getCachedReservations(
                 status = statusFilter ?: "Todos",
                 limit = limit.toInt()
-            )
-            val reservations = cachedEntities?.map { it.toReservation() } ?: emptyList()
-            if (reservations.isEmpty() && cachedEntities == null) {
+            ).orEmpty()
+            if (cachedEntities.isEmpty()) {
                 throw e
             }
-            Pair(reservations, null)
+            Pair(cachedEntities.map { it.toReservation() }, null)
         }
     }
 }

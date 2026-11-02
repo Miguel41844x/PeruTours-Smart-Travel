@@ -48,8 +48,16 @@ class AdminDashboardViewModel(
     fun loadData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            var errorMsg: String? = null
+
             try {
                 val metrics = repository.fetchAdminMetrics()
+                _uiState.update { it.copy(metrics = metrics) }
+            } catch (e: Exception) {
+                errorMsg = e.localizedMessage ?: "Error al cargar métricas"
+            }
+
+            try {
                 val (reservations, lastDoc) = repository.fetchReservations(
                     limit = AdminDashboardConstants.DEFAULT_PAGE_SIZE.toLong(),
                     statusFilter = _uiState.value.selectedFilterStatus,
@@ -59,16 +67,16 @@ class AdminDashboardViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        metrics = metrics,
                         reservations = reservations,
-                        endReached = reservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE
+                        endReached = lastDoc == null || reservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE,
+                        errorMessage = errorMsg
                     )
                 }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = e.localizedMessage ?: "Error al cargar datos del dashboard"
+                        errorMessage = errorMsg ?: (e.localizedMessage ?: "Error al cargar listado de reservas")
                     )
                 }
             }
@@ -81,7 +89,7 @@ class AdminDashboardViewModel(
 
     fun setFilterStatus(status: String) {
         if (_uiState.value.selectedFilterStatus == status) return
-        _uiState.update { it.copy(selectedFilterStatus = status, endReached = false) }
+        _uiState.update { it.copy(selectedFilterStatus = status, endReached = false, errorMessage = null) }
         lastDocumentSnapshot = null
         viewModelScope.launch {
             try {
@@ -94,7 +102,7 @@ class AdminDashboardViewModel(
                 _uiState.update {
                     it.copy(
                         reservations = reservations,
-                        endReached = reservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE
+                        endReached = lastDoc == null || reservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE
                     )
                 }
             } catch (e: Exception) {
@@ -116,11 +124,12 @@ class AdminDashboardViewModel(
                     lastDocument = lastDocumentSnapshot
                 )
                 lastDocumentSnapshot = lastDoc
+                val combined = (state.reservations + moreReservations).distinctBy { it.id }
                 _uiState.update {
                     it.copy(
                         isLoadingMore = false,
-                        reservations = state.reservations + moreReservations,
-                        endReached = moreReservations.isEmpty() || moreReservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE
+                        reservations = combined,
+                        endReached = lastDoc == null || moreReservations.isEmpty() || moreReservations.size < AdminDashboardConstants.DEFAULT_PAGE_SIZE
                     )
                 }
             } catch (e: Exception) {
