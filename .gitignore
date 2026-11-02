@@ -23,3 +23,5 @@ geoapify.properties
 /app/release/
 scripts/serviceAccount*.json
 scripts/node_modules/
+/.artifacts/
+
