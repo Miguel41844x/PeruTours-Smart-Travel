@@ -9,7 +9,7 @@ FCM), Retrofit para APIs externas y Room para lectura offline.
 La pantalla principal incluye la sección **"Recomendado para ti"**, que sugiere
 destinos personalizados usando:
 
-- **IA: Google Gemini 2.5 Flash** (tier gratuito de Google AI Studio) llamado por
+- **IA: Google Gemini 3.8 Flash** (tier gratuito de Google AI Studio) llamado por
   **Retrofit + corrutinas**, que devuelve un JSON con los destinos rankeados y una
   razón personalizada en español.
 - **Recomendador local de respaldo** (filtrado de contenido por reglas): si no hay

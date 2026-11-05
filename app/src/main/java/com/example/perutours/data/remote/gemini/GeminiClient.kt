@@ -18,7 +18,10 @@ object GeminiClient {
     const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/"
 
     // Modelo gratuito del tier free: rápido y con buena salida en español.
-    const val MODEL = "gemini-2.5-flash"
+    // Nota: gemini-2.5-flash dejó de estar disponible para usuarios nuevos
+    // y los modelos 3.7/3.8 estaban saturados (503) al momento de probar;
+    // gemini-3.6-flash respondió de forma estable.
+    const val MODEL = "gemini-3.6-flash"
 
     @Volatile
     private var apiService: GeminiApiService? = null
