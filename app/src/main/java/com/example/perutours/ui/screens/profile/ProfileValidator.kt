@@ -1,18 +1,26 @@
 package com.example.perutours.ui.screens.profile
 
+import com.example.perutours.data.model.TravelProfileOptions
+
 data class ProfileValidationResult(
     val nameError: String? = null,
     val phoneError: String? = null,
     val dniError: String? = null,
     val cityError: String? = null,
-    val preferencesError: String? = null
+    val preferencesError: String? = null,
+    val tripTypeError: String? = null,
+    val budgetError: String? = null,
+    val durationError: String? = null
 ) {
     val isValid: Boolean
         get() = nameError == null &&
                 phoneError == null &&
                 dniError == null &&
                 cityError == null &&
-                preferencesError == null
+                preferencesError == null &&
+                tripTypeError == null &&
+                budgetError == null &&
+                durationError == null
 }
 
 object ProfileValidator {
@@ -22,13 +30,19 @@ object ProfileValidator {
         phone: String,
         dni: String,
         city: String,
-        selectedPreferences: Set<String>
+        selectedPreferences: Set<String>,
+        tripType: String,
+        budget: String,
+        duration: String
     ): ProfileValidationResult {
 
         val cleanName = name.trim()
         val cleanPhone = phone.trim()
         val cleanDni = dni.trim()
         val cleanCity = city.trim()
+        val cleanTripType = tripType.trim()
+        val cleanBudget = budget.trim()
+        val cleanDuration = duration.trim()
 
         // Nombre: letras, espacios y caracteres propios del español
         val nameRegex =
@@ -120,12 +134,38 @@ object ProfileValidator {
                 null
             }
 
+        // HU10: tipo de viaje, presupuesto y duración son obligatorios
+        // y solo aceptan los valores permitidos (TravelProfileOptions).
+        val tripTypeError =
+            if (cleanTripType in TravelProfileOptions.tripTypes) {
+                null
+            } else {
+                "Selecciona tu tipo de viaje."
+            }
+
+        val budgetError =
+            if (cleanBudget in TravelProfileOptions.budgets) {
+                null
+            } else {
+                "Selecciona tu presupuesto de viaje."
+            }
+
+        val durationError =
+            if (cleanDuration in TravelProfileOptions.durations) {
+                null
+            } else {
+                "Selecciona la duración de tu viaje."
+            }
+
         return ProfileValidationResult(
             nameError = nameError,
             phoneError = phoneError,
             dniError = dniError,
             cityError = cityError,
-            preferencesError = preferencesError
+            preferencesError = preferencesError,
+            tripTypeError = tripTypeError,
+            budgetError = budgetError,
+            durationError = durationError
         )
     }
 }

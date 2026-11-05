@@ -137,7 +137,10 @@ class ProfileViewModel(
             phone = state.phone,
             dni = state.dni,
             city = state.city,
-            selectedPreferences = state.selectedPreferences
+            selectedPreferences = state.selectedPreferences,
+            tripType = state.tripType,
+            budget = state.budget,
+            duration = state.duration
         )
 
         _uiState.value = state.copy(
@@ -145,7 +148,10 @@ class ProfileViewModel(
             phoneError = validation.phoneError,
             dniError = validation.dniError,
             cityError = validation.cityError,
-            preferencesError = validation.preferencesError
+            preferencesError = validation.preferencesError,
+            tripTypeError = validation.tripTypeError,
+            budgetError = validation.budgetError,
+            durationError = validation.durationError
         )
 
         return validation.isValid
@@ -181,7 +187,10 @@ class ProfileViewModel(
                     city = state.city.trim(),
                     role = state.role,
                     photoUrl = state.photoUrl,
-                    preferences = state.selectedPreferences.toList()
+                    preferences = state.selectedPreferences.toList(),
+                    tripType = state.tripType.trim(),
+                    budget = state.budget.trim(),
+                    duration = state.duration.trim()
                 )
 
                 repository.saveProfile(profile)

@@ -15,7 +15,10 @@ class ProfileValidatorTest {
             phone = "987654321",
             dni = "",
             city = "Lima, Perú",
-            selectedPreferences = setOf("Historia y Cultura")
+            selectedPreferences = setOf("Historia y Cultura"),
+            tripType = "Cultura",
+            budget = "Medio",
+            duration = "1 semana"
         )
 
         assertTrue(result.isValid)
@@ -23,6 +26,9 @@ class ProfileValidatorTest {
         assertNull(result.phoneError)
         assertNull(result.cityError)
         assertNull(result.preferencesError)
+        assertNull(result.tripTypeError)
+        assertNull(result.budgetError)
+        assertNull(result.durationError)
     }
 
     @Test
@@ -32,7 +38,10 @@ class ProfileValidatorTest {
             phone = "",
             dni = "",
             city = " ",
-            selectedPreferences = emptySet()
+            selectedPreferences = emptySet(),
+            tripType = "",
+            budget = "",
+            duration = ""
         )
 
         assertFalse(result.isValid)
@@ -40,6 +49,9 @@ class ProfileValidatorTest {
         assertEquals("El número de celular es obligatorio.", result.phoneError)
         assertEquals("La ciudad o país de origen es obligatorio.", result.cityError)
         assertEquals("Selecciona al menos una preferencia de viaje.", result.preferencesError)
+        assertEquals("Selecciona tu tipo de viaje.", result.tripTypeError)
+        assertEquals("Selecciona tu presupuesto de viaje.", result.budgetError)
+        assertEquals("Selecciona la duración de tu viaje.", result.durationError)
     }
 
     @Test
@@ -49,7 +61,10 @@ class ProfileValidatorTest {
             phone = "812345678",
             dni = "",
             city = "Cusco",
-            selectedPreferences = setOf("Aventura y Trekking")
+            selectedPreferences = setOf("Aventura y Trekking"),
+            tripType = "Aventura",
+            budget = "Económico",
+            duration = "3-5 días"
         )
 
         assertFalse(result.isValid)
@@ -63,7 +78,10 @@ class ProfileValidatorTest {
             phone = " 987654321 ",
             dni = "",
             city = "  Cusco  ",
-            selectedPreferences = setOf("Gastronomía Peruana")
+            selectedPreferences = setOf("Gastronomía Peruana"),
+            tripType = "  Gastronomía  ",
+            budget = "  Premium  ",
+            duration = "  Fin de semana  "
         )
 
         assertTrue(result.isValid)

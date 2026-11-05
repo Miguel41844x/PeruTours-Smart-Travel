@@ -29,12 +29,20 @@ data class ProfileUiState(
     // Preferencias obtenidas desde Firestore
     val availablePreferences: List<Preference> = emptyList(),
 
+    // HU10: preferencias estructuradas del viaje (tipo, presupuesto, duración)
+    val tripType: String = "",
+    val budget: String = "",
+    val duration: String = "",
+
     // Errores de validación
     val nameError: String? = null,
     val phoneError: String? = null,
     val dniError: String? = null,
     val cityError: String? = null,
     val preferencesError: String? = null,
+    val tripTypeError: String? = null,
+    val budgetError: String? = null,
+    val durationError: String? = null,
 
     // Estados de carga
     val isLoadingInitialData: Boolean = true,
