@@ -77,7 +77,6 @@ import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
 import com.example.perutours.R
 import com.example.perutours.data.model.Recommendation
-import com.example.perutours.data.model.RecommendationSource
 import com.example.perutours.data.remote.DestinationDto
 import com.example.perutours.ui.components.PeruToursBrand
 import com.example.perutours.ui.components.ScreenHorizontalPadding
@@ -638,25 +637,13 @@ private fun RecommendationCard(
                         .align(Alignment.TopStart)
                         .padding(8.dp),
                     shape = MaterialTheme.shapes.small,
-                    color = if (recommendation.source == RecommendationSource.AI) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    }
+                    color = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Text(
-                        text = if (recommendation.source == RecommendationSource.AI) {
-                            "Recomendado por IA"
-                        } else {
-                            "Recomendado por reglas"
-                        },
+                        text = "Recomendaciones",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (recommendation.source == RecommendationSource.AI) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        }
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
