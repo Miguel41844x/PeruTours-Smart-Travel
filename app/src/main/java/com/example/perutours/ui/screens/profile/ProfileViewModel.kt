@@ -81,6 +81,9 @@ class ProfileViewModel(
             photoUrl = profile.photoUrl,
             selectedPreferences = profile.preferences.toSet(),
             availablePreferences = preferences,
+            tripType = profile.tripType,
+            budget = profile.budget,
+            duration = profile.duration,
             isLoadingInitialData = false,
             message = message
         )
@@ -127,6 +130,28 @@ class ProfileViewModel(
         _uiState.value = _uiState.value.copy(
             selectedPreferences = updated,
             preferencesError = null
+        )
+    }
+
+    // HU10: selección de tipo de viaje, presupuesto y duración
+    fun onTripTypeSelected(value: String) {
+        _uiState.value = _uiState.value.copy(
+            tripType = value,
+            tripTypeError = null
+        )
+    }
+
+    fun onBudgetSelected(value: String) {
+        _uiState.value = _uiState.value.copy(
+            budget = value,
+            budgetError = null
+        )
+    }
+
+    fun onDurationSelected(value: String) {
+        _uiState.value = _uiState.value.copy(
+            duration = value,
+            durationError = null
         )
     }
 

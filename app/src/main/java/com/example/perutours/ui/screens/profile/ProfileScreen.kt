@@ -97,6 +97,7 @@ import coil.compose.AsyncImage
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
+import com.example.perutours.data.model.TravelProfileOptions
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -105,7 +106,10 @@ private data class ProfileSignature(
     val phone: String,
     val dni: String,
     val city: String,
-    val preferences: Set<String>
+    val preferences: Set<String>,
+    val tripType: String,
+    val budget: String,
+    val duration: String
 )
 
 private fun ProfileUiState.signature() = ProfileSignature(
@@ -113,7 +117,10 @@ private fun ProfileUiState.signature() = ProfileSignature(
     phone = phone,
     dni = dni,
     city = city,
-    preferences = selectedPreferences
+    preferences = selectedPreferences,
+    tripType = tripType,
+    budget = budget,
+    duration = duration
 )
 
 private fun createTempImageFile(context: Context): File {
@@ -445,6 +452,102 @@ fun ProfileScreen(
                     }
 
                     uiState.preferencesError?.let { error ->
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    // HU10: tipo de viaje, presupuesto y duración
+                    SectionHeading(
+                        title = "Tipo de viaje",
+                        supportingText = "¿Qué tipo de experiencia buscas?"
+                    )
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TravelProfileOptions.tripTypes.forEach { option ->
+                            val isSelected = option == uiState.tripType
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.onTripTypeSelected(option) },
+                                label = { Text(option) },
+                                leadingIcon = if (isSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                } else null
+                            )
+                        }
+                    }
+
+                    uiState.tripTypeError?.let { error ->
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    SectionHeading(
+                        title = "Presupuesto",
+                        supportingText = "Rango aproximado por persona"
+                    )
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TravelProfileOptions.budgets.forEach { option ->
+                            val isSelected = option == uiState.budget
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.onBudgetSelected(option) },
+                                label = { Text(option) },
+                                leadingIcon = if (isSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                } else null
+                            )
+                        }
+                    }
+
+                    uiState.budgetError?.let { error ->
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    SectionHeading(
+                        title = "Duración",
+                        supportingText = "¿Cuánto tiempo tienes para viajar?"
+                    )
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TravelProfileOptions.durations.forEach { option ->
+                            val isSelected = option == uiState.duration
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.onDurationSelected(option) },
+                                label = { Text(option) },
+                                leadingIcon = if (isSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                                } else null
+                            )
+                        }
+                    }
+
+                    uiState.durationError?.let { error ->
                         Text(
                             text = error,
                             color = MaterialTheme.colorScheme.error,

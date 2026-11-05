@@ -99,7 +99,12 @@ class ProfileRepository(
                     ?.takeIf { it.isNotBlank() }
                     ?: profile.photoUrl,
 
-                preferences = finalPreferences
+                preferences = finalPreferences,
+
+                // HU10: preferencias estructuradas para recomendaciones
+                tripType = document.getString("tripType") ?: "",
+                budget = document.getString("budget") ?: "",
+                duration = document.getString("duration") ?: ""
             )
         }
 
@@ -117,6 +122,10 @@ class ProfileRepository(
             "role" to profile.role,
             "photoUrl" to profile.photoUrl,
             "preferences" to profile.preferences,
+            // HU10: preferencias estructuradas del viaje
+            "tripType" to profile.tripType,
+            "budget" to profile.budget,
+            "duration" to profile.duration,
             "updatedAt" to System.currentTimeMillis()
         )
 
@@ -258,7 +267,10 @@ class ProfileRepository(
                                 city = snapshot.getString("city")?.takeIf { it.isNotBlank() } ?: "Lima, Perú",
                                 role = snapshot.getString("role")?.takeIf { it.isNotBlank() } ?: authProfile.role,
                                 photoUrl = snapshot.getString("photoUrl")?.takeIf { it.isNotBlank() } ?: authProfile.photoUrl,
-                                preferences = finalPrefs
+                                preferences = finalPrefs,
+                                tripType = snapshot.getString("tripType") ?: "",
+                                budget = snapshot.getString("budget") ?: "",
+                                duration = snapshot.getString("duration") ?: ""
                             )
                             trySend(userProfile)
                         }
@@ -271,7 +283,10 @@ class ProfileRepository(
                                 city = snapshot.getString("city")?.takeIf { it.isNotBlank() } ?: "Lima, Perú",
                                 role = snapshot.getString("role")?.takeIf { it.isNotBlank() } ?: authProfile.role,
                                 photoUrl = snapshot.getString("photoUrl")?.takeIf { it.isNotBlank() } ?: authProfile.photoUrl,
-                                preferences = embeddedPrefs
+                                preferences = embeddedPrefs,
+                                tripType = snapshot.getString("tripType") ?: "",
+                                budget = snapshot.getString("budget") ?: "",
+                                duration = snapshot.getString("duration") ?: ""
                             )
                             trySend(userProfile)
                         }
