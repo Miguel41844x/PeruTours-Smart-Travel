@@ -6,15 +6,20 @@ import com.example.perutours.data.model.RecommendationSource
 import com.example.perutours.data.model.TravelPreferences
 import com.example.perutours.data.remote.gemini.GeminiClient
 import com.example.perutours.data.remote.gemini.GeminiApiService
+import com.example.perutours.data.remote.wikipedia.WikipediaApiService
 import com.example.perutours.domain.recommendation.LocalRecommender
 import com.example.perutours.domain.recommendation.RecommendationPromptBuilder
 import com.example.perutours.domain.recommendation.RecommendationResponseParser
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * HU10: servicio de recomendación inteligente.
@@ -34,7 +39,8 @@ class RecommendationRepository(
     private val firestore: FirebaseFirestore,
     private val profileRepository: ProfileRepository,
     private val destinationRepository: DestinationRepository,
-    private val geminiApi: GeminiApiService
+    private val geminiApi: GeminiApiService,
+    private val wikipediaApi: WikipediaApiService
 ) {
 
     /**
@@ -69,7 +75,7 @@ class RecommendationRepository(
             //     perfil no cambió y la caché sigue vigente.
             if (!forceRefresh) {
                 readCache(uid, preferences, candidates)?.let { cached ->
-                    return@withContext Result.success(cached)
+                    return@withContext Result.success(enrichWithWikipedia(cached))
                 }
             }
 
@@ -95,10 +101,14 @@ class RecommendationRepository(
                 LocalRecommender.recommend(preferences, candidates)
             }
 
-            // 4. Caché best-effort del resultado para próximas aperturas
-            saveCache(uid, preferences, recommendations)
+            // 4. Información turística externa: resumen de Wikipedia
+            //    (Retrofit + corrutinas, mejor esfuerzo por destino).
+            val enriched = enrichWithWikipedia(recommendations)
 
-            Result.success(recommendations)
+            // 5. Caché best-effort del resultado para próximas aperturas
+            saveCache(uid, preferences, enriched)
+
+            Result.success(enriched)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -204,6 +214,39 @@ class RecommendationRepository(
         }
     }
 
+    /**
+     * HU10: consume la API externa de Wikipedia (Retrofit + corrutinas)
+     * para añadir un resumen turístico a cada recomendación.
+     *
+     * Es mejor esfuerzo: si un destino no tiene página o falla la red,
+     * la recomendación conserva su resumen vacío sin romper el flujo.
+     */
+    private suspend fun enrichWithWikipedia(
+        recommendations: List<Recommendation>
+    ): List<Recommendation> = coroutineScope {
+        recommendations.map { recommendation ->
+            async {
+                val summary = try {
+                    withTimeoutOrNull(WIKIPEDIA_TIMEOUT_MILLIS) {
+                        val title = recommendation.title
+                            .replace(Regex("[\\\\/:*?\"<>|]"), " ")
+                            .trim()
+                            .ifBlank { recommendation.title }
+                        wikipediaApi.summary(title).extract
+                    }
+                } catch (_: Exception) {
+                    null
+                }
+
+                if (summary.isNullOrBlank()) {
+                    recommendation
+                } else {
+                    recommendation.copy(summary = summary.take(280))
+                }
+            }
+        }.awaitAll()
+    }
+
     /** Perfil estructurado + nombres de las categorías de interés marcadas. */
     suspend fun loadTravelPreferences(uid: String): TravelPreferences {        val profile = profileRepository.getProfile(uid)
 
@@ -264,5 +307,8 @@ class RecommendationRepository(
 
         // Vigencia de la caché: 6 horas (evita repetir llamadas a Gemini).
         const val CACHE_TTL_MILLIS: Long = 6 * 60 * 60 * 1000L
+
+        // Timeout de cada resumen de Wikipedia (mejor esfuerzo).
+        const val WIKIPEDIA_TIMEOUT_MILLIS: Long = 4_000L
     }
 }
