@@ -10,8 +10,10 @@ import com.example.perutours.domain.recommendation.LocalRecommender
 import com.example.perutours.domain.recommendation.RecommendationPromptBuilder
 import com.example.perutours.domain.recommendation.RecommendationResponseParser
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 /**
@@ -29,6 +31,7 @@ import kotlinx.coroutines.withContext
  */
 class RecommendationRepository(
     private val auth: FirebaseAuth,
+    private val firestore: FirebaseFirestore,
     private val profileRepository: ProfileRepository,
     private val destinationRepository: DestinationRepository,
     private val geminiApi: GeminiApiService
@@ -36,7 +39,7 @@ class RecommendationRepository(
 
     /**
      * Recomendaciones personalizadas para el usuario autenticado.
-     * @param forceRefresh ignora la caché de Firestore (commit de caché).
+     * @param forceRefresh ignora la caché de Firestore y llama a la IA.
      */
     suspend fun getRecommendations(
         forceRefresh: Boolean = false
@@ -62,6 +65,14 @@ class RecommendationRepository(
                 return@withContext Result.success(emptyList())
             }
 
+            // 2b. Caché en Firestore: evita gastar cuota de IA si el
+            //     perfil no cambió y la caché sigue vigente.
+            if (!forceRefresh) {
+                readCache(uid, preferences, candidates)?.let { cached ->
+                    return@withContext Result.success(cached)
+                }
+            }
+
             // 3. IA Gemini con respaldo local: la sección nunca queda vacía
             val recommendations = try {
                 if (BuildConfig.GEMINI_API_KEY.isBlank()) {
@@ -84,15 +95,117 @@ class RecommendationRepository(
                 LocalRecommender.recommend(preferences, candidates)
             }
 
+            // 4. Caché best-effort del resultado para próximas aperturas
+            saveCache(uid, preferences, recommendations)
+
             Result.success(recommendations)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
+    // ===================== Caché en Firestore (HU10) =====================
+
+    /** Último resultado guardado si el perfil no cambió y sigue vigente. */
+    private suspend fun readCache(
+        uid: String,
+        preferences: TravelPreferences,
+        candidates: List<com.example.perutours.data.remote.DestinationDto>
+    ): List<Recommendation>? {
+        return try {
+            val document = firestore
+                .collection("users")
+                .document(uid)
+                .collection(RECOMMENDATIONS_COLLECTION)
+                .document(CACHE_DOCUMENT)
+                .get()
+                .await()
+
+            if (!document.exists()) return null
+
+            val updatedAt = document.getLong("updatedAt") ?: return null
+            if (System.currentTimeMillis() - updatedAt > CACHE_TTL_MILLIS) return null
+
+            // Si el usuario cambió sus preferencias, la caché no sirve.
+            if (document.getString("tripType") != preferences.tripType ||
+                document.getString("budget") != preferences.budget ||
+                document.getString("duration") != preferences.duration
+            ) {
+                return null
+            }
+
+            val cachedInterests = (document.get("interests") as? List<*>)
+                ?.filterIsInstance<String>()
+                .orEmpty()
+            if (cachedInterests != preferences.interestNames) return null
+
+            @Suppress("UNCHECKED_CAST")
+            val items = document.get("items") as? List<Map<String, Any?>> ?: return null
+            val byId = candidates.associateBy { it.destinationId.ifBlank { it.id } }
+
+            items.mapNotNull { item ->
+                val destinationId = item["destinationId"] as? String
+                    ?: return@mapNotNull null
+                val destination = byId[destinationId]
+                    ?: return@mapNotNull null
+
+                Recommendation(
+                    destinationId = destinationId,
+                    title = (item["title"] as? String)?.takeIf { it.isNotBlank() }
+                        ?: destination.title,
+                    reason = item["reason"] as? String ?: "",
+                    source = if (item["source"] as? String == RecommendationSource.LOCAL.name) {
+                        RecommendationSource.LOCAL
+                    } else {
+                        RecommendationSource.AI
+                    },
+                    destination = destination
+                )
+            }.takeIf { it.isNotEmpty() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Guarda el resultado; la caché nunca debe romper el flujo principal. */
+    private suspend fun saveCache(
+        uid: String,
+        preferences: TravelPreferences,
+        recommendations: List<Recommendation>
+    ) {
+        try {
+            val items = recommendations.map { recommendation ->
+                mapOf(
+                    "destinationId" to recommendation.destinationId,
+                    "title" to recommendation.title,
+                    "reason" to recommendation.reason,
+                    "source" to recommendation.source.name
+                )
+            }
+
+            firestore
+                .collection("users")
+                .document(uid)
+                .collection(RECOMMENDATIONS_COLLECTION)
+                .document(CACHE_DOCUMENT)
+                .set(
+                    mapOf(
+                        "tripType" to preferences.tripType,
+                        "budget" to preferences.budget,
+                        "duration" to preferences.duration,
+                        "interests" to preferences.interestNames,
+                        "items" to items,
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+                )
+                .await()
+        } catch (_: Exception) {
+            // Best-effort: sin caché la IA simplemente se re-evalúa.
+        }
+    }
+
     /** Perfil estructurado + nombres de las categorías de interés marcadas. */
-    suspend fun loadTravelPreferences(uid: String): TravelPreferences {
-        val profile = profileRepository.getProfile(uid)
+    suspend fun loadTravelPreferences(uid: String): TravelPreferences {        val profile = profileRepository.getProfile(uid)
 
         val interestNames = try {
             val catalog = profileRepository.getPreferences()
@@ -144,5 +257,12 @@ class RecommendationRepository(
 
     companion object {
         const val MAX_RECOMMENDATIONS = 5
+
+        // users/{uid}/recommendations/last → último resultado de la IA.
+        const val RECOMMENDATIONS_COLLECTION = "recommendations"
+        const val CACHE_DOCUMENT = "last"
+
+        // Vigencia de la caché: 6 horas (evita repetir llamadas a Gemini).
+        const val CACHE_TTL_MILLIS: Long = 6 * 60 * 60 * 1000L
     }
 }

@@ -1199,6 +1199,12 @@ service cloud.firestore {
       match /user_preferences/{prefId} {
         allow read, write: if isOwner(userId);
       }
+
+      // HU10: último resultado del recomendador (caché de la IA).
+      // Solo el propietario puede leer/escribir su propia caché.
+      match /recommendations/{docId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /travel_requests/{requestId} {
