@@ -6,6 +6,7 @@ import com.example.perutours.data.model.RecommendationSource
 import com.example.perutours.data.model.TravelPreferences
 import com.example.perutours.data.remote.gemini.GeminiClient
 import com.example.perutours.data.remote.gemini.GeminiApiService
+import com.example.perutours.domain.recommendation.LocalRecommender
 import com.example.perutours.domain.recommendation.RecommendationPromptBuilder
 import com.example.perutours.domain.recommendation.RecommendationResponseParser
 import com.google.firebase.auth.FirebaseAuth
@@ -22,9 +23,9 @@ import kotlinx.coroutines.withContext
  *  3. Construye el prompt y llama a Gemini con Retrofit.
  *  4. Parsea el JSON de respuesta y lo une con el catálogo real.
  *
- * La clave de Gemini puede venir vacía (sin configurar); en ese caso el
- * llamado lanza GeminiUnavailableException para que el llamador aplique el
- * recomendador local de respaldo.
+ * La clave de Gemini puede venir vacía (sin configurar); en ese caso, o
+ * ante cualquier fallo de la IA, se aplica automáticamente el recomendador
+ * local de respaldo (LocalRecommender) para no dejar la sección vacía.
  */
 class RecommendationRepository(
     private val auth: FirebaseAuth,
@@ -61,24 +62,29 @@ class RecommendationRepository(
                 return@withContext Result.success(emptyList())
             }
 
-            // 3. Llamada a Gemini (Retrofit + corrutinas)
-            if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-                throw GeminiUnavailableException()
+            // 3. IA Gemini con respaldo local: la sección nunca queda vacía
+            val recommendations = try {
+                if (BuildConfig.GEMINI_API_KEY.isBlank()) {
+                    throw GeminiUnavailableException()
+                }
+
+                val request = RecommendationPromptBuilder.toRequest(preferences, candidates)
+                val response = geminiApi.generateContent(
+                    model = GeminiClient.MODEL,
+                    request = request
+                )
+
+                val entries = RecommendationResponseParser.parse(response.text())
+                mapToCatalog(entries, candidates).ifEmpty {
+                    LocalRecommender.recommend(preferences, candidates)
+                }
+            } catch (_: Exception) {
+                // Sin clave, sin red o con respuesta inválida de la IA:
+                // filtrado de contenido local (siempre disponible).
+                LocalRecommender.recommend(preferences, candidates)
             }
 
-            val request = RecommendationPromptBuilder.toRequest(preferences, candidates)
-            val response = geminiApi.generateContent(
-                model = GeminiClient.MODEL,
-                request = request
-            )
-
-            // 4. Parseo del JSON y unión con el catálogo real
-            val entries = RecommendationResponseParser.parse(response.text())
-            val recommendations = mapToCatalog(entries, candidates)
-
             Result.success(recommendations)
-        } catch (e: GeminiUnavailableException) {
-            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
