@@ -269,6 +269,29 @@ val appModule = module {
         )
     }
 
+    // HU10: cliente de IA Gemini para recomendaciones personalizadas
+    single {
+        com.example.perutours.data.remote.gemini.GeminiClient.getApiService()
+    }
+
+    // HU10: API externa de información turística (resúmenes de Wikipedia)
+    single {
+        com.example.perutours.data.remote.wikipedia.WikipediaClient
+            .getApiService(androidContext().cacheDir)
+    }
+
+    // HU10: recomendador (Gemini + respaldo local + caché Firestore)
+    single {
+        com.example.perutours.data.repository.RecommendationRepository(
+            auth = get(),
+            firestore = get(),
+            profileRepository = get(),
+            destinationRepository = get(),
+            geminiApi = get(),
+            wikipediaApi = get()
+        )
+    }
+
     // HU09: analítica comercial calculada desde Firestore.
     single { SalesAnalyticsCalculator() }
 
@@ -439,6 +462,13 @@ val appModule = module {
             destinationRepository = get(),
             packageRepository = get(),
             pointsOfInterestRepository = get()
+        )
+    }
+
+    // HU10: sección "Recomendado para ti" de la pantalla principal
+    viewModel {
+        com.example.perutours.ui.screens.recommendation.RecommendationViewModel(
+            repository = get()
         )
     }
 }
