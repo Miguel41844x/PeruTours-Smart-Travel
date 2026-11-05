@@ -35,6 +35,18 @@ android {
         }.getProperty("GEOAPIFY_API_KEY", "")
 
         buildConfigField("String", "GEOAPIFY_API_KEY", "\"$geoapifyApiKey\"")
+
+        // HU10: clave de la API de Gemini para las recomendaciones.
+        // Mismo patrón que GEOAPIFY_API_KEY: se lee de local.properties
+        // (ignorado por git) y jamás se escribe en el código fuente.
+        val geminiApiKey = Properties().apply {
+            val propertiesFile = rootProject.file("local.properties")
+            if (propertiesFile.exists()) {
+                propertiesFile.inputStream().use { stream -> load(stream) }
+            }
+        }.getProperty("GEMINI_API_KEY", "")
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
