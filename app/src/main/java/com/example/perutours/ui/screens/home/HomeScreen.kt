@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -72,10 +75,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
 import com.example.perutours.R
+import com.example.perutours.data.model.Recommendation
+import com.example.perutours.data.model.RecommendationSource
 import com.example.perutours.data.remote.DestinationDto
 import com.example.perutours.ui.components.PeruToursBrand
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
+import com.example.perutours.ui.screens.recommendation.RecommendationUiState
+import com.example.perutours.ui.screens.recommendation.RecommendationViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.perutours.data.messaging.FCMTokenManager
@@ -97,9 +104,11 @@ fun HomeScreen(
     navigateToDetail: (String) -> Unit = {},
     navigateToInitial: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
+    recommendationViewModel: RecommendationViewModel = koinViewModel(),
     fcmTokenManager: FCMTokenManager = koinInject()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val recommendationState by recommendationViewModel.uiState.collectAsStateWithLifecycle()
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showNotificationPrompt by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -322,6 +331,36 @@ fun HomeScreen(
                     }
                 }
 
+                // HU10: sección "Recomendado para ti" (IA + respaldo local)
+                SectionHeading(
+                    title = "Recomendado para ti",
+                    supportingText = "Sugerencias según tus preferencias de viaje"
+                )
+
+                when (val state = recommendationState) {
+                    is RecommendationUiState.Success -> {
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(vertical = 4.dp)
+                        ) {
+                            items(
+                                items = state.recommendations,
+                                key = { it.destinationId }
+                            ) { recommendation ->
+                                RecommendationCard(
+                                    recommendation = recommendation,
+                                    onClick = { navigateToDetail(recommendation.destinationId) }
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {
+                        // Estados de carga/error/vacío se completan a continuación.
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -335,7 +374,6 @@ fun HomeScreen(
                         Icon(Icons.Default.Refresh, contentDescription = "Actualizar destinos")
                     }
                 }
-
                 when (val state = uiState.destinationsState) {
                     is HomeDestinationsState.Loading -> DestinationLoadingState()
                     is HomeDestinationsState.Error -> DestinationErrorState(
@@ -481,6 +519,129 @@ private fun DestinationErrorState(message: String, onRetry: () -> Unit) {
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
             TextButton(onClick = onRetry) { Text("Intentar de nuevo") }
+        }
+    }
+}
+
+/**
+ * HU10: tarjeta de la sección "Recomendado para ti".
+ * Muestra el motivo personalizado, la procedencia (IA o reglas locales)
+ * y el resumen turístico externo cuando está disponible.
+ */
+@Composable
+private fun RecommendationCard(
+    recommendation: Recommendation,
+    onClick: () -> Unit
+) {
+    val destination = recommendation.destination
+
+    Card(
+        modifier = Modifier
+            .width(264.dp)
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+            ) {
+                AsyncImage(
+                    model = destination?.imageUrl.orEmpty(),
+                    contentDescription = recommendation.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = if (recommendation.source == RecommendationSource.AI) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    }
+                ) {
+                    Text(
+                        text = if (recommendation.source == RecommendationSource.AI) {
+                            "Recomendado por IA"
+                        } else {
+                            "Recomendado por reglas"
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (recommendation.source == RecommendationSource.AI) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        }
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = recommendation.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = destination?.rating.orEmpty().ifBlank { "—" },
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                    destination?.price?.let { price ->
+                        Text(
+                            text = price,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Text(
+                    text = recommendation.reason,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Información turística externa (Wikipedia), si estuvo disponible.
+                if (recommendation.summary.isNotBlank()) {
+                    Text(
+                        text = recommendation.summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }
