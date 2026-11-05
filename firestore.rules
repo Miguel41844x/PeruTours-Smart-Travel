@@ -199,6 +199,14 @@ service cloud.firestore {
         || (data[field] is string && data[field].size() <= maxLength);
     }
 
+    // HU10: la preferencia estructurada puede ausentarse, venir vacía
+    // (perfil antiguo) o ser exactamente uno de los valores del catálogo.
+    function validOptionalChoice(data, field, values) {
+      return !(field in data)
+        || (data[field] is string
+          && (data[field] == '' || data[field] in values));
+    }
+
     function isValidEmail(value) {
       return value is string
         && value.size() <= 254
@@ -265,7 +273,8 @@ service cloud.firestore {
         ])
         && hasOnlyAllowedFields(data, [
           'uid', 'name', 'email', 'phone', 'dni', 'city', 'role',
-          'photoUrl', 'preferences', 'updatedAt', 'fcmToken'
+          'photoUrl', 'preferences', 'updatedAt', 'fcmToken',
+          'tripType', 'budget', 'duration'
         ])
         && validString(data.uid, 1, 128)
         && validString(data.name, 3, 100)
@@ -282,6 +291,16 @@ service cloud.firestore {
         && data.role in ['cliente', 'agente', 'gerente', 'administrador']
         && isValidUrl(data.photoUrl)
         && isValidPreferenceIdList(data.preferences)
+        // HU10: preferencias estructuradas del viaje (opcionales y acotadas)
+        && validOptionalChoice(data, 'tripType', [
+            'Aventura', 'Cultura', 'Relax', 'Gastronomía', 'Naturaleza', 'Familiar'
+          ])
+        && validOptionalChoice(data, 'budget', [
+            'Económico', 'Medio', 'Premium'
+          ])
+        && validOptionalChoice(data, 'duration', [
+            'Fin de semana', '3-5 días', '1 semana', '2+ semanas'
+          ])
         && data.updatedAt is int
         && data.updatedAt > 0
         && validOptionalString(data, 'fcmToken', 4096);
