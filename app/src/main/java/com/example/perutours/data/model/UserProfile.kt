@@ -9,5 +9,10 @@ data class UserProfile(
     val city: String = "Lima, Perú",
     val role: String = "cliente",
     val photoUrl: String = "",
-    val preferences: List<String> = emptyList()
+    val preferences: List<String> = emptyList(),
+
+    // HU10: preferencias estructuradas para el servicio de recomendación
+    val tripType: String = "",
+    val budget: String = "",
+    val duration: String = ""
 )
