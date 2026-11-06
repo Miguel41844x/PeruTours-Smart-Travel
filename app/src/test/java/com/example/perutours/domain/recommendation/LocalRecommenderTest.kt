@@ -133,6 +133,92 @@ class LocalRecommenderTest {
         assertEquals(2, result.size)
     }
 
+    // ============ HU10 fix: destinos con varios paquetes ============
+
+    @Test
+    fun keepsOnlyOneCardPerDestinationWhenItHasManyPackages() {
+        // Cusco publicado como 3 paquetes distintos + la Amazonía.
+        val cuscoBasic = DestinationDto(
+            id = "cusco-basico",
+            destinationId = "cusco",
+            title = "Cusco Esencial",
+            location = "Cusco",
+            duration = "3 días / 2 noches",
+            price = "S/ 650",
+            rating = "4.2",
+            category = "Historia y Cultura",
+            imageUrl = ""
+        )
+        val cuscoPremium = DestinationDto(
+            id = "cusco-premium",
+            destinationId = "cusco",
+            title = "Cusco Premium",
+            location = "Cusco",
+            duration = "5 días / 4 noches",
+            price = "S/ 1,400",
+            rating = "4.9",
+            category = "Historia y Cultura",
+            imageUrl = ""
+        )
+        val cuscoMid = DestinationDto(
+            id = "cusco-medio",
+            destinationId = "cusco",
+            title = "Cusco Clásico",
+            location = "Cusco",
+            duration = "4 días / 3 noches",
+            price = "S/ 950",
+            rating = "4.5",
+            category = "Historia y Cultura",
+            imageUrl = ""
+        )
+
+        val result = LocalRecommender.recommend(
+            preferences = TravelPreferences(tripType = "Cultura"),
+            candidates = listOf(cuscoBasic, cuscoPremium, cuscoMid, jungle)
+        )
+
+        // 4 paquetes → 2 destinos distintos (Cusco una sola vez + Amazonía).
+        assertEquals(2, result.size)
+        assertEquals(1, result.count { it.destinationId == "cusco" })
+        assertEquals(1, result.count { it.destinationId == jungle.destinationId })
+    }
+
+    @Test
+    fun keepsTheBestScoredPackageOfEachDuplicatedDestination() {
+        val cuscoBasic = DestinationDto(
+            id = "cusco-basico",
+            destinationId = "cusco",
+            title = "Cusco Esencial",
+            location = "Cusco",
+            duration = "3 días / 2 noches",
+            price = "S/ 650",
+            rating = "4.2",
+            category = "Historia y Cultura",
+            imageUrl = ""
+        )
+        val cuscoPremium = DestinationDto(
+            id = "cusco-premium",
+            destinationId = "cusco",
+            title = "Cusco Premium",
+            location = "Cusco",
+            duration = "5 días / 4 noches",
+            price = "S/ 1,400",
+            rating = "4.9",
+            category = "Historia y Cultura",
+            imageUrl = ""
+        )
+
+        val result = LocalRecommender.recommend(
+            preferences = TravelPreferences(tripType = "Cultura"),
+            candidates = listOf(cuscoBasic, cuscoPremium, jungle)
+        )
+
+        // De los dos paquetes de Cusco se conserva el mejor puntuado.
+        val cusco = result.first { it.destinationId == "cusco" }
+        assertEquals("cusco-premium", cusco.destination?.id)
+        assertEquals("S/ 1,400", cusco.destination?.price)
+    }
+
     @Test
     fun everyRecommendationExplainsItself() {
         val result = LocalRecommender.recommend(
