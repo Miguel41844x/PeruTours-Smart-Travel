@@ -42,6 +42,9 @@ object LocalRecommender {
         return candidates
             .map { destination -> score(destination, preferences) }
             .sortedWith(compareByDescending<Scored> { it.score }.thenByDescending { it.rating })
+            // Un destino con varios paquetes publicados = UNA sola tarjeta
+            // (se conserva el paquete con mejor puntaje para ese destino).
+            .distinctBy { it.recommendation.destinationId }
             .take(max)
             .map { it.recommendation }
     }
