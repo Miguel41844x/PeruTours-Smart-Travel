@@ -4,6 +4,7 @@ import com.example.perutours.BuildConfig
 import com.example.perutours.data.model.Recommendation
 import com.example.perutours.data.model.RecommendationSource
 import com.example.perutours.data.model.TravelPreferences
+import com.example.perutours.data.remote.DestinationDto
 import com.example.perutours.data.remote.gemini.GeminiClient
 import com.example.perutours.data.remote.gemini.GeminiApiService
 import com.example.perutours.data.remote.wikipedia.WikipediaApiService
@@ -120,7 +121,7 @@ class RecommendationRepository(
     private suspend fun readCache(
         uid: String,
         preferences: TravelPreferences,
-        candidates: List<com.example.perutours.data.remote.DestinationDto>
+        candidates: List<DestinationDto>
     ): List<Recommendation>? {
         return try {
             val document = firestore
@@ -151,27 +152,9 @@ class RecommendationRepository(
 
             @Suppress("UNCHECKED_CAST")
             val items = document.get("items") as? List<Map<String, Any?>> ?: return null
-            val byId = candidates.associateBy { it.destinationId.ifBlank { it.id } }
 
-            items.mapNotNull { item ->
-                val destinationId = item["destinationId"] as? String
-                    ?: return@mapNotNull null
-                val destination = byId[destinationId]
-                    ?: return@mapNotNull null
-
-                Recommendation(
-                    destinationId = destinationId,
-                    title = (item["title"] as? String)?.takeIf { it.isNotBlank() }
-                        ?: destination.title,
-                    reason = item["reason"] as? String ?: "",
-                    source = if (item["source"] as? String == RecommendationSource.LOCAL.name) {
-                        RecommendationSource.LOCAL
-                    } else {
-                        RecommendationSource.AI
-                    },
-                    destination = destination
-                )
-            }.takeIf { it.isNotEmpty() }
+            restoreFromCacheItems(items, candidates)
+                .takeIf { it.isNotEmpty() }
         } catch (_: Exception) {
             null
         }
@@ -184,14 +167,7 @@ class RecommendationRepository(
         recommendations: List<Recommendation>
     ) {
         try {
-            val items = recommendations.map { recommendation ->
-                mapOf(
-                    "destinationId" to recommendation.destinationId,
-                    "title" to recommendation.title,
-                    "reason" to recommendation.reason,
-                    "source" to recommendation.source.name
-                )
-            }
+            val items = buildCacheItems(recommendations)
 
             firestore
                 .collection("users")
@@ -310,5 +286,80 @@ class RecommendationRepository(
 
         // Timeout de cada resumen de Wikipedia (mejor esfuerzo).
         const val WIKIPEDIA_TIMEOUT_MILLIS: Long = 4_000L
+
+        /**
+         * Serializa las recomendaciones para guardarlas en Firestore.
+         *
+         * Incluye el paquete exacto mostrado (packageId): si un destino
+         * tiene varios paquetes publicados, al volver a abrir la app se
+         * restaura ESE paquete con su imagen y precio originales.
+         */
+        internal fun buildCacheItems(
+            recommendations: List<Recommendation>
+        ): List<Map<String, Any>> = recommendations.map { recommendation ->
+            mapOf(
+                "destinationId" to recommendation.destinationId,
+                "packageId" to (recommendation.destination?.id ?: ""),
+                "title" to recommendation.title,
+                "reason" to recommendation.reason,
+                "source" to recommendation.source.name
+            )
+        }
+
+        /**
+         * Reconstruye las recomendaciones desde los items de la caché.
+         *
+         * - Si el item registra packageId se busca ESE paquete exacto; si ya
+         *   no existe en el catálogo se descarta el item (mejor recomputar
+         *   que mostrar título de un paquete y precio de otro).
+         * - Los items antiguos (sin packageId) usan el título guardado como
+         *   pistazo para elegir el paquete correcto del destino.
+         * - Los destinos repetidos de cachés antiguas se colapsan a una
+         *   sola tarjeta.
+         */
+        internal fun restoreFromCacheItems(
+            items: List<Map<String, Any?>>,
+            candidates: List<DestinationDto>
+        ): List<Recommendation> {
+            val byPackageId = candidates.associateBy { it.id }
+
+            return items.mapNotNull { item ->
+                val destinationId = item["destinationId"] as? String
+                    ?: return@mapNotNull null
+                val packageId = (item["packageId"] as? String)
+                    ?.takeIf { it.isNotBlank() }
+
+                val destination = if (packageId != null) {
+                    // Paquete exacto registrado al guardar; si ya no existe
+                    // en el catálogo se descarta el item (mejor recomputar
+                    // que mezclar el título de un paquete con el precio de otro).
+                    byPackageId[packageId] ?: return@mapNotNull null
+                } else {
+                    // Caché antigua sin packageId: usa el título guardado
+                    // como pistazo para quedarse con el paquete correcto.
+                    val cachedTitle = (item["title"] as? String)
+                        ?.takeIf { it.isNotBlank() }
+                    val sameDestination = candidates.filter { candidate ->
+                        candidate.destinationId.ifBlank { candidate.id } == destinationId
+                    }
+                    sameDestination.firstOrNull { it.title == cachedTitle }
+                        ?: sameDestination.firstOrNull()
+                        ?: return@mapNotNull null
+                }
+
+                Recommendation(
+                    destinationId = destinationId,
+                    title = (item["title"] as? String)?.takeIf { it.isNotBlank() }
+                        ?: destination.title,
+                    reason = item["reason"] as? String ?: "",
+                    source = if (item["source"] as? String == RecommendationSource.LOCAL.name) {
+                        RecommendationSource.LOCAL
+                    } else {
+                        RecommendationSource.AI
+                    },
+                    destination = destination
+                )
+            }.distinctBy { it.destinationId }
+        }
     }
 }
