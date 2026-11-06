@@ -5,6 +5,7 @@ import com.example.perutours.data.model.RecommendationSource
 import com.example.perutours.data.repository.RecommendationRepository
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -120,6 +121,38 @@ class RecommendationViewModelTest {
         assertEquals(callsAfterInit + 1, callCount)
     }
 
+    // ============ HU10 fix: carrera de consultas ============
+
+    @Test
+    fun olderQueryDoesNotOverwriteNewerOne() = runTest(dispatcher) {
+        val slowFirst = CompletableDeferred<Result<List<Recommendation>>>()
+        val fastSecond = CompletableDeferred<Result<List<Recommendation>>>()
+        val pending = ArrayDeque(listOf(slowFirst, fastSecond))
+
+        val repository = mockk<RecommendationRepository> {
+            coEvery { getRecommendations(any()) } coAnswers { pending.removeFirst().await() }
+        }
+        val viewModel = RecommendationViewModel(repository)
+
+        // init lanza la primera consulta (queda suspendida) y luego llega otra.
+        viewModel.loadRecommendations()
+        advanceUntilIdle()
+
+        // La segunda termina primero y muestra su resultado...
+        fastSecond.complete(Result.success(singleRecommendation("2")))
+        advanceUntilIdle()
+
+        val fresh = viewModel.uiState.value as RecommendationUiState.Success
+        assertEquals("2", fresh.recommendations.single().destinationId)
+
+        // ...y la consulta vieja termina DESPUÉS: no debe pisar lo nuevo.
+        slowFirst.complete(Result.success(singleRecommendation("1")))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as RecommendationUiState.Success
+        assertEquals("2", state.recommendations.single().destinationId)
+    }
+
     @Test
     fun successStateKeepsAiAndLocalSources() = runTest(dispatcher) {
         val viewModel = RecommendationViewModel(
@@ -153,6 +186,15 @@ class RecommendationViewModelTest {
             title = "Trekking al Ausangate",
             reason = "Encaja con tu presupuesto Económico.",
             source = RecommendationSource.LOCAL
+        )
+    )
+
+    private fun singleRecommendation(id: String): List<Recommendation> = listOf(
+        Recommendation(
+            destinationId = id,
+            title = "Destino $id",
+            reason = "Motivo de la consulta $id",
+            source = RecommendationSource.AI
         )
     )
 }
