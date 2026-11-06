@@ -22,11 +22,16 @@ class RecommendationViewModel(
     private val _uiState = MutableStateFlow<RecommendationUiState>(RecommendationUiState.Loading)
     val uiState: StateFlow<RecommendationUiState> = _uiState.asStateFlow()
 
+    // Número de la consulta en curso. Si una carga vieja termina DESPUÉS
+    // de una más nueva, su resultado se descarta en vez de pisar el actual.
+    private var loadGeneration = 0L
+
     init {
         loadRecommendations()
     }
 
     fun loadRecommendations(forceRefresh: Boolean = false) {
+        val generation = ++loadGeneration
         viewModelScope.launch {
             // Mientras no haya resultado se muestra el indicador de carga.
             if (_uiState.value !is RecommendationUiState.Success) {
@@ -34,6 +39,9 @@ class RecommendationViewModel(
             }
 
             val result = repository.getRecommendations(forceRefresh = forceRefresh)
+
+            // Llegó tarde una consulta anterior: no reemplaza a la más reciente.
+            if (generation != loadGeneration) return@launch
 
             _uiState.value = result.fold(
                 onSuccess = { recommendations ->
