@@ -292,6 +292,25 @@ val appModule = module {
         )
     }
 
+    // HU11: chatbot turístico (Gemini + datos del cliente autenticado)
+    single<com.example.perutours.data.repository.ChatUserDataSource> {
+        com.example.perutours.data.repository.FirestoreChatUserDataSource(
+            auth = get(),
+            firestore = get(),
+            profileRepository = get(),
+            destinationRepository = get()
+        )
+    }
+
+    single<com.example.perutours.data.repository.ChatAssistant> {
+        val firebaseAuth = get<com.google.firebase.auth.FirebaseAuth>()
+        com.example.perutours.data.repository.ChatRepository(
+            currentUid = { firebaseAuth.currentUser?.uid },
+            dataSource = get(),
+            geminiApi = get()
+        )
+    }
+
     // HU09: analítica comercial calculada desde Firestore.
     single { SalesAnalyticsCalculator() }
 
@@ -299,6 +318,12 @@ val appModule = module {
         SalesDashboardRepository(
             firestore = get(),
             calculator = get()
+        )
+    }
+
+    viewModel {
+        com.example.perutours.ui.screens.chat.ChatViewModel(
+            assistant = get()
         )
     }
 
