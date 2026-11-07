@@ -90,6 +90,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.compose.koinInject
+import androidx.compose.material.icons.filled.SmartToy
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("InlinedApi")
@@ -100,6 +101,7 @@ fun HomeScreen(
     navigateToQuotations: () -> Unit = {},
     navigateToReservations: () -> Unit = {},
     navigateToTrips: () -> Unit = {},
+    navigateToChat: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
     navigateToDetail: (String) -> Unit = {},
     navigateToInitial: () -> Unit,
@@ -211,6 +213,12 @@ fun HomeScreen(
                     onClick = navigateToTrips,
                     icon = { Icon(Icons.Default.Luggage, contentDescription = null) },
                     label = { Text("Viajes") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = navigateToChat,
+                    icon = { Icon(Icons.Default.SmartToy, contentDescription = null) },
+                    label = { Text("Asistente") }
                 )
                 NavigationBarItem(
                     selected = false,
