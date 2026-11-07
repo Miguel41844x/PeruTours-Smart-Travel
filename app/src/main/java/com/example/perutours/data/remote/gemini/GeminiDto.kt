@@ -12,7 +12,8 @@ import com.google.gson.annotations.SerializedName
 
 data class GeminiGenerateRequest(
     val contents: List<GeminiContent>,
-    val generationConfig: GeminiGenerationConfig? = null
+    val generationConfig: GeminiGenerationConfig? = null,
+    val systemInstruction: GeminiSystemInstruction? = null
 )
 
 data class GeminiContent(
@@ -30,6 +31,11 @@ data class GeminiGenerationConfig(
     /** "application/json" fuerza a Gemini a responder JSON estricto. */
     @SerializedName("responseMimeType")
     val responseMimeType: String? = null
+)
+
+/** Instrucciones de sistema: el REST de Gemini solo espera la lista de partes. */
+data class GeminiSystemInstruction(
+    val parts: List<GeminiPart>
 )
 
 data class GeminiGenerateResponse(
