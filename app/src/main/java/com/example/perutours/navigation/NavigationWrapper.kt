@@ -56,7 +56,7 @@ import com.example.perutours.ui.screens.trip.TripDetailScreen
 import com.example.perutours.ui.screens.trip.AgentTripsScreen
 import com.example.perutours.ui.screens.trip.AgentTripManagementScreen
 import org.koin.compose.koinInject
-
+import com.example.perutours.ui.screens.chat.ChatScreen
 @Composable
 fun NavigationWrapper(
     navHostController: NavHostController,
@@ -346,6 +346,9 @@ fun NavigationWrapper(
                 navigateToTrips = {
                     navHostController.navigate(route = "trips")
                 },
+                navigateToChat = {
+                    navHostController.navigate(route = "chat") { launchSingleTop = true }
+                },
                 navigateToProfile = {
                     navHostController.navigate(route = "profile")
                 },
@@ -557,6 +560,16 @@ fun NavigationWrapper(
                             inclusive = false
                         }
                     }
+                }
+            )
+        }
+
+        // HU11: asistente virtual (chatbot turístico)
+        composable(route = "chat") {
+            ChatScreen(
+                onNavigateBack = { navHostController.popBackStack() },
+                onOpenQuotation = { quotationId ->
+                    navHostController.navigate("customer_quotation/$quotationId")
                 }
             )
         }
