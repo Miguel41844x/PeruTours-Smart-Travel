@@ -18,9 +18,7 @@ object ChatPromptBuilder {
     const val MAX_HISTORY = 10
     private const val MAX_HISTORY_MESSAGE_LENGTH = 1_000
 
-    // Temperatura baja: respuestas fieles a los datos, con poca "creatividad".
-    const val TEMPERATURE = 0.3
-    const val MAX_OUTPUT_TOKENS = 700
+    const val MAX_OUTPUT_TOKENS = 4096
 
     const val ROLE_USER = "user"
     // Gemini nombra "model" al asistente (no "assistant").
@@ -65,7 +63,6 @@ object ChatPromptBuilder {
     ): GeminiGenerateRequest = GeminiGenerateRequest(
         contents = buildContents(history, userText),
         generationConfig = GeminiGenerationConfig(
-            temperature = TEMPERATURE,
             maxOutputTokens = MAX_OUTPUT_TOKENS
         ),
         systemInstruction = GeminiSystemInstruction(

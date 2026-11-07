@@ -49,7 +49,7 @@ data class GeminiCandidate(
     val content: GeminiContent? = null,
     val finishReason: String? = null
 ) {
-    /** Texto completo de la respuesta (primer part del primer candidate). */
+    /** Texto completo de la respuesta: une todas las partes de texto del candidato. */
     fun text(): String =
-        content?.parts?.firstOrNull()?.text.orEmpty()
+        content?.parts?.mapNotNull { it.text }?.joinToString("").orEmpty()
 }
