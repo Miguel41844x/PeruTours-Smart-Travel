@@ -618,17 +618,12 @@ private fun ReservationStatusChart(statusData: Map<String, Int>) {
 
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
     val gridColor = MaterialTheme.colorScheme.outlineVariant.toArgb()
-    val barColors = listOf(
-        MaterialTheme.colorScheme.tertiary.toArgb(),
-        MaterialTheme.colorScheme.secondary.toArgb(),
-        MaterialTheme.colorScheme.primary.toArgb(),
-        MaterialTheme.colorScheme.error.toArgb()
-    )
 
     val entries = statusData.entries.mapIndexed { index, entry ->
         BarEntry(index.toFloat(), entry.value.toFloat())
     }
     val labels = statusData.keys.toList()
+    val barColors = labels.map { status -> getStatusColor(status).toArgb() }
 
     AndroidView(
         modifier = Modifier
