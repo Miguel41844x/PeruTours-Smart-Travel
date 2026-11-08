@@ -35,7 +35,8 @@ object LocalRecommender {
     fun recommend(
         preferences: TravelPreferences,
         candidates: List<DestinationDto>,
-        max: Int = 5
+        // Debe coincidir con RecommendationRepository.MAX_RECOMMENDATIONS.
+        max: Int = 3
     ): List<Recommendation> {
         if (candidates.isEmpty()) return emptyList()
 

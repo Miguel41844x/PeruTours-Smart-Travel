@@ -12,6 +12,7 @@
 /captures
 .externalNativeBuild
 .cxx
+.kotlin/
 local.properties
 
 # Secretos locales: la API key de Geoapify vive en local.properties

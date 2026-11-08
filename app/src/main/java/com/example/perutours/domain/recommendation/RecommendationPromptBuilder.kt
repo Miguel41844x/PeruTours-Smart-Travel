@@ -26,7 +26,7 @@ REGLAS ESTRICTAS:
 2. Usa EXCLUSIVAMENTE los destinationId del catálogo recibido; jamás inventes destinos.
 3. "reason" debe ser una frase corta en español (máximo 120 caracteres) que explique
    por qué ese destino encaja con las preferencias del usuario.
-4. Ordena de mejor a peor coincidencia y devuelve máximo 5 recomendaciones.
+4. Ordena de mejor a peor coincidencia y devuelve máximo 3 recomendaciones.
 5. No agregues ningún texto fuera del JSON.
 """
 

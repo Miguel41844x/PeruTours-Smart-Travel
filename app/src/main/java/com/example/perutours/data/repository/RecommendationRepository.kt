@@ -154,6 +154,7 @@ class RecommendationRepository(
             val items = document.get("items") as? List<Map<String, Any?>> ?: return null
 
             restoreFromCacheItems(items, candidates)
+                .take(MAX_RECOMMENDATIONS)
                 .takeIf { it.isNotEmpty() }
         } catch (_: Exception) {
             null
@@ -275,7 +276,10 @@ class RecommendationRepository(
         IllegalStateException("La clave de Gemini no está configurada.")
 
     companion object {
-        const val MAX_RECOMMENDATIONS = 5
+        // Máximo de tarjetas en "Recomendado para ti".
+        // Debe coincidir con el prompt de Gemini (RecommendationPromptBuilder)
+        // y con el default de LocalRecommender.recommend().
+        const val MAX_RECOMMENDATIONS = 3
 
         // users/{uid}/recommendations/last → último resultado de la IA.
         const val RECOMMENDATIONS_COLLECTION = "recommendations"

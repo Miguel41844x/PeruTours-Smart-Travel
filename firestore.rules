@@ -320,10 +320,14 @@ service cloud.firestore {
             && isRecentMillis(request.resource.data.updatedAt)));
     }
 
+    // NOTE: no separate isValidUser() call here. Each branch of the || below
+    // already requires a valid bootstrap OR full profile, so re-checking it
+    // duplicated the whole validation and burned Firestore's hard budget of
+    // 1000 evaluated expressions per request (the update was rejected with
+    // PERMISSION_DENIED for real, full-size profile documents).
     function isValidUserUpdate(userId) {
       return isOwner(userId)
         && uidNotModified()
-        && isValidUser(request.resource.data)
         && (
           // Once a complete profile exists, it may never be downgraded to a
           // bootstrap document and its role remains immutable.
