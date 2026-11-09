@@ -1,8 +1,6 @@
 package com.example.perutours.data.repository
 
-import com.example.perutours.data.model.Payment
 import com.example.perutours.data.model.SalesAnalytics
-import com.example.perutours.domain.analytics.ApprovedSaleRecord
 import com.example.perutours.domain.analytics.SalesAnalyticsCalculator
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.async
@@ -32,22 +30,8 @@ class SalesDashboardRepository(
         val quotationStatuses = quotationsDeferred.await().documents.map { document ->
             document.getString("status").orEmpty()
         }
-        val approvedSales = paymentsDeferred.await().documents.mapNotNull { document ->
-            if (document.getString("status") != Payment.STATUS_APPROVED) {
-                return@mapNotNull null
-            }
-
-            val amount = document.getDouble("amount") ?: return@mapNotNull null
-            if (!amount.isFinite() || amount < 0.0) return@mapNotNull null
-
-            ApprovedSaleRecord(
-                amount = amount,
-                currency = document.getString("currency").orEmpty().ifBlank { DEFAULT_CURRENCY },
-                approvedAtMillis = document.getLong("reviewedAtMillis")
-                    ?: document.getLong("submittedAtMillis")
-                    ?: 0L
-            )
-        }
+        val approvedSales = paymentsDeferred.await().documents
+            .mapNotNull { it.toApprovedSaleOrNull() }
         val requestedDestinations = requestsDeferred.await().documents.mapNotNull { document ->
             document.getString("destination")?.takeIf { it.isNotBlank() }
         }
@@ -63,6 +47,5 @@ class SalesDashboardRepository(
         const val COLLECTION_QUOTATIONS = "cotizaciones"
         const val COLLECTION_PAYMENTS = "payments"
         const val COLLECTION_REQUESTS = "travel_requests"
-        const val DEFAULT_CURRENCY = "PEN"
     }
 }

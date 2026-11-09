@@ -51,9 +51,9 @@ class SalesAnalyticsCalculator(
         )
     }
 
-    private fun monthlyRevenue(
+    fun monthlyRevenue(
         sales: List<ApprovedSaleRecord>,
-        nowMillis: Long
+        nowMillis: Long = System.currentTimeMillis()
     ): List<MonthlyRevenueMetric> {
         val periods = recentPeriods(nowMillis)
         val totals = sales

@@ -6,13 +6,11 @@ import com.example.perutours.data.local.ReservationCacheDao
 import com.example.perutours.data.local.ReservationEntity
 import com.example.perutours.data.model.AdminMetrics
 import com.example.perutours.data.model.Reservation
+import com.example.perutours.domain.analytics.SalesAnalyticsCalculator
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class AdminDashboardRepository(
     private val firestore: FirebaseFirestore,
@@ -20,50 +18,36 @@ class AdminDashboardRepository(
     private val reservationCacheDao: ReservationCacheDao? = null
 ) {
     suspend fun fetchAdminMetrics(): AdminMetrics {
-        val peruLocale = Locale.Builder().setLanguage("es").setRegion("PE").build()
         return try {
-            val snapshot = firestore.collection("reservations").get().await()
-            var paidRevenue = 0.0
+            // Reservas: solo para conteos por estado y clientes (no para dinero).
+            val reservations = firestore.collection("reservations").get().await()
             val statusCount = mutableMapOf<String, Int>()
             val distinctCustomers = mutableSetOf<String>()
-            val monthlyRevRaw = mutableMapOf<String, Double>()
-            val sortKeyFormat = SimpleDateFormat("yyyy-MM", peruLocale)
-            val displayKeyFormat = SimpleDateFormat("MMM yyyy", peruLocale)
 
-            for (doc in snapshot.documents) {
-                val amount = doc.getDouble("totalAmount") ?: 0.0
+            for (doc in reservations.documents) {
                 val status = doc.getString("status") ?: "Confirmada"
-                val clientId = doc.getString("clientId") ?: ""
-                val createdAt = doc.getLong("createdAtMillis") ?: System.currentTimeMillis()
-
                 statusCount[status] = (statusCount[status] ?: 0) + 1
-                if (clientId.isNotBlank()) {
-                    distinctCustomers.add(clientId)
-                }
-
-                // Total revenue and monthly revenue count ONLY "Pagado"
-                if (status.equals("Pagado", ignoreCase = true)) {
-                    paidRevenue += amount
-                    val sortKey = sortKeyFormat.format(Date(createdAt))
-                    monthlyRevRaw[sortKey] = (monthlyRevRaw[sortKey] ?: 0.0) + amount
-                }
+                val clientId = doc.getString("clientId").orEmpty()
+                if (clientId.isNotBlank()) distinctCustomers.add(clientId)
             }
 
-            // Sort monthly revenue chronologically by yyyy-MM
-            val sortedMonthlyRevenue = monthlyRevRaw.entries
-                .sortedBy { it.key }
-                .associate { entry ->
-                    val date = sortKeyFormat.parse(entry.key) ?: Date()
-                    val label = displayKeyFormat.format(date).replaceFirstChar { it.uppercase() }
-                    label to entry.value
-                }
+            // Ingresos: pagos aprobados, igual que el dashboard del gerente.
+            val approvedSales = firestore.collection("payments").get().await()
+                .documents
+                .mapNotNull { it.toApprovedSaleOrNull() }
+                .filter { it.currency.equals("PEN", ignoreCase = true) }
+
+            // Últimos 6 meses, con 0 en los meses sin ventas.
+            val monthlyRevenue = SalesAnalyticsCalculator()
+                .monthlyRevenue(approvedSales)
+                .associate { it.label to it.amount }
 
             val metrics = AdminMetrics(
-                totalRevenue = paidRevenue,
-                totalReservations = snapshot.size(),
+                totalRevenue = approvedSales.sumOf { it.amount },
+                totalReservations = reservations.size(),
                 activeCustomers = distinctCustomers.size,
                 statusSummary = statusCount,
-                monthlyRevenue = sortedMonthlyRevenue,
+                monthlyRevenue = monthlyRevenue,
                 isCached = false,
                 updatedAtMillis = System.currentTimeMillis()
             )
