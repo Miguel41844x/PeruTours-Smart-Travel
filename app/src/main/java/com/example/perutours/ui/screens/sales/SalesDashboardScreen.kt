@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.perutours.data.model.SalesAnalytics
+import com.example.perutours.ui.screens.sales.components.DestinationDemandBarChart
 import com.example.perutours.ui.screens.sales.components.DestinationRanking
 import com.example.perutours.ui.screens.sales.components.MonthlyRevenueLineChart
 import com.example.perutours.ui.screens.sales.components.QuotationStatusBarChart
@@ -176,7 +177,10 @@ private fun DashboardContent(
                 title = "Destinos más solicitados",
                 supportingText = "Ranking construido con las solicitudes de viaje registradas."
             ) {
-                DestinationRanking(destinations = uiState.analytics.topDestinations)
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    DestinationDemandBarChart(destinations = uiState.analytics.topDestinations)
+                    DestinationRanking(destinations = uiState.analytics.topDestinations)
+                }
             }
         }
     }
