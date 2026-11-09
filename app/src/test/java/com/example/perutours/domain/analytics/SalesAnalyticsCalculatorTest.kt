@@ -49,23 +49,27 @@ class SalesAnalyticsCalculatorTest {
     }
 
     @Test
-    fun ranksDestinationsIgnoringCaseAndExtraSpaces() {
+    fun groupsEquivalentDestinationLabelsWithoutMixingDifferentDepartments() {
         val analytics = calculator.calculate(
             quotationStatuses = emptyList(),
             approvedSales = emptyList(),
             requestedDestinations = listOf(
                 "Cusco, Perú",
-                "cusco, perú",
+                "cusco , Peru",
                 "  Arequipa,   Perú ",
-                "Cusco, Perú"
+                "Cusco, Cusco, Perú",
+                "Arequipa, Cajamarca, Perú"
             ),
             nowMillis = date(2026, Calendar.OCTOBER, 20)
         )
 
         assertEquals("Cusco, Perú", analytics.topDestinations.first().destination)
         assertEquals(3, analytics.topDestinations.first().requestCount)
-        assertEquals(75.0, analytics.topDestinations.first().percentage, 0.0)
-        assertEquals("Arequipa, Perú", analytics.topDestinations[1].destination)
+        assertEquals(60.0, analytics.topDestinations.first().percentage, 0.0)
+        assertEquals(
+            listOf("Cusco, Perú", "Arequipa, Cajamarca, Perú", "Arequipa, Perú"),
+            analytics.topDestinations.map { it.destination }
+        )
     }
 
     private fun date(year: Int, month: Int, day: Int): Long =

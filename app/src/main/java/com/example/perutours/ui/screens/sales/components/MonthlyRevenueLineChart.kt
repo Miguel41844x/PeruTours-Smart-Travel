@@ -28,7 +28,7 @@ fun MonthlyRevenueLineChart(
     currency: String,
     modifier: Modifier = Modifier
 ) {
-    if (metrics.isEmpty()) {
+    if (metrics.none { it.amount > 0.0 }) {
         Box(
             modifier = modifier
                 .fillMaxWidth()

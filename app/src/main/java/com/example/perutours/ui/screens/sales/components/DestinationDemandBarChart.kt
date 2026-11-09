@@ -2,6 +2,7 @@ package com.example.perutours.ui.screens.sales.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,12 +26,9 @@ fun DestinationDemandBarChart(
 ) {
     if (destinations.isEmpty()) return
 
+    val colors = MaterialTheme.colorScheme
     val palette = listOf(
-        androidx.compose.ui.graphics.Color(0xFF8F2D24),
-        androidx.compose.ui.graphics.Color(0xFFC48712),
-        androidx.compose.ui.graphics.Color(0xFF176B5B),
-        androidx.compose.ui.graphics.Color(0xFF777872),
-        androidx.compose.ui.graphics.Color(0xFFBA1A1A)
+        colors.primary, colors.tertiary, colors.secondary, colors.error, colors.onSurfaceVariant
     )
 
     val bars = destinations.take(5).mapIndexed { index, destination ->
@@ -48,10 +46,19 @@ fun DestinationDemandBarChart(
             .height(220.dp),
         animation = simpleChartAnimation(),
         barDrawer = SimpleBarDrawer(),
-        xAxisDrawer = SimpleXAxisDrawer(),
-        yAxisDrawer = SimpleYAxisDrawer(),
-        labelDrawer = SimpleValueDrawer(SimpleValueDrawer.DrawLocation.Outside)
+        xAxisDrawer = SimpleXAxisDrawer(axisLineColor = colors.outline),
+        yAxisDrawer = SimpleYAxisDrawer(
+            axisLineColor = colors.outline,
+            labelTextColor = colors.onSurfaceVariant
+        ),
+        labelDrawer = SimpleValueDrawer(
+            SimpleValueDrawer.DrawLocation.Outside,
+            labelTextColor = colors.onSurface
+        )
     )
 }
 
-private fun String.shortLabel(): String = if (length > 10) take(9) + "…" else this
+private fun String.shortLabel(): String {
+    val city = substringBefore(',')
+    return if (city.length > 10) city.take(9) + "…" else city
+}

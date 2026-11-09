@@ -77,7 +77,7 @@ class SalesAnalyticsCalculator(
         if (normalized.isEmpty()) return emptyList()
 
         return normalized
-            .groupBy { it.lowercase(Locale.ROOT) }
+            .groupBy(::normalize)
             .map { (_, labels) ->
                 DestinationDemandMetric(
                     destination = labels.first(),
@@ -140,9 +140,11 @@ class SalesAnalyticsCalculator(
         .replace(ACCENTS_REGEX, "")
         .lowercase(Locale.ROOT)
 
-    private fun cleanLabel(value: String): String = value
-        .trim()
-        .replace(WHITESPACE_REGEX, " ")
+    private fun cleanLabel(value: String): String = value.split(',')
+        .map { it.trim().replace(WHITESPACE_REGEX, " ") }
+        .filter(String::isNotBlank)
+        .distinctBy(::normalize)
+        .joinToString(", ")
 
     private data class MonthPeriod(val key: String, val label: String)
 
