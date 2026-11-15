@@ -282,7 +282,7 @@ fun AdminDashboardScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Ingresos por mes (Pagados - Vico)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Ingresos por mes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         MonthlyRevenueVicoChart(monthlyRevenue = uiState.metrics.monthlyRevenue)
                     }
                 }
@@ -294,7 +294,7 @@ fun AdminDashboardScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Distribución de reservas por estado (Tehras Donut)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Distribución de reservas por estado ", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         ReservationStatusDonutChart(statusData = uiState.metrics.statusSummary)
                     }
                 }
