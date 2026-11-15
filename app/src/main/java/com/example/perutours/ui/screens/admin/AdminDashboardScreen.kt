@@ -14,20 +14,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.perutours.data.model.Reservation
-import com.github.mikephil.charting.charts.BarChart
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.*
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
-import com.github.mikephil.charting.formatter.ValueFormatter
+import com.example.perutours.ui.screens.admin.components.MonthlyRevenueVicoChart
+import com.example.perutours.ui.screens.admin.components.ReservationStatusDonutChart
 import org.koin.androidx.compose.koinViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -288,8 +282,8 @@ fun AdminDashboardScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Ingresos por mes (Pagados)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        MonthlyRevenueChart(monthlyData = uiState.metrics.monthlyRevenue)
+                        Text("Ingresos por mes (Pagados - Vico)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        MonthlyRevenueVicoChart(monthlyRevenue = uiState.metrics.monthlyRevenue)
                     }
                 }
             }
@@ -300,8 +294,8 @@ fun AdminDashboardScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Distribución de reservas por estado", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        ReservationStatusChart(statusData = uiState.metrics.statusSummary)
+                        Text("Distribución de reservas por estado (Tehras Donut)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        ReservationStatusDonutChart(statusData = uiState.metrics.statusSummary)
                     }
                 }
             }
@@ -529,140 +523,6 @@ private fun ReservationItemCard(reservation: Reservation) {
             }
         }
     }
-}
-
-@Composable
-private fun MonthlyRevenueChart(monthlyData: Map<String, Double>) {
-    if (monthlyData.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("No hay datos de ingresos pagados.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        return
-    }
-
-    val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
-    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
-    val gridColor = MaterialTheme.colorScheme.outlineVariant.toArgb()
-
-    val entries = monthlyData.entries.mapIndexed { index, entry ->
-        Entry(index.toFloat(), entry.value.toFloat())
-    }
-    val labels = monthlyData.keys.toList()
-
-    AndroidView(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp),
-        factory = { context ->
-            LineChart(context).apply {
-                description.isEnabled = false
-                legend.isEnabled = false
-                axisRight.isEnabled = false
-                axisLeft.axisMinimum = 0f
-                xAxis.position = XAxis.XAxisPosition.BOTTOM
-                xAxis.granularity = 1f
-                xAxis.setDrawGridLines(false)
-                setScaleEnabled(false)
-                setPinchZoom(false)
-            }
-        },
-        update = { chart ->
-            val dataSet = LineDataSet(entries, "Ingresos").apply {
-                color = primaryColor
-                circleColors = listOf(primaryColor)
-                lineWidth = 2.5f
-                circleRadius = 3.5f
-                mode = LineDataSet.Mode.CUBIC_BEZIER
-                setDrawValues(false)
-                setDrawFilled(true)
-                fillColor = primaryColor
-                fillAlpha = 35
-            }
-
-            chart.axisLeft.textColor = axisColor
-            chart.axisLeft.gridColor = gridColor
-            chart.axisLeft.valueFormatter = object : ValueFormatter() {
-                override fun getFormattedValue(value: Float): String {
-                    if (value >= 1000f) {
-                        return String.format(Locale.US, "S/ %.1fk", value / 1000f)
-                    }
-                    return "S/ ${value.toInt()}"
-                }
-            }
-            chart.xAxis.textColor = axisColor
-            chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
-            chart.data = LineData(dataSet)
-            chart.invalidate()
-        }
-    )
-}
-
-@Composable
-private fun ReservationStatusChart(statusData: Map<String, Int>) {
-    if (statusData.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("No hay reservas para comparar.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        return
-    }
-
-    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
-    val gridColor = MaterialTheme.colorScheme.outlineVariant.toArgb()
-
-    val entries = statusData.entries.mapIndexed { index, entry ->
-        BarEntry(index.toFloat(), entry.value.toFloat())
-    }
-    val labels = statusData.keys.toList()
-    val barColors = labels.map { status -> getStatusColor(status).toArgb() }
-
-    AndroidView(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp),
-        factory = { context ->
-            BarChart(context).apply {
-                description.isEnabled = false
-                legend.isEnabled = false
-                axisRight.isEnabled = false
-                axisLeft.axisMinimum = 0f
-                axisLeft.granularity = 1f
-                xAxis.position = XAxis.XAxisPosition.BOTTOM
-                xAxis.granularity = 1f
-                xAxis.setDrawGridLines(false)
-                setScaleEnabled(false)
-                setPinchZoom(false)
-                setDrawValueAboveBar(true)
-            }
-        },
-        update = { chart ->
-            val dataSet = BarDataSet(entries, "Reservas").apply {
-                colors = barColors
-                valueTextColor = axisColor
-                valueTextSize = 11f
-                valueFormatter = object : ValueFormatter() {
-                    override fun getFormattedValue(value: Float): String = value.toInt().toString()
-                }
-            }
-
-            chart.axisLeft.textColor = axisColor
-            chart.axisLeft.gridColor = gridColor
-            chart.xAxis.textColor = axisColor
-            chart.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
-            chart.data = BarData(dataSet).apply { barWidth = 0.5f }
-            chart.setFitBars(true)
-            chart.invalidate()
-        }
-    )
 }
 
 @Composable
