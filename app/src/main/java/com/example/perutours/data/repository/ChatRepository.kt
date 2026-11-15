@@ -6,14 +6,21 @@ import com.example.perutours.data.model.ChatQuotationCard
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.data.model.TravelRequest
-import com.example.perutours.data.remote.gemini.GeminiApiService
 import com.example.perutours.data.remote.gemini.GeminiClient
+import com.example.perutours.data.remote.gemini.GeminiGateway
 import com.example.perutours.domain.chat.ChatCatalogItem
 import com.example.perutours.domain.chat.ChatContextBuilder
 import com.example.perutours.domain.chat.ChatFallbackResponder
 import com.example.perutours.domain.chat.ChatPromptBuilder
 import com.example.perutours.domain.chat.ChatQuotationCardsBuilder
 import com.example.perutours.domain.chat.ChatUserData
+import com.google.firebase.ai.type.APINotConfiguredException
+import com.google.firebase.ai.type.FirebaseAIException
+import com.google.firebase.ai.type.InvalidAPIKeyException
+import com.google.firebase.ai.type.QuotaExceededException
+import com.google.firebase.ai.type.RequestTimeoutException
+import com.google.firebase.ai.type.ServerException
+import com.google.firebase.ai.type.ServiceDisabledException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CancellationException
@@ -153,7 +160,7 @@ class FirestoreChatUserDataSource(
  * Flujo (todo con corrutinas en Dispatchers.IO):
  *  1. Verifica la sesión y lee los datos del cliente autenticado.
  *  2. Construye el prompt (reglas + datos + historial) y llama a Gemini
- *     reutilizando el cliente Retrofit de la HU10.
+ *     (SDK de Firebase AI Logic con respaldo al cliente Retrofit de la HU10).
  *  3. Si la IA falla (sin red, saturada, sin clave...) responde con un
  *     resumen real de los datos del cliente y explica el motivo.
  *
@@ -162,7 +169,7 @@ class FirestoreChatUserDataSource(
 class ChatRepository(
     private val currentUid: () -> String?,
     private val dataSource: ChatUserDataSource,
-    private val geminiApi: GeminiApiService,
+    private val gemini: GeminiGateway,
     private val apiKey: () -> String = { BuildConfig.GEMINI_API_KEY },
     private val model: String = GeminiClient.MODEL,
     private val clock: () -> Long = { System.currentTimeMillis() },
@@ -224,20 +231,18 @@ class ChatRepository(
         data: ChatUserData,
         nowMillis: Long
     ): GeminiOutcome {
-        val key = apiKey()
-        if (key.isBlank()) return GeminiOutcome.Failed(ChatFailure.NOT_CONFIGURED)
-
         val request = ChatPromptBuilder.toRequest(
             history = history,
             userText = userText,
             contextText = ChatContextBuilder.build(data, nowMillis)
         )
+        val restKey = apiKey()
 
         var retries = 0
         while (true) {
             try {
-                val text = geminiApi
-                    .generateContent(model = model, apiKey = key, request = request)
+                val text = gemini
+                    .generate(request, apiKey = restKey, restModel = model)
                     .text()
                     .trim()
                 return if (text.isBlank()) {
@@ -276,6 +281,17 @@ class ChatRepository(
                 429 -> ChatFailure.RATE_LIMITED
                 401, 403 -> ChatFailure.NOT_CONFIGURED
                 in 500..599 -> ChatFailure.SERVICE_UNAVAILABLE
+                else -> ChatFailure.UNKNOWN
+            }
+            // Errores del SDK de Firebase AI Logic (solo llegan aquí si no
+            // hay clave REST de respaldo); misma semántica que el REST.
+            is FirebaseAIException -> when (error) {
+                is QuotaExceededException -> ChatFailure.RATE_LIMITED
+                is RequestTimeoutException -> ChatFailure.TIMEOUT
+                is ServerException -> ChatFailure.SERVICE_UNAVAILABLE
+                is InvalidAPIKeyException,
+                is ServiceDisabledException,
+                is APINotConfiguredException -> ChatFailure.NOT_CONFIGURED
                 else -> ChatFailure.UNKNOWN
             }
             else -> ChatFailure.UNKNOWN

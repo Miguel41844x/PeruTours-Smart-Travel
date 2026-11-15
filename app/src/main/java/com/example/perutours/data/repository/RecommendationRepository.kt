@@ -1,12 +1,10 @@
 package com.example.perutours.data.repository
 
-import com.example.perutours.BuildConfig
 import com.example.perutours.data.model.Recommendation
 import com.example.perutours.data.model.RecommendationSource
 import com.example.perutours.data.model.TravelPreferences
 import com.example.perutours.data.remote.DestinationDto
-import com.example.perutours.data.remote.gemini.GeminiClient
-import com.example.perutours.data.remote.gemini.GeminiApiService
+import com.example.perutours.data.remote.gemini.GeminiGateway
 import com.example.perutours.data.remote.wikipedia.WikipediaApiService
 import com.example.perutours.domain.recommendation.LocalRecommender
 import com.example.perutours.domain.recommendation.RecommendationPromptBuilder
@@ -28,19 +26,21 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Flujo (todo con corrutinas en Dispatchers.IO):
  *  1. Lee las preferencias del usuario desde Firestore (HU10).
  *  2. Toma el catálogo de destinos desde Room (Single Source of Truth).
- *  3. Construye el prompt y llama a Gemini con Retrofit.
+ *  3. Construye el prompt y llama a Gemini (SDK de Firebase AI Logic
+ *     con respaldo al cliente Retrofit).
  *  4. Parsea el JSON de respuesta y lo une con el catálogo real.
  *
- * La clave de Gemini puede venir vacía (sin configurar); en ese caso, o
- * ante cualquier fallo de la IA, se aplica automáticamente el recomendador
- * local de respaldo (LocalRecommender) para no dejar la sección vacía.
+ * El SDK no necesita clave de Gemini; si el SDK falla y tampoco hay
+ * clave REST configurada, o ante cualquier fallo de la IA, se aplica
+ * automáticamente el recomendador local de respaldo (LocalRecommender)
+ * para no dejar la sección vacía.
  */
 class RecommendationRepository(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
     private val profileRepository: ProfileRepository,
     private val destinationRepository: DestinationRepository,
-    private val geminiApi: GeminiApiService,
+    private val gemini: GeminiGateway,
     private val wikipediaApi: WikipediaApiService
 ) {
 
@@ -80,17 +80,11 @@ class RecommendationRepository(
                 }
             }
 
-            // 3. IA Gemini con respaldo local: la sección nunca queda vacía
+            // 3. IA Gemini (SDK Firebase AI Logic + respaldo REST) con
+            //    respaldo local: la sección nunca queda vacía
             val recommendations = try {
-                if (BuildConfig.GEMINI_API_KEY.isBlank()) {
-                    throw GeminiUnavailableException()
-                }
-
                 val request = RecommendationPromptBuilder.toRequest(preferences, candidates)
-                val response = geminiApi.generateContent(
-                    model = GeminiClient.MODEL,
-                    request = request
-                )
+                val response = gemini.generate(request)
 
                 val entries = RecommendationResponseParser.parse(response.text())
                 mapToCatalog(entries, candidates).ifEmpty {

@@ -269,9 +269,20 @@ val appModule = module {
         )
     }
 
-    // HU10: cliente de IA Gemini para recomendaciones personalizadas
+    // HU10/HU11: cliente REST de IA Gemini (respaldo del SDK)
     single {
         com.example.perutours.data.remote.gemini.GeminiClient.getApiService()
+    }
+
+    // Firebase AI Logic (codelab): SDK primero, Retrofit como respaldo
+    single {
+        com.example.perutours.data.remote.gemini.GeminiSdkGateway()
+    }
+    single {
+        com.example.perutours.data.remote.gemini.GeminiGateway(
+            sdk = get(),
+            rest = get()
+        )
     }
 
     // HU10: API externa de información turística (resúmenes de Wikipedia)
@@ -287,7 +298,7 @@ val appModule = module {
             firestore = get(),
             profileRepository = get(),
             destinationRepository = get(),
-            geminiApi = get(),
+            gemini = get(),
             wikipediaApi = get()
         )
     }
@@ -307,7 +318,7 @@ val appModule = module {
         com.example.perutours.data.repository.ChatRepository(
             currentUid = { firebaseAuth.currentUser?.uid },
             dataSource = get(),
-            geminiApi = get()
+            gemini = get()
         )
     }
 
