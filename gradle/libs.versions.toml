@@ -23,6 +23,7 @@ koin = "4.1.0"
 cameraX = "1.6.2"
 mpAndroidChart = "3.1.0"
 tehrasCharts = "0.2.4-alpha"
+vico = "2.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -68,6 +69,9 @@ androidx-room-testing = { group = "androidx.room", name = "room-testing", versio
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpAndroidChart" }
 tehrasCharts = { group = "com.github.tehras", name = "charts", version.ref = "tehrasCharts" }
+vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
+vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
+vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }

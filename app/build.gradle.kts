@@ -100,6 +100,9 @@ dependencies {
     implementation(libs.google.play.services.location)
     implementation(libs.mpandroidchart)
     implementation(libs.tehrasCharts)
+    implementation(libs.vico.core)
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
 
     // Tests
     testImplementation(libs.junit)
