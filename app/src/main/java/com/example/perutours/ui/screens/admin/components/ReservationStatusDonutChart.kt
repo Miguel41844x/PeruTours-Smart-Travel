@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.github.tehras.charts.piechart.PieChart
 import com.github.tehras.charts.piechart.PieChartData
 import com.github.tehras.charts.piechart.animation.simpleChartAnimation
+import kotlin.math.roundToInt
 
 @Composable
 fun ReservationStatusDonutChart(
@@ -68,7 +69,7 @@ fun ReservationStatusDonutChart(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             statusData.forEach { (status, count) ->
-                val percentage = (count * 100) / total
+                val percentage = (count * 100f / total).roundToInt()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
