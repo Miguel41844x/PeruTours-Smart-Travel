@@ -10,22 +10,27 @@ class SalesAnalyticsCalculatorTest {
     private val calculator = SalesAnalyticsCalculator(timeZone)
 
     @Test
-    fun calculatesQuotationStatusRevenueAndConversion() {
+    fun countsAllApprovedSalesAndSeparatesRevenueByCurrency() {
         val analytics = calculator.calculate(
             quotationStatuses = listOf("Cotizado", "Aceptada", "Observada", "Cancelada"),
             approvedSales = listOf(
                 ApprovedSaleRecord(800.0, "PEN", date(2026, Calendar.OCTOBER, 2)),
                 ApprovedSaleRecord(200.0, "PEN", date(2026, Calendar.OCTOBER, 4)),
-                ApprovedSaleRecord(99.0, "USD", date(2026, Calendar.OCTOBER, 5))
+                ApprovedSaleRecord(99.50, "USD", date(2026, Calendar.OCTOBER, 5))
             ),
             requestedDestinations = emptyList(),
             nowMillis = date(2026, Calendar.OCTOBER, 20)
         )
 
         assertEquals(4, analytics.totalQuotations)
-        assertEquals(2, analytics.approvedSales)
-        assertEquals(1_000.0, analytics.totalRevenue, 0.0)
-        assertEquals(50.0, analytics.conversionRate, 0.0)
+        assertEquals(3, analytics.approvedSales)
+        assertEquals(75.0, analytics.conversionRate, 0.0)
+        assertEquals(listOf("PEN", "USD"), analytics.revenueByCurrency.map { it.currency })
+        assertEquals(listOf(1_000.0, 99.50), analytics.revenueByCurrency.map { it.totalAmount })
+        assertEquals(
+            listOf(1_000.0, 99.50),
+            analytics.revenueByCurrency.map { it.monthlyRevenue.last().amount }
+        )
         assertEquals(listOf("Cotizado", "Aceptada", "Observada", "Cancelada"), analytics.quotationStatuses.map { it.status })
     }
 
@@ -41,11 +46,12 @@ class SalesAnalyticsCalculatorTest {
             nowMillis = date(2026, Calendar.MARCH, 15)
         )
 
+        val monthlyRevenue = analytics.revenueByCurrency.single().monthlyRevenue
         assertEquals(
             listOf("2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03"),
-            analytics.monthlyRevenue.map { it.periodKey }
+            monthlyRevenue.map { it.periodKey }
         )
-        assertEquals(listOf(0.0, 0.0, 300.0, 700.0, 0.0, 0.0), analytics.monthlyRevenue.map { it.amount })
+        assertEquals(listOf(0.0, 0.0, 300.0, 700.0, 0.0, 0.0), monthlyRevenue.map { it.amount })
     }
 
     @Test

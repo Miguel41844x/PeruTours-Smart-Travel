@@ -1,5 +1,6 @@
 package com.example.perutours.domain.analytics
 
+import com.example.perutours.data.model.CurrencyRevenue
 import com.example.perutours.data.model.DestinationDemandMetric
 import com.example.perutours.data.model.MonthlyRevenueMetric
 import com.example.perutours.data.model.QuotationStatusMetric
@@ -22,12 +23,17 @@ class SalesAnalyticsCalculator(
         quotationStatuses: List<String>,
         approvedSales: List<ApprovedSaleRecord>,
         requestedDestinations: List<String>,
-        nowMillis: Long = System.currentTimeMillis(),
-        currency: String = DEFAULT_CURRENCY
+        nowMillis: Long = System.currentTimeMillis()
     ): SalesAnalytics {
-        val salesInCurrency = approvedSales.filter {
-            it.currency.equals(currency, ignoreCase = true)
-        }
+        val revenueByCurrency = approvedSales.groupBy { it.currency.trim().uppercase(Locale.ROOT) }
+            .toSortedMap()
+            .map { (currency, sales) ->
+                CurrencyRevenue(
+                    currency = currency,
+                    totalAmount = sales.sumOf { it.amount },
+                    monthlyRevenue = monthlyRevenue(sales, nowMillis)
+                )
+            }
         val quotationMetrics = quotationStatuses
             .groupingBy(::canonicalStatus)
             .eachCount()
@@ -36,16 +42,14 @@ class SalesAnalyticsCalculator(
 
         return SalesAnalytics(
             totalQuotations = quotationStatuses.size,
-            approvedSales = salesInCurrency.size,
-            totalRevenue = salesInCurrency.sumOf { it.amount },
-            currency = currency.uppercase(Locale.ROOT),
+            approvedSales = approvedSales.size,
             conversionRate = if (quotationStatuses.isEmpty()) {
                 0.0
             } else {
-                salesInCurrency.size * 100.0 / quotationStatuses.size
+                approvedSales.size * 100.0 / quotationStatuses.size
             },
             quotationStatuses = quotationMetrics,
-            monthlyRevenue = monthlyRevenue(salesInCurrency, nowMillis),
+            revenueByCurrency = revenueByCurrency,
             topDestinations = destinationRanking(requestedDestinations),
             updatedAtMillis = nowMillis
         )
@@ -149,7 +153,6 @@ class SalesAnalyticsCalculator(
     private data class MonthPeriod(val key: String, val label: String)
 
     private companion object {
-        const val DEFAULT_CURRENCY = "PEN"
         const val MONTH_WINDOW = 6
         const val MAX_DESTINATIONS = 5
 

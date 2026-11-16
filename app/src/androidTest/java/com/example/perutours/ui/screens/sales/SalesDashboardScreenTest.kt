@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.perutours.data.model.SalesAnalytics
@@ -55,6 +56,33 @@ class SalesDashboardScreenTest {
         val emptyRevenue = "Aún no hay ingresos para este periodo."
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(emptyRevenue))
         compose.onNodeWithText(emptyRevenue).assertIsDisplayed()
+    }
+
+    @Test
+    fun changesRevenueCurrencyAndKeepsConversionAcrossAllSales() {
+        val now = System.currentTimeMillis()
+        val analytics = SalesAnalyticsCalculator().calculate(
+            quotationStatuses = listOf("Aceptada", "Aceptada", "Cotizado", "Cancelada"),
+            approvedSales = listOf(
+                ApprovedSaleRecord(250.25, "PEN", now),
+                ApprovedSaleRecord(99.50, "USD", now)
+            ),
+            requestedDestinations = emptyList(),
+            nowMillis = now
+        )
+        showDashboard(analytics)
+
+        val dashboard = compose.onNode(hasScrollAction())
+        dashboard.performScrollToNode(hasText("S/ 250", substring = true))
+        compose.onNodeWithText("S/ 250", substring = true).assertIsDisplayed()
+        dashboard.performScrollToNode(hasText("USD"))
+        compose.onNodeWithText("USD").performClick()
+        dashboard.performScrollToNode(hasText("USD 99", substring = true))
+        compose.onNodeWithText("USD 99", substring = true).assertIsDisplayed()
+        dashboard.performScrollToNode(hasText("50%"))
+        compose.onNodeWithText("50%").assertIsDisplayed()
+        dashboard.performScrollToNode(hasText("Pagos confirmados en USD", substring = true))
+        compose.onNodeWithText("Pagos confirmados en USD", substring = true).assertIsDisplayed()
     }
 
     private fun showDashboard(analytics: SalesAnalytics) {

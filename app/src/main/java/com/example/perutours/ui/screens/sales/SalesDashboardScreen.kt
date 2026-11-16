@@ -26,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +38,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.perutours.data.model.CurrencyRevenue
 import com.example.perutours.data.model.SalesAnalytics
 import com.example.perutours.ui.screens.sales.components.DestinationDemandBarChart
 import com.example.perutours.ui.screens.sales.components.DestinationRanking
@@ -112,6 +117,12 @@ private fun DashboardContent(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedCurrency by rememberSaveable { mutableStateOf("PEN") }
+    val currencies = uiState.analytics.revenueByCurrency
+    val revenue = currencies.firstOrNull { it.currency == selectedCurrency }
+        ?: currencies.firstOrNull()
+        ?: CurrencyRevenue()
+
     if (uiState.isLoading && !uiState.analytics.hasData) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -149,7 +160,24 @@ private fun DashboardContent(
             }
         }
 
-        item { SalesSummary(analytics = uiState.analytics) }
+        if (currencies.size > 1) {
+            item {
+                Column {
+                    Text("Moneda de ingresos", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        currencies.forEach { item ->
+                            FilterChip(
+                                selected = revenue.currency == item.currency,
+                                onClick = { selectedCurrency = item.currency },
+                                label = { Text(item.currency) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item { SalesSummary(analytics = uiState.analytics, revenue = revenue) }
 
         item {
             DashboardSection(
@@ -163,11 +191,11 @@ private fun DashboardContent(
         item {
             DashboardSection(
                 title = "Ingresos aprobados",
-                supportingText = "Pagos confirmados durante los últimos seis meses."
+                supportingText = "Pagos confirmados en ${revenue.currency} durante los últimos seis meses."
             ) {
                 MonthlyRevenueLineChart(
-                    metrics = uiState.analytics.monthlyRevenue,
-                    currency = uiState.analytics.currency
+                    metrics = revenue.monthlyRevenue,
+                    currency = revenue.currency
                 )
             }
         }
@@ -187,15 +215,15 @@ private fun DashboardContent(
 }
 
 @Composable
-private fun SalesSummary(analytics: SalesAnalytics) {
+private fun SalesSummary(analytics: SalesAnalytics, revenue: CurrencyRevenue) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val wideLayout = maxWidth >= 720.dp
-        SummaryCards(analytics = analytics, singleRow = wideLayout)
+        SummaryCards(analytics = analytics, revenue = revenue, singleRow = wideLayout)
     }
 }
 
 @Composable
-private fun SummaryCards(analytics: SalesAnalytics, singleRow: Boolean) {
+private fun SummaryCards(analytics: SalesAnalytics, revenue: CurrencyRevenue, singleRow: Boolean) {
     val metrics = listOf(
         SummaryMetric(
             label = "Cotizaciones",
@@ -211,7 +239,7 @@ private fun SummaryCards(analytics: SalesAnalytics, singleRow: Boolean) {
         ),
         SummaryMetric(
             label = "Ingresos",
-            value = formatCurrency(analytics.totalRevenue, analytics.currency),
+            value = formatCurrency(revenue.totalAmount, revenue.currency),
             icon = Icons.Default.Payments,
             accent = MaterialTheme.colorScheme.secondary
         ),
@@ -360,8 +388,8 @@ private fun ErrorPanel(message: String, onRetry: () -> Unit) {
 
 private fun formatCurrency(amount: Double, currency: String): String {
     val formatter = NumberFormat.getNumberInstance(PERU_LOCALE).apply {
-        minimumFractionDigits = 0
-        maximumFractionDigits = 0
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
     }
     val prefix = if (currency.equals("PEN", ignoreCase = true)) "S/ " else "$currency "
     return prefix + formatter.format(amount)
