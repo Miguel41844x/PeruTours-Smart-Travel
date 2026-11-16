@@ -25,6 +25,8 @@ import com.example.perutours.data.repository.TripDataSource
 import com.example.perutours.data.repository.TripRemoteDataSource
 import com.example.perutours.data.repository.TripRepository
 import com.example.perutours.data.repository.PaymentRepository
+import com.example.perutours.data.ocr.MlKitVoucherTextReader
+import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.repository.PaymentReviewDataSource
 import com.example.perutours.data.repository.PaymentReviewRepository
 import com.example.perutours.data.repository.SalesDashboardDataSource
@@ -196,6 +198,8 @@ val appModule = module {
             workManager = get()
         )
     }
+
+    single<VoucherTextReader> { MlKitVoucherTextReader(androidContext()) }
 
     // HU07: revisión del pago (lectura del cliente y panel del agente)
     single<PaymentReviewDataSource> {
@@ -423,7 +427,8 @@ val appModule = module {
     viewModel {
         PaymentViewModel(
             paymentRepository = get(),
-            reservationRepository = get()
+            reservationRepository = get(),
+            voucherTextReader = get()
         )
     }
 

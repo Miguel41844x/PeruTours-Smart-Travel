@@ -41,6 +41,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.perutours.ui.components.VoucherOcrPanel
 import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.theme.PeruGold40
@@ -254,6 +255,13 @@ fun PaymentScreen(
                     )
                 }
             }
+
+            VoucherOcrPanel(
+                state = uiState.voucherOcr,
+                expectedAmount = uiState.reservationAmount,
+                expectedCurrency = uiState.reservationCurrency,
+                modifier = Modifier.padding(top = 12.dp)
+            )
 
             if (uiState.errorMessage != null) {
                 Text(
