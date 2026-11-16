@@ -7,6 +7,7 @@ import coil.imageLoader
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import coil.size.Scale
 import com.example.perutours.domain.payment.VoucherOcrResult
 import com.example.perutours.domain.payment.VoucherTextParser
 import com.google.mlkit.vision.common.InputImage
@@ -25,6 +26,7 @@ class MlKitVoucherTextReader(private val context: Context) : VoucherTextReader {
         val request = ImageRequest.Builder(context)
             .data(uri)
             .size(MAX_IMAGE_SIDE)
+            .scale(Scale.FIT)
             .allowHardware(false)
             .diskCachePolicy(CachePolicy.READ_ONLY)
             .build()

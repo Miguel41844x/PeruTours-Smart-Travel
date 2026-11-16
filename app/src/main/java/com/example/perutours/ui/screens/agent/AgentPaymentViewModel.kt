@@ -1,10 +1,17 @@
 package com.example.perutours.ui.screens.agent
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.model.Payment
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.data.repository.PaymentReviewDataSource
+import com.example.perutours.ui.screens.payment.VoucherOcrState
+import com.example.perutours.ui.screens.payment.readForReview
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +31,7 @@ data class AgentPaymentDetailUiState(
     val payment: Payment? = null,
     val reservation: Reservation? = null,
     val clientName: String? = null,
+    val voucherOcr: VoucherOcrState = VoucherOcrState.Idle,
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
     val resolutionMessage: String? = null
@@ -38,7 +46,8 @@ data class AgentPaymentDetailUiState(
  * colecciones (pago y reserva) se actualizan de forma atómica.
  */
 class AgentPaymentViewModel(
-    private val repository: PaymentReviewDataSource
+    private val repository: PaymentReviewDataSource,
+    private val voucherTextReader: VoucherTextReader
 ) : ViewModel() {
 
     private val _paymentsState = MutableStateFlow(AgentPaymentsUiState())
@@ -46,6 +55,8 @@ class AgentPaymentViewModel(
 
     private val _detailState = MutableStateFlow(AgentPaymentDetailUiState())
     val detailState: StateFlow<AgentPaymentDetailUiState> = _detailState.asStateFlow()
+    private var detailLoadJob: Job? = null
+    private var voucherOcrJob: Job? = null
 
     fun loadPendingPayments() {
         viewModelScope.launch {
@@ -83,6 +94,9 @@ class AgentPaymentViewModel(
     }
 
     fun loadPaymentDetail(paymentId: String) {
+        detailLoadJob?.cancel()
+        voucherOcrJob?.cancel()
+        _detailState.value = AgentPaymentDetailUiState(isLoading = paymentId.isNotBlank())
         if (paymentId.isBlank()) {
             _detailState.update {
                 it.copy(errorMessage = "No se recibió el identificador del pago.")
@@ -90,8 +104,7 @@ class AgentPaymentViewModel(
             return
         }
 
-        viewModelScope.launch {
-            _detailState.update { it.copy(isLoading = true, errorMessage = null) }
+        detailLoadJob = viewModelScope.launch {
             try {
                 val payment = repository.getPaymentForReservation(paymentId)
                     ?: throw IllegalStateException("No se encontró el pago.")
@@ -101,6 +114,7 @@ class AgentPaymentViewModel(
                 val clientName = runCatching {
                     repository.getClientName(payment.clientId)
                 }.getOrNull()
+                ensureActive()
                 _detailState.update {
                     it.copy(
                         isLoading = false,
@@ -109,6 +123,8 @@ class AgentPaymentViewModel(
                         clientName = clientName
                     )
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (_: Exception) {
                 _detailState.update {
                     it.copy(
@@ -117,6 +133,18 @@ class AgentPaymentViewModel(
                     )
                 }
             }
+        }
+    }
+
+    fun readVoucher() {
+        val state = _detailState.value
+        val url = state.payment?.voucherUrl?.takeIf(String::isNotBlank) ?: return
+        if (state.isLoading || state.voucherOcr == VoucherOcrState.Reading) return
+
+        _detailState.update { it.copy(voucherOcr = VoucherOcrState.Reading) }
+        voucherOcrJob = viewModelScope.launch {
+            val reading = voucherTextReader.readForReview(Uri.parse(url))
+            _detailState.update { it.copy(voucherOcr = reading) }
         }
     }
 

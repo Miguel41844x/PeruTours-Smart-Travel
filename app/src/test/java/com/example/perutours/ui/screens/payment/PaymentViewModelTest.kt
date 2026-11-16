@@ -1,10 +1,12 @@
 package com.example.perutours.ui.screens.payment
 
 import android.net.Uri
+import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.data.repository.PaymentRepository
 import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.data.repository.ReservationDataSource
+import com.example.perutours.domain.payment.VoucherOcrResult
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -13,10 +15,12 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -38,6 +42,7 @@ class PaymentViewModelTest {
     private lateinit var paymentRepository: PaymentRepository
     private lateinit var reservationRepository: ReservationDataSource
     private lateinit var viewModel: PaymentViewModel
+    private lateinit var voucherTextReader: VoucherTextReader
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -63,7 +68,9 @@ class PaymentViewModelTest {
         Dispatchers.setMain(testDispatcher)
         paymentRepository = mockk(relaxed = true)
         reservationRepository = mockk(relaxed = true)
-        viewModel = PaymentViewModel(paymentRepository, reservationRepository)
+        voucherTextReader = mockk()
+        coEvery { voucherTextReader.read(any()) } returns VoucherOcrResult(null, null)
+        viewModel = PaymentViewModel(paymentRepository, reservationRepository, voucherTextReader)
     }
 
     @After
@@ -113,6 +120,24 @@ class PaymentViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.canSubmit)
+        assertEquals(VoucherOcrState.Unavailable, viewModel.uiState.value.voucherOcr)
+    }
+
+    @Test
+    fun `al reemplazar el comprobante descarta la lectura anterior`() = runTest {
+        val replacement = mockk<Uri>()
+        val result = VoucherOcrResult(amount = null, operationNumber = "731546")
+        coEvery { voucherTextReader.read(voucherUri) } coAnswers { awaitCancellation() }
+        coEvery { voucherTextReader.read(replacement) } returns result
+
+        viewModel.onVoucherCaptured(voucherUri)
+        runCurrent()
+        assertEquals(VoucherOcrState.Reading, viewModel.uiState.value.voucherOcr)
+
+        viewModel.onVoucherCaptured(replacement)
+        advanceUntilIdle()
+        assertEquals(replacement, viewModel.uiState.value.voucherUri)
+        assertEquals(VoucherOcrState.Read(result), viewModel.uiState.value.voucherOcr)
     }
 
     @Test

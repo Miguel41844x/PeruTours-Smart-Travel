@@ -3,6 +3,7 @@ package com.example.perutours.ui.screens.payment
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.repository.PaymentRepository
 import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.data.repository.PaymentValidator
@@ -17,6 +18,7 @@ import java.util.UUID
 
 data class PaymentUiState(
     val voucherUri: Uri? = null,
+    val voucherOcr: VoucherOcrState = VoucherOcrState.Idle,
     val paymentMethod: String? = null,
     val isPreparing: Boolean = false,
     val uploadState: PaymentUploadState = PaymentUploadState.Idle,
@@ -31,13 +33,15 @@ data class PaymentUiState(
     val paymentMethods: List<String>
         get() = PaymentValidator.ALLOWED_METHODS
 
+    val canChangeVoucher: Boolean
+        get() = !isPreparing &&
+            (uploadState is PaymentUploadState.Idle || uploadState is PaymentUploadState.Error)
+
     val canSubmit: Boolean
         get() = voucherUri != null
             && paymentMethod != null
-            && !isPreparing
+            && canChangeVoucher
             && !isLoadingReservation
-            && (uploadState is PaymentUploadState.Idle ||
-                uploadState is PaymentUploadState.Error)
             && PaymentValidator.canClientSubmit(reservationStatus)
 }
 
@@ -48,13 +52,15 @@ data class PaymentUiState(
  */
 class PaymentViewModel(
     private val paymentRepository: PaymentRepository,
-    private val reservationRepository: ReservationDataSource
+    private val reservationRepository: ReservationDataSource,
+    private val voucherTextReader: VoucherTextReader
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PaymentUiState())
     val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
 
     private var uploadJob: Job? = null
+    private var voucherOcrJob: Job? = null
 
     /**
      * Carga la reserva desde Firestore para tomar el importe y la
@@ -107,8 +113,19 @@ class PaymentViewModel(
     }
 
     fun onVoucherCaptured(uri: Uri) {
+        if (!_uiState.value.canChangeVoucher) return
+        voucherOcrJob?.cancel()
         _uiState.update {
-            it.copy(voucherUri = uri, uploadState = PaymentUploadState.Idle, errorMessage = null)
+            it.copy(
+                voucherUri = uri,
+                voucherOcr = VoucherOcrState.Reading,
+                uploadState = PaymentUploadState.Idle,
+                errorMessage = null
+            )
+        }
+        voucherOcrJob = viewModelScope.launch {
+            val reading = voucherTextReader.readForReview(uri)
+            _uiState.update { it.copy(voucherOcr = reading) }
         }
     }
 

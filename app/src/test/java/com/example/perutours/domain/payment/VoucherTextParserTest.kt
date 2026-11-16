@@ -11,12 +11,13 @@ class VoucherTextParserTest {
     @Test
     fun readsSolesAndKeepsLeadingZerosInTheOperationNumber() {
         val result = VoucherTextParser.parse("Yape\nS/ 1,250.50\nN.º de operación:\n0012345")
+        val amount = requireNotNull(result.amount)
 
-        assertEquals(VoucherAmount(BigDecimal("1250.50"), "PEN"), result.amount)
+        assertEquals(VoucherAmount(BigDecimal("1250.50"), "PEN"), amount)
         assertEquals("0012345", result.operationNumber)
-        assertTrue(result.amount!!.matches(1250.50, "PEN"))
-        assertFalse(result.amount.matches(1250.50, "USD"))
-        assertFalse(result.amount.matches(1250.51, "PEN"))
+        assertTrue(amount.matches(1250.50, "PEN"))
+        assertFalse(amount.matches(1250.50, "USD"))
+        assertFalse(amount.matches(1250.51, "PEN"))
     }
 
     @Test

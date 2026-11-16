@@ -41,6 +41,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.perutours.ui.components.VoucherOcrPanel
 import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.theme.PeruGold40
@@ -196,6 +197,7 @@ fun PaymentScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
+                    enabled = uiState.canChangeVoucher,
                     onClick = {
                         if (
                             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -216,6 +218,7 @@ fun PaymentScreen(
 
                 OutlinedButton(
                     onClick = { galleryLauncher.launch("image/*") },
+                    enabled = uiState.canChangeVoucher,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -242,7 +245,7 @@ fun PaymentScreen(
                         model = uiState.voucherUri,
                         contentDescription = "Comprobante de pago",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Fit
                     )
                 } else {
                     Text(
@@ -252,6 +255,13 @@ fun PaymentScreen(
                     )
                 }
             }
+
+            VoucherOcrPanel(
+                state = uiState.voucherOcr,
+                expectedAmount = uiState.reservationAmount,
+                expectedCurrency = uiState.reservationCurrency,
+                modifier = Modifier.padding(top = 12.dp)
+            )
 
             if (uiState.errorMessage != null) {
                 Text(
