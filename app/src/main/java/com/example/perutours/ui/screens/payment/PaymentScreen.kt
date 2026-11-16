@@ -242,7 +242,7 @@ fun PaymentScreen(
                         model = uiState.voucherUri,
                         contentDescription = "Comprobante de pago",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Fit
                     )
                 } else {
                     Text(

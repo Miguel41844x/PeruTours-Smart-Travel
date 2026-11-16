@@ -288,7 +288,7 @@ fun AgentPaymentDetailScreen(
                             model = payment.voucherUrl,
                             contentDescription = "Comprobante de pago",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Fit
                         )
                     } else {
                         Column(
