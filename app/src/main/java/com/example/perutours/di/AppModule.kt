@@ -435,7 +435,8 @@ val appModule = module {
     // HU07: revisión de comprobantes por el agente
     viewModel {
         AgentPaymentViewModel(
-            repository = get()
+            repository = get(),
+            voucherTextReader = get()
         )
     }
 

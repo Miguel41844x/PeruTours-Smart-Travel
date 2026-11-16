@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.perutours.ui.components.VoucherOcrPanel
 import com.example.perutours.data.model.Payment
 import com.example.perutours.data.repository.PaymentValidator
 import com.example.perutours.ui.components.PeruToursTopBar
@@ -339,6 +340,16 @@ fun AgentPaymentDetailScreen(
                             )
                         }
                     }
+                }
+
+                if (payment.voucherUrl.isNotBlank()) {
+                    VoucherOcrPanel(
+                        state = uiState.voucherOcr,
+                        expectedAmount = uiState.reservation?.totalAmount ?: payment.amount,
+                        expectedCurrency = uiState.reservation?.currency ?: payment.currency,
+                        modifier = Modifier.widthIn(max = 720.dp),
+                        onRead = viewModel::readVoucher
+                    )
                 }
 
                 if (payment.status == Payment.STATUS_PENDING) {
