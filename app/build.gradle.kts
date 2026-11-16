@@ -98,6 +98,7 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging-ktx:24.1.0")
 
     implementation(libs.coil.compose)
+    implementation(libs.mlkit.text.recognition)
     implementation(libs.google.play.services.location)
     implementation(libs.mpandroidchart)
     implementation(libs.tehrasCharts)
