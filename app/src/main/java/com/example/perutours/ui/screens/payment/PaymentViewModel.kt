@@ -31,13 +31,15 @@ data class PaymentUiState(
     val paymentMethods: List<String>
         get() = PaymentValidator.ALLOWED_METHODS
 
+    val canChangeVoucher: Boolean
+        get() = !isPreparing &&
+            (uploadState is PaymentUploadState.Idle || uploadState is PaymentUploadState.Error)
+
     val canSubmit: Boolean
         get() = voucherUri != null
             && paymentMethod != null
-            && !isPreparing
+            && canChangeVoucher
             && !isLoadingReservation
-            && (uploadState is PaymentUploadState.Idle ||
-                uploadState is PaymentUploadState.Error)
             && PaymentValidator.canClientSubmit(reservationStatus)
 }
 
@@ -107,6 +109,7 @@ class PaymentViewModel(
     }
 
     fun onVoucherCaptured(uri: Uri) {
+        if (!_uiState.value.canChangeVoucher) return
         _uiState.update {
             it.copy(voucherUri = uri, uploadState = PaymentUploadState.Idle, errorMessage = null)
         }

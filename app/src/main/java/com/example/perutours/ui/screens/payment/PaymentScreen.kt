@@ -196,6 +196,7 @@ fun PaymentScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
+                    enabled = uiState.canChangeVoucher,
                     onClick = {
                         if (
                             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -216,6 +217,7 @@ fun PaymentScreen(
 
                 OutlinedButton(
                     onClick = { galleryLauncher.launch("image/*") },
+                    enabled = uiState.canChangeVoucher,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
