@@ -2,11 +2,16 @@ package com.example.perutours.data.model
 
 data class QuotationServiceItem(
     val id: String = "",
+    val catalogServiceId: String = "",
+    val destinationId: String = "",
+    val providerId: String = "",
     val name: String = "",
     val category: String = "", // Alojamiento, Transporte, Tours, Guía, Seguro, Alimentación
     val unitCost: Double = 0.0,
     val commercialCost: Double = 0.0,
     val supplierName: String = "",
+    val description: String = "",
+    val requiresScheduling: Boolean = true,
     val quantity: Int = 1,
     val subtotal: Double = unitCost * quantity
 )
@@ -17,6 +22,9 @@ data class Quotation(
     val clientId: String = "",             // UID del cliente en Firebase Auth
     val clientName: String = "",
     val clientEmail: String = "",
+    val packageId: String = "",
+    val destinationId: String = "",
+    val packageSnapshot: TravelPackageSnapshot = TravelPackageSnapshot(),
     val destination: String = "",
     val travelerCount: Int = 1,
     val services: List<QuotationServiceItem> = emptyList(),

@@ -2,8 +2,8 @@ package com.example.perutours.data.model
 
 /**
  * HU07: Entidad independiente del pago. Se almacena en payments/{paymentId}
- * usando el ID de la reserva como identificador para evitar duplicados.
- * La reserva solo conserva su estado general y el paymentId asociado.
+ * Cada envío es un intento independiente para conservar el historial de
+ * rechazos y reenvíos. La reserva apunta únicamente al intento vigente.
  */
 data class Payment(
     val id: String = "",
@@ -11,6 +11,8 @@ data class Payment(
     val quotationId: String = "",
     val clientId: String = "",
     val agentId: String = "",
+    val attemptNumber: Int = 1,
+    val previousPaymentId: String = "",
     val method: String = "",
     val amount: Double = 0.0,
     val currency: String = "PEN",

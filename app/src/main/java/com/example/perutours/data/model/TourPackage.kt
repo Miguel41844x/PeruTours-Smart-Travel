@@ -1,11 +1,12 @@
 package com.example.perutours.data.model
 
+import java.text.NumberFormat
+import java.util.Locale
+
 /**
  * Paquete turístico vendible vinculado a un destino.
  *
  * Colección Firestore: packages/{packageId}
- * Subcolección:        packages/{packageId}/included_services/{serviceId}
- *
  * Concentra lo que PeruTours vende: precio, duración, categoría, imagen y
  * condiciones comerciales. La lista [includedServiceIds] guarda los IDs de
  * los servicios incluidos (catálogo interno de servicios).
@@ -33,10 +34,7 @@ data class TourPackage(
         get() = CatalogStatus.from(status) == CatalogStatus.PUBLICADO
 
     /** Texto mostrado en la tarjeta del cliente, p. ej. "S/ 1,299". */
-    fun priceLabel(): String {
-        val formatted = "%,.0f".format(priceAmount).replace(',', ' ')
-        return if (currency == "USD") "$ $formatted" else "S/ $formatted"
-    }
+    fun priceLabel(): String = formatCatalogPrice(priceAmount, currency)
 
     fun durationLabel(): String = durationText.ifBlank {
         "$durationDays día${if (durationDays == 1) "" else "s"}"
@@ -61,4 +59,11 @@ data class TourPackage(
         "createdAtMillis" to createdAtMillis,
         "updatedAtMillis" to updatedAtMillis
     )
+}
+
+internal fun formatCatalogPrice(amount: Double, currency: String): String {
+    val formatted = NumberFormat.getNumberInstance(Locale.US).apply {
+        maximumFractionDigits = 2
+    }.format(amount).replace(',', ' ')
+    return if (currency == "USD") "USD $formatted" else "S/ $formatted"
 }

@@ -1,5 +1,7 @@
 package com.example.perutours.data.model
 
+import com.google.firebase.firestore.Exclude
+
 data class UserProfile(
     val uid: String = "",
     val name: String = "",
@@ -15,4 +17,8 @@ data class UserProfile(
     val tripType: String = "",
     val budget: String = "",
     val duration: String = ""
-)
+) {
+    @get:Exclude
+    val userRole: UserRole
+        get() = UserRole.fromWire(role)
+}
