@@ -105,7 +105,7 @@ class GeminiSdkGateway {
 
     companion object {
         /** Modelo del codelab: rápido, económico y con cuota gratuita generosa. */
-        const val MODEL = "gemini-3.1-flash-lite"
+        const val MODEL = GeminiClient.MODEL
 
         /** Safety settings del codelab: umbral más estricto en las 4 categorías. */
         private val SAFETY_SETTINGS = listOf(

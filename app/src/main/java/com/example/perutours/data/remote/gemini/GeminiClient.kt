@@ -17,11 +17,8 @@ object GeminiClient {
     // URL base del servicio Gemini (Google AI Studio).
     const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/"
 
-    // Modelo gratuito del tier free: rápido y con buena salida en español.
-    // Nota: gemini-2.5-flash dejó de estar disponible para usuarios nuevos
-    // y los modelos 3.7/3.8 estaban saturados (503) al momento de probar;
-    // gemini-3.6-flash respondió de forma estable.
-    const val MODEL = "gemini-3.6-flash"
+    // Modelo compartido por el SDK y el respaldo REST.
+    const val MODEL = "gemini-3.1-flash-lite"
 
     @Volatile
     private var apiService: GeminiApiService? = null

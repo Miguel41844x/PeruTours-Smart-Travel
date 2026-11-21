@@ -63,7 +63,14 @@ class AuthRepository(
 
         Result.success(Unit)
     } catch (e: Exception) {
-        Result.failure(AuthException(AuthErrorTranslator.translate(e, AuthOperation.REGISTRO), e))
+        val partiallyCreated = auth.currentUser?.isEmailVerified == false
+        auth.signOut()
+        val message = if (partiallyCreated) {
+            "Tu cuenta fue creada. Inicia sesión para reenviar la verificación de correo."
+        } else {
+            AuthErrorTranslator.translate(e, AuthOperation.REGISTRO)
+        }
+        Result.failure(AuthException(message, e))
     }
 
     /**

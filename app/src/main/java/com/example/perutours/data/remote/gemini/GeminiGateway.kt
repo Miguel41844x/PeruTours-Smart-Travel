@@ -13,7 +13,7 @@ import kotlinx.coroutines.CancellationException
  *     google-services.json.
  *  2. **Cliente REST existente** ([GeminiApiService] + [GeminiClient]):
  *     solo si el SDK falló y hay clave en BuildConfig (local.properties).
- *     Es el mismo código de siempre, con su modelo `gemini-3.6-flash`.
+ *     Comparte el modelo de [GeminiClient] con el SDK.
  *  3. Si no hay clave REST y el SDK falló, se propaga la excepción del
  *     SDK: los repositorios aplican su respaldo local (LocalRecommender)
  *     o su mapeo de fallos (ChatRepository.mapFailure).
