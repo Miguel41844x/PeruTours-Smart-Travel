@@ -29,7 +29,7 @@ class TripWorkScheduler(
 
         workManager.enqueueUniqueWork(
             CHECKLIST_SYNC_WORK,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             request
         )
     }

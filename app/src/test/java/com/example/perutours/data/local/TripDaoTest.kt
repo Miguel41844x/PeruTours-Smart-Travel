@@ -73,6 +73,16 @@ class TripDaoTest {
         assertEquals(1, dao.getPendingChecklist("client-1").size)
     }
 
+    @Test
+    fun `una confirmacion antigua conserva la edicion local pendiente`() = runBlocking {
+        val item = checklist("changed", TripChecklistEntity.PENDING_UPSERT)
+        dao.upsertChecklistItem(item.copy(updatedAtMillis = 2L))
+        assertEquals(0, dao.markChecklistSynced(item.id, 1L))
+        assertEquals(1, dao.getPendingChecklist("client-1").size)
+        assertEquals(1, dao.markChecklistSynced(item.id, 2L))
+        assertTrue(dao.getPendingChecklist("client-1").isEmpty())
+    }
+
     private fun trip(id: String, clientId: String) = TripEntity(
         reservationId = id,
         quotationId = "quotation-$id",

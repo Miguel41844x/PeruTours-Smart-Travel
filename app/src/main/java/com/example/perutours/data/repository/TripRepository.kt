@@ -264,7 +264,7 @@ class TripRepository(
         tripDao.upsertChecklistItem(
             current.copy(
                 isCompleted = !current.isCompleted,
-                updatedAtMillis = System.currentTimeMillis(),
+                updatedAtMillis = maxOf(System.currentTimeMillis(), current.updatedAtMillis + 1),
                 syncState = TripChecklistEntity.PENDING_UPSERT,
                 isDeleted = false
             )
@@ -281,7 +281,7 @@ class TripRepository(
         }
         tripDao.upsertChecklistItem(
             current.copy(
-                updatedAtMillis = System.currentTimeMillis(),
+                updatedAtMillis = maxOf(System.currentTimeMillis(), current.updatedAtMillis + 1),
                 syncState = TripChecklistEntity.PENDING_DELETE,
                 isDeleted = true
             )

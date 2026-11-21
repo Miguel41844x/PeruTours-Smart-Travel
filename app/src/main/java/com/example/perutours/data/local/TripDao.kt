@@ -89,12 +89,13 @@ interface TripDao {
 
     @Query(
         "UPDATE trip_checklist_items SET syncState = 'SYNCED', isDeleted = 0 " +
-            "WHERE id = :itemId"
+            "WHERE id = :itemId AND updatedAtMillis = :expectedUpdatedAt AND syncState = 'PENDING_UPSERT'"
     )
-    suspend fun markChecklistSynced(itemId: String)
+    suspend fun markChecklistSynced(itemId: String, expectedUpdatedAt: Long): Int
 
-    @Query("DELETE FROM trip_checklist_items WHERE id = :itemId")
-    suspend fun deleteChecklistPermanently(itemId: String)
+    @Query("DELETE FROM trip_checklist_items WHERE id = :itemId " +
+        "AND updatedAtMillis = :expectedUpdatedAt AND syncState = 'PENDING_DELETE'")
+    suspend fun deleteChecklistPermanently(itemId: String, expectedUpdatedAt: Long): Int
 
     @Query(
         "DELETE FROM trip_checklist_items WHERE reservationId = :reservationId " +

@@ -10,6 +10,7 @@ import com.example.perutours.data.repository.FirestoreTripRemoteDataSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.CancellationException
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -30,7 +31,9 @@ class TripSyncWorker(
 
         return try {
             pending.forEach { item -> syncItem(item, clientId) }
-            Result.success()
+            if (tripDao.getPendingChecklist(clientId).isEmpty()) Result.success() else Result.retry()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
@@ -52,11 +55,11 @@ class TripSyncWorker(
         when (item.syncState) {
             TripChecklistEntity.PENDING_DELETE -> {
                 document.delete().await()
-                tripDao.deleteChecklistPermanently(item.id)
+                tripDao.deleteChecklistPermanently(item.id, item.updatedAtMillis)
             }
             TripChecklistEntity.PENDING_UPSERT -> {
                 document.set(item.toModel()).await()
-                tripDao.markChecklistSynced(item.id)
+                tripDao.markChecklistSynced(item.id, item.updatedAtMillis)
             }
         }
     }
