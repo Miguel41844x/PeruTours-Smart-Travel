@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.perutours.ui.components.AgentListSearch
+import androidx.compose.material3.FilterChip
 import com.example.perutours.ui.components.VoucherOcrPanel
 import com.example.perutours.data.model.Payment
 import com.example.perutours.data.repository.PaymentValidator
@@ -77,6 +79,8 @@ fun AgentPaymentsScreen(
     viewModel: AgentPaymentViewModel = koinViewModel()
 ) {
     val uiState by viewModel.paymentsState.collectAsStateWithLifecycle()
+    val query by viewModel.query.collectAsStateWithLifecycle()
+    val matching = query.matching(uiState.payments, uiState.clientNames)
 
     LaunchedEffect(Unit) {
         viewModel.loadPendingPayments()
@@ -143,12 +147,30 @@ fun AgentPaymentsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                items(uiState.payments, key = { payment -> payment.id }) { payment ->
+                item { AgentListSearch(query.text, viewModel::searchPayments, "Buscar cliente, reserva o pago") }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (listOf<String?>(null) + PaymentValidator.ALLOWED_METHODS).forEach { method ->
+                            FilterChip(
+                                selected = query.method == method,
+                                onClick = { viewModel.filterMethod(method) },
+                                label = { Text(method ?: "Todos") }
+                            )
+                        }
+                    }
+                }
+                if (matching.isEmpty()) {
+                    item { Text("No hay comprobantes con estos filtros.") }
+                }
+                items(matching.take(query.visibleLimit), key = { payment -> payment.id }) { payment ->
                     PaymentListItem(
                         payment = payment,
                         clientName = uiState.clientNames[payment.clientId].orEmpty(),
                         onClick = { onPaymentSelected(payment.id) }
                     )
+                }
+                if (matching.size > query.visibleLimit) {
+                    item { TextButton(onClick = viewModel::loadMorePayments) { Text("Cargar más") } }
                 }
             }
         }
@@ -202,7 +224,7 @@ private fun PaymentListItem(
             Text(
                 text = formatQuotationAmount(payment.amount, payment.currency),
                 style = MaterialTheme.typography.titleSmall,
-                color = PeruGold40
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -316,7 +338,7 @@ fun AgentPaymentDetailScreen(
                         Text(
                             text = formatQuotationAmount(payment.amount, payment.currency),
                             style = MaterialTheme.typography.headlineSmall,
-                            color = PeruGold40
+                            color = MaterialTheme.colorScheme.primary
                         )
                         DetailRow(
                             label = "Cliente",

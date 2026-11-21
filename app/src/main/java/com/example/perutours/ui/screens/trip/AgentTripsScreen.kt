@@ -33,6 +33,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.TextButton
+import com.example.perutours.domain.searchKey
+import com.example.perutours.ui.components.AgentListSearch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +59,12 @@ fun AgentTripsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var query by rememberSaveable { mutableStateOf("") }
+    var limit by rememberSaveable { mutableStateOf(20) }
+    val matching = state.trips.filter {
+        listOf(it.id, it.destination, it.originCity)
+            .any { field -> field.searchKey().contains(query.searchKey()) }
+    }.sortedBy { it.departureAtMillis }
 
     LaunchedEffect(state.message) {
         state.message?.let {
@@ -100,8 +112,17 @@ fun AgentTripsScreen(
                         )
                     }
                 }
-                items(state.trips, key = Reservation::id) { reservation ->
+                item {
+                    AgentListSearch(query, { query = it.take(120); limit = 20 }, "Buscar destino o reserva")
+                }
+                if (matching.isEmpty()) {
+                    item { Text("No hay viajes con estos filtros.") }
+                }
+                items(matching.take(limit), key = Reservation::id) { reservation ->
                     AgentTripCard(reservation) { onTripSelected(reservation.id) }
+                }
+                if (matching.size > limit) {
+                    item { TextButton(onClick = { limit += 20 }) { Text("Cargar más") } }
                 }
             }
         }

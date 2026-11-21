@@ -7,6 +7,7 @@ import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.model.Payment
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.data.repository.PaymentReviewDataSource
+import com.example.perutours.domain.AgentPaymentQuery
 import com.example.perutours.ui.screens.payment.VoucherOcrState
 import com.example.perutours.ui.screens.payment.readForReview
 import kotlinx.coroutines.CancellationException
@@ -52,6 +53,17 @@ class AgentPaymentViewModel(
 
     private val _paymentsState = MutableStateFlow(AgentPaymentsUiState())
     val paymentsState: StateFlow<AgentPaymentsUiState> = _paymentsState.asStateFlow()
+    private val _query = MutableStateFlow(AgentPaymentQuery())
+    val query = _query.asStateFlow()
+    fun searchPayments(value: String) {
+        _query.value = _query.value.copy(text = value.take(120), visibleLimit = 20)
+    }
+    fun filterMethod(method: String?) {
+        _query.value = _query.value.copy(method = method, visibleLimit = 20)
+    }
+    fun loadMorePayments() {
+        _query.value = _query.value.copy(visibleLimit = _query.value.visibleLimit + 20)
+    }
 
     private val _detailState = MutableStateFlow(AgentPaymentDetailUiState())
     val detailState: StateFlow<AgentPaymentDetailUiState> = _detailState.asStateFlow()
