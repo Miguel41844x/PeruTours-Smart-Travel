@@ -90,6 +90,25 @@ const validProvider = (overrides = {}) => ({
   ...overrides
 });
 
+const validCatalogService = (overrides = {}) => ({
+  id: 'svc_cusco_1',
+  name: 'Tour por el Valle Sagrado',
+  destinationId: DESTINATION_ID,
+  providerId: PROVIDER_ID,
+  city: 'Cusco',
+  category: 'Actividad',
+  unitCost: 120,
+  commercialCost: 120,
+  supplierName: 'Andes Travel',
+  description: 'Recorrido guiado de día completo.',
+  defaultQuantity: 1,
+  durationMinutes: 480,
+  requiresScheduling: true,
+  imageUrl: '',
+  active: true,
+  ...overrides
+});
+
 const seedData = () =>
   testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
@@ -316,6 +335,42 @@ describe('providers (proveedores turísticos)', () => {
         active: false,
         updatedAtMillis: 2_000
       })
+    );
+  });
+});
+
+describe('catalog_services (servicios relacionados)', () => {
+  beforeEach(async () => {
+    await setDoc(doc(dbAs(ADMIN_UID), 'providers', PROVIDER_ID), validProvider());
+  });
+
+  it('el administrador registra un servicio vinculado a destino y proveedor', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(dbAs(ADMIN_UID), 'catalog_services', 'svc_cusco_1'),
+        validCatalogService()
+      )
+    );
+  });
+
+  it('un agente no puede alterar el catálogo maestro', async () => {
+    await assertFails(
+      setDoc(
+        doc(dbAs(AGENT_UID), 'catalog_services', 'svc_cusco_1'),
+        validCatalogService()
+      )
+    );
+  });
+
+  it('rechaza relaciones hacia proveedores inexistentes', async () => {
+    await assertFails(
+      setDoc(
+        doc(dbAs(ADMIN_UID), 'catalog_services', 'svc_sin_proveedor'),
+        validCatalogService({
+          id: 'svc_sin_proveedor',
+          providerId: 'prov_inexistente'
+        })
+      )
     );
   });
 });

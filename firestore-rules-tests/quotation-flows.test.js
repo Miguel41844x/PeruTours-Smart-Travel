@@ -138,7 +138,9 @@ const seedQuoted = () =>
       notes: '',
       status: 'Cotizado',
       createdAtMillis: Date.now(),
-      quotationId: QUOTATION_ID
+      quotationId: QUOTATION_ID,
+      assignedAgentId: AGENT_UID,
+      claimedAtMillis: Date.now()
     });
     await setDoc(doc(db, 'cotizaciones', QUOTATION_ID), {
       id: QUOTATION_ID,

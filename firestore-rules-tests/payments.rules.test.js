@@ -177,6 +177,22 @@ describe('Envío del comprobante por el cliente', () => {
     await assertSucceeds(submitPaymentBatch(dbAs(CLIENT_UID)));
   });
 
+  it('permite crear un intento independiente y enlazarlo desde la reserva', async () => {
+    const paymentId = 'payment_attempt_1';
+    const db = dbAs(CLIENT_UID);
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'payments', paymentId), validPayment({
+      id: paymentId,
+      attemptNumber: 1,
+      previousPaymentId: ''
+    }));
+    batch.update(doc(db, 'reservations', RESERVATION_ID), {
+      status: 'Pago enviado',
+      paymentId
+    });
+    await assertSucceeds(batch.commit());
+  });
+
   it('permite reenviar tras un rechazo con método y voucher nuevos', async () => {
     await seedRejectedPayment();
     const db = dbAs(CLIENT_UID);

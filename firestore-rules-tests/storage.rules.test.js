@@ -17,11 +17,13 @@ let testEnv;
 const CLIENT_UID = 'cliente_storage_1';
 const OTHER_CLIENT_UID = 'cliente_storage_2';
 const AGENT_UID = 'agente_storage_1';
+const ADMIN_UID = 'admin_storage_1';
 const RESERVATION_ID = 'res_storage_1';
+const PAYMENT_ID = 'payment_attempt_storage_1';
 
 // Ruta exacta que usa UploadPaymentWorker al subir el comprobante.
 const voucherPath = (uid = CLIENT_UID) =>
-  `payment_vouchers/${uid}/${RESERVATION_ID}/voucher.jpg`;
+  `payment_vouchers/${uid}/${RESERVATION_ID}/${PAYMENT_ID}/voucher.jpg`;
 
 const uploadVoucher = (
   uid,
@@ -43,6 +45,10 @@ const downloadVoucher = (uid, path = voucherPath()) =>
 const seedReservation = (overrides = {}) =>
   testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
+    await setDoc(doc(db, 'users', ADMIN_UID), {
+      uid: ADMIN_UID,
+      role: 'administrador'
+    });
     await setDoc(doc(db, 'reservations', RESERVATION_ID), {
       id: RESERVATION_ID,
       clientId: CLIENT_UID,
@@ -122,5 +128,29 @@ describe('Lectura del comprobante en Storage', () => {
 
   it('rechaza que otro cliente lea el comprobante', async () => {
     await assertFails(downloadVoucher(OTHER_CLIENT_UID));
+  });
+});
+
+describe('Imágenes propias de paquetes', () => {
+  const packagePath = 'package_images/pkg_storage_1/cover.jpg';
+
+  it('permite al administrador subir una portada', async () => {
+    await assertSucceeds(
+      uploadBytes(
+        ref(testEnv.authenticatedContext(ADMIN_UID).storage(), packagePath),
+        Buffer.from('portada'),
+        { contentType: 'image/jpeg' }
+      )
+    );
+  });
+
+  it('rechaza que un cliente modifique la portada', async () => {
+    await assertFails(
+      uploadBytes(
+        ref(testEnv.authenticatedContext(CLIENT_UID).storage(), packagePath),
+        Buffer.from('portada'),
+        { contentType: 'image/jpeg' }
+      )
+    );
   });
 });

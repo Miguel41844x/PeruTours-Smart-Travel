@@ -14,15 +14,20 @@ service cloud.firestore {
     //   while preparing and managing a travel quotation.
     //
     // travel_requests/{requestId}
-    //   id, userId, destination, destinationLatitude,
+    //   id, userId, requestType, packageId, destinationId,
+    //   packageSnapshot, requestedServiceIds (hasta cinco actividades),
+    //   assignedAgentId, claimedAtMillis,
+    //   destination, destinationLatitude,
     //   destinationLongitude, originCity, originLatitude,
     //   originLongitude, departureAtMillis, returnAtMillis,
     //   travelerCount, notes, status, createdAtMillis;
     //   optional quotationId after an agent creates a quotation.
     //
     // catalog_services/{serviceId}
-    //   id, name, city, category, unitCost, description,
-    //   defaultQuantity, active.
+    //   id, destinationId, providerId, name, city, category,
+    //   unitCost, commercialCost, supplierName, description,
+    //   defaultQuantity, durationMinutes, requiresScheduling,
+    //   imageUrl, active, requestable (opcional).
     //
     // destinations/{destinationId}   (HU catálogo turístico)
     //   id, name, department, summary, latitude, longitude,
@@ -34,8 +39,9 @@ service cloud.firestore {
     //   alimentan la consulta de puntos de interés cercanos.
     //
     // providers/{providerId}          (HU catálogo turístico)
-    //   id, name, contactName, phone, email, city, serviceNames,
-    //   active, createdBy, createdAtMillis, updatedAtMillis.
+    //   id, name, contactName, phone, email, city, active,
+    //   createdBy, createdAtMillis, updatedAtMillis. Los servicios viven
+    //   en catalog_services y referencian al proveedor por providerId.
     //
     // packages/{packageId}            (HU catálogo turístico)
     //   id, destinationId, title, summary, durationText, durationDays,
@@ -45,14 +51,12 @@ service cloud.firestore {
     //   status: BORRADOR | PUBLICADO | ARCHIVADO. El cliente solo ve
     //   los paquetes PUBLICADOS.
     //
-    // packages/{packageId}/included_services/{serviceId}
-    //   serviceId (ID del servicio incluido, documento = ID de servicio).
-    //
     // preferences/{preferenceId}
     //   id, name, description, active, order.
     //
     // cotizaciones/{quotationId}
-    //   id, requestId, clientId, clientName, clientEmail, destination,
+    //   id, requestId, clientId, clientName, clientEmail, packageId,
+    //   destinationId, packageSnapshot, destination,
     //   travelerCount, services, baseCost, marginPercent, totalAmount,
     //   currency, validityDate, validUntilMillis, conditions, status,
     //   agentId, agentName,
@@ -65,27 +69,26 @@ service cloud.firestore {
     //   resultingStatus, createdAtMillis.
     //
     // reservations/{reservationId}
-    //   id, quotationId, requestId, clientId, agentId, destination,
+    //   id, quotationId, requestId, clientId, agentId, packageId,
+    //   destinationId, packageSnapshot, destination,
     //   originCity, departureAtMillis, returnAtMillis, travelerCount,
     //   services, totalAmount, currency, validityDate, conditions,
-    //   status, createdAtMillis, paymentId, paymentVoucherUrl,
-    //   paymentMethod, paidAtMillis. A new reservation starts Confirmada
-    //   with empty payment fields. HU07 flow: Confirmada → Pago enviado
+    //   status, createdAtMillis, paymentId. A new reservation starts
+    //   Confirmada con paymentId vacío. HU07 flow: Confirmada → Pago enviado
     //   → Pagado | Pago rechazado. paymentId points to the payment doc
-    //   once a voucher has been submitted. HU06 uses the quotation ID
-    //   as the reservation document ID.
+    //   once a voucher has been submitted.
     //
     // payments/{paymentId}
-    //   id, reservationId, quotationId, clientId, agentId, method,
+    //   id, reservationId, quotationId, clientId, agentId, attemptNumber,
+    //   previousPaymentId, method,
     //   amount, currency, voucherUrl, status, rejectionReason,
     //   submittedAtMillis, reviewedAtMillis, reviewedBy.
-    //   paymentId equals the reservation ID so a reservation can never
-    //   have two payment documents. The client submits with status
-    //   'Pendiente'; only the assigned agent may move it to 'Aprobado'
-    //   or 'Rechazado' with a mandatory reason.
+    //   Cada reenvío crea un documento y enlaza el intento anterior. Solo
+    //   el asignado puede aprobar o rechazar el intento vigente.
     //
     // trip_itinerary_items/{itemId}
-    //   id, reservationId, clientId, agentId, title, description,
+    //   id, reservationId, reservationServiceId, clientId, agentId,
+    //   title, description,
     //   category, locationName, latitude, longitude, startAtMillis,
     //   endAtMillis, dayIndex, sortOrder, providerName, status, notes,
     //   source, createdAtMillis, updatedAtMillis. Only the agent assigned
@@ -145,7 +148,7 @@ service cloud.firestore {
     }
 
     function isManager() {
-      return (isAuthenticated() && request.auth.token.email == 'adminperutours@gmail.com')
+      return isVerifiedCatalogAdmin()
         || hasRole('gerente')
         || hasRole('administrador');
     }
@@ -153,8 +156,14 @@ service cloud.firestore {
     // HU catálogo turístico: la gestión de destinos, proveedores y
     // paquetes está reservada al administrador del caso de negocio.
     function isAdmin() {
-      return (isAuthenticated() && request.auth.token.email == 'adminperutours@gmail.com')
+      return isVerifiedCatalogAdmin()
         || hasRole('administrador');
+    }
+
+    function isVerifiedCatalogAdmin() {
+      return isAuthenticated()
+        && request.auth.token.get('email', '') == 'adminperutours@gmail.com'
+        && request.auth.token.get('email_verified', false) == true;
     }
 
     // Verify UID has not been tampered with on create.
@@ -349,95 +358,159 @@ service cloud.firestore {
           || isRecentMillis(request.resource.data.updatedAt));
     }
 
-    function isValidCoordinates(data) {
-      return (
-          data.originLatitude == null
-          && data.originLongitude == null
-        ) || (
-          data.originLatitude is number
-          && data.originLatitude >= -90
-          && data.originLatitude <= 90
-          && data.originLongitude is number
-          && data.originLongitude >= -180
-          && data.originLongitude <= 180
-        );
+    function isValidCoordinatePair(latitude, longitude) {
+      return latitude is number && latitude >= -90 && latitude <= 90
+        && longitude is number && longitude >= -180 && longitude <= 180;
     }
 
-    function isValidDestinationCoordinates(data) {
-      return (
-          !('destinationLatitude' in data)
-          && !('destinationLongitude' in data)
-        ) || (
-          data.destinationLatitude is number
-          && data.destinationLatitude >= -90
-          && data.destinationLatitude <= 90
-          && data.destinationLongitude is number
-          && data.destinationLongitude >= -180
-          && data.destinationLongitude <= 180
-        );
-    }
-
-    function isValidTravelRequest(data) {
-      return hasRequiredFields(data, [
-          'id', 'userId', 'destination', 'originCity',
-          'originLatitude', 'originLongitude', 'departureAtMillis',
-          'returnAtMillis', 'travelerCount', 'notes', 'status',
-          'createdAtMillis'
-        ])
-        && hasOnlyAllowedFields(data, [
+    function isValidTravelRequestCreate(requestId) {
+      let data = request.resource.data;
+      let originLat = data.originLatitude;
+      let originLon = data.originLongitude;
+      let createdAt = data.createdAtMillis;
+      let departure = data.departureAtMillis;
+      let returning = data.returnAtMillis;
+      let travelers = data.travelerCount;
+      return isClient()
+        && data.id == requestId
+        && data.userId == request.auth.uid
+        && data.status == 'Pendiente de cotizacion'
+        && data.keys().hasOnly([
           'id', 'userId', 'destination', 'destinationLatitude',
           'destinationLongitude', 'originCity',
           'originLatitude', 'originLongitude', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'notes', 'status',
-          'createdAtMillis', 'quotationId'
+          'createdAtMillis', 'quotationId', 'requestType', 'packageId',
+          'destinationId', 'packageSnapshot', 'assignedAgentId',
+          'claimedAtMillis', 'requestedServiceIds'
         ])
-        && validString(data.id, 1, 128)
-        && validString(data.userId, 1, 128)
+        && validString(requestId, 1, 128)
         && validString(data.destination, 3, 120)
         && validString(data.originCity, 2, 120)
-        && isValidDestinationCoordinates(data)
-        && isValidCoordinates(data)
-        && data.departureAtMillis is int
-        && data.returnAtMillis is int
-        && data.departureAtMillis > data.createdAtMillis
-        && data.returnAtMillis > data.departureAtMillis
-        && data.travelerCount is int
-        && data.travelerCount >= 1
-        && data.travelerCount <= 20
-        && data.notes is string
-        && data.notes.size() <= 500
-        && data.status in [
-          'Pendiente de cotizacion', 'Cotizado', 'Aceptada',
-          'Observada', 'Cancelada'
-        ]
-        && data.createdAtMillis is int
-        && data.createdAtMillis > 0
-        && validOptionalString(data, 'quotationId', 128);
+        && isValidCoordinatePair(data.destinationLatitude, data.destinationLongitude)
+        && ((originLat == null && originLon == null) || isValidCoordinatePair(originLat, originLon))
+        && departure is int && returning is int
+        && departure > createdAt && returning > departure
+        && travelers is int && travelers >= 1 && travelers <= 20
+        && validString(data.notes, 0, 500)
+        && isRecentMillis(createdAt)
+        && data.get('quotationId', '') == ''
+        && data.get('assignedAgentId', '') == ''
+        && data.get('claimedAtMillis', null) == null
+        && isValidRequestedOffer(data)
+        && isValidRequestedActivities(data);
+    }
+
+    function requestedPackagePath(packageId) {
+      return /databases/$(database)/documents/packages/$(packageId);
+    }
+
+    function isPublishedRequestedDestination(destinationId) {
+      return get(/databases/$(database)/documents/destinations/$(destinationId)).data.status == 'PUBLICADO';
+    }
+
+    function emptyPackageSnapshot() {
+      return {
+        'title': '', 'summary': '', 'durationText': '', 'durationDays': 0,
+        'priceAmount': 0, 'currency': 'PEN', 'coverImageUrl': '',
+        'conditions': '', 'includedServiceIds': []
+      };
+    }
+
+    function matchesPublishedPackage(packageId, destinationId, snapshot) {
+      let offer = get(requestedPackagePath(packageId)).data;
+      return offer.status == 'PUBLICADO'
+        && offer.destinationId == destinationId
+        && snapshot == {
+          'title': offer.title,
+          'summary': offer.summary,
+          'durationText': offer.durationText == '' ? snapshot.durationText : offer.durationText,
+          'durationDays': offer.durationDays,
+          'priceAmount': offer.priceAmount,
+          'currency': offer.currency,
+          'coverImageUrl': offer.coverImageUrl,
+          'conditions': offer.conditions,
+          'includedServiceIds': offer.includedServiceIds
+        }
+        && validString(snapshot.durationText, 1, 80);
+    }
+
+    function isValidRequestedOffer(data) {
+      let destinationId = data.get('destinationId', '');
+      let packageId = data.get('packageId', '');
+      let type = data.get('requestType', 'CUSTOM');
+      return (destinationId == '' || (destinationId.matches('^[^/]{1,128}$')
+          && isPublishedRequestedDestination(destinationId)))
+        && (type == 'CUSTOM'
+          ? packageId == '' && data.get('packageSnapshot', emptyPackageSnapshot()) == emptyPackageSnapshot()
+          : type == 'PACKAGE' && destinationId != '' && packageId.matches('^[^/]{1,128}$')
+            && matchesPublishedPackage(packageId, destinationId, data.packageSnapshot));
+    }
+
+    function requestableActivityMatches(serviceId, destinationId) {
+      let activity = get(/databases/$(database)/documents/catalog_services/$(serviceId)).data;
+      return activity.destinationId == destinationId
+        && activity.active == true
+        && activity.requestable == true;
+    }
+
+    function isValidRequestedActivityAt(ids, index, destinationId) {
+      return ids.size() <= index
+        || (ids[index].matches('^[^/]{1,128}$')
+          && requestableActivityMatches(ids[index], destinationId));
+    }
+
+    function isValidRequestedActivities(data) {
+      let ids = data.get('requestedServiceIds', []);
+      let included = data.get('packageSnapshot', {}).get('includedServiceIds', []);
+      let destinationId = data.get('destinationId', '');
+      return ids is list
+        && ids.size() <= 5
+        && (ids.size() == 0 || (
+          destinationId != ''
+          && ids.toSet().size() == ids.size()
+          && !ids.hasAny(included)
+          && isValidRequestedActivityAt(ids, 0, destinationId)
+          && isValidRequestedActivityAt(ids, 1, destinationId)
+          && isValidRequestedActivityAt(ids, 2, destinationId)
+          && isValidRequestedActivityAt(ids, 3, destinationId)
+          && isValidRequestedActivityAt(ids, 4, destinationId)
+        ));
     }
 
     function isValidCatalogService(data) {
       return hasRequiredFields(data, [
-          'id', 'name', 'city', 'category', 'unitCost',
-          'description', 'defaultQuantity', 'active'
+          'id', 'name', 'destinationId', 'providerId', 'city', 'category',
+          'unitCost', 'commercialCost', 'supplierName', 'description',
+          'defaultQuantity', 'durationMinutes', 'requiresScheduling',
+          'imageUrl', 'active'
         ])
         && hasOnlyAllowedFields(data, [
-          'id', 'name', 'city', 'category', 'unitCost',
-          'commercialCost', 'supplierName',
-          'description', 'defaultQuantity', 'active'
+          'id', 'name', 'destinationId', 'providerId', 'city', 'category',
+          'unitCost', 'commercialCost', 'supplierName', 'description',
+          'defaultQuantity', 'durationMinutes', 'requiresScheduling',
+          'imageUrl', 'active', 'requestable'
         ])
         && validString(data.id, 1, 128)
         && validString(data.name, 1, 120)
+        && validString(data.destinationId, 1, 128)
+        && validString(data.providerId, 1, 128)
         && validString(data.city, 1, 100)
         && validString(data.category, 1, 80)
         && isPositiveBoundedNumber(data.unitCost, 1000000)
         && isPositiveBoundedNumber(data.commercialCost, 1000000)
-        && data.supplierName is string
-        && data.supplierName.size() <= 120
+        && validString(data.supplierName, 1, 120)
         && data.description is string
         && data.description.size() <= 1000
         && data.defaultQuantity is int
         && data.defaultQuantity >= 1
         && data.defaultQuantity <= 100
+        && data.durationMinutes is int
+        && data.durationMinutes >= 0
+        && data.durationMinutes <= 10080
+        && data.requiresScheduling is bool
+        && data.get('requestable', false) is bool
+        && isValidUrl(data.imageUrl)
         && data.active is bool;
     }
 
@@ -568,7 +641,7 @@ service cloud.firestore {
     function isValidProvider(data) {
       return hasRequiredFields(data, [
           'id', 'name', 'contactName', 'phone', 'email', 'city',
-          'serviceNames', 'active', 'createdBy', 'createdAtMillis',
+          'active', 'createdBy', 'createdAtMillis',
           'updatedAtMillis'
         ])
         && hasOnlyAllowedFields(data, [
@@ -584,7 +657,8 @@ service cloud.firestore {
         && data.phone.size() <= 20
         && isValidEmail(data.email)
         && validString(data.city, 2, 100)
-        && isValidProviderServiceList(data.serviceNames)
+        && (!('serviceNames' in data)
+          || isValidProviderServiceList(data.serviceNames))
         && data.active is bool
         && validString(data.createdBy, 1, 128)
         && isValidCatalogTimestamps(data);
@@ -656,29 +730,22 @@ service cloud.firestore {
 
     function isValidQuotationServiceItem(item) {
       return item is map
-        // Keep this validator flat: it is evaluated once per service and
-        // nested helper calls quickly consume Firestore's expression budget.
         && item.keys().hasOnly([
           'id', 'name', 'category', 'unitCost', 'quantity', 'subtotal',
-          'commercialCost', 'supplierName'
+          'commercialCost', 'supplierName', 'catalogServiceId',
+          'destinationId', 'providerId', 'description',
+          'requiresScheduling'
         ])
-        // matches() also rejects non-string values while enforcing bounds.
-        && item.id.matches('^.{1,128}$')
-        && item.name.matches('^.{1,120}$')
-        && item.category.matches('^.{1,80}$')
         && item.unitCost is number
         && item.unitCost >= 0
-        && item.unitCost <= 1000000
         && item.quantity is int
         && item.quantity >= 1
         && item.quantity <= 100
-        // The equality below enforces a numeric subtotal; its bounds follow
-        // from bounded unitCost and quantity.
-        && math.abs(item.subtotal - item.unitCost * item.quantity) < 0.01
+        && item.subtotal is number
+        && item.subtotal >= 0
         && item.commercialCost is number
         && item.commercialCost >= 0
-        && item.commercialCost <= 1000000
-        && item.supplierName.matches('^.{0,100}$');
+        && item.supplierName is string;
     }
 
     // As with preferences, every allowed list position is inspected.
@@ -709,16 +776,15 @@ service cloud.firestore {
           'validUntilMillis', 'conditions', 'status', 'agentId', 'agentName',
           'createdAtMillis', 'respondedAtMillis',
           'latestObservation', 'reservationId',
-          'version', 'parentQuotationId'
+          'version', 'parentQuotationId', 'packageId', 'destinationId',
+          'packageSnapshot'
         ])
-        && data.id.matches('^.{1,128}$')
-        && data.requestId.matches('^.{1,128}$')
-        && data.clientId.matches('^.{1,128}$')
-        && data.clientName.matches('^.{1,100}$')
+        && data.id is string
+        && data.requestId is string
+        && data.clientId is string
+        && data.clientName is string
         && data.clientEmail is string
-        && data.clientEmail.size() <= 254
-        && data.clientEmail.matches('^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$')
-        && data.destination.matches('^.{3,120}$')
+        && data.destination is string
         && data.travelerCount is int
         && data.travelerCount >= 1
         && data.travelerCount <= 20
@@ -735,15 +801,14 @@ service cloud.firestore {
         && data.totalAmount >= data.baseCost
         && data.currency in ['USD', 'PEN']
         && data.validityDate is string
-        && data.validityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && data.validUntilMillis is int
         && data.validUntilMillis > request.time.toMillis()
         && data.validUntilMillis <= request.time.toMillis() + 2678400000
         && data.conditions is string
         && data.conditions.size() <= 2000
         && data.status == 'Cotizado'
-        && data.agentId.matches('^.{1,128}$')
-        && data.agentName.matches('^.{1,100}$')
+        && data.agentId is string
+        && data.agentName is string
         && data.createdAtMillis is int
         && data.createdAtMillis >= request.time.toMillis() - 300000
         && data.createdAtMillis <= request.time.toMillis() + 300000
@@ -819,6 +884,7 @@ service cloud.firestore {
     function isValidReservation(data) {
       return hasOnlyAllowedFields(data, [
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
+          'packageId', 'destinationId', 'packageSnapshot',
           'destination', 'originCity', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
           'currency', 'validityDate', 'conditions', 'status', 'createdAtMillis',
@@ -835,6 +901,7 @@ service cloud.firestore {
         ])
         && hasOnlyAllowedFields(data, [
           'id', 'reservationId', 'quotationId', 'clientId', 'agentId',
+          'attemptNumber', 'previousPaymentId',
           'method', 'amount', 'currency', 'voucherUrl', 'status',
           'rejectionReason', 'submittedAtMillis', 'reviewedAtMillis',
           'reviewedBy'
@@ -844,6 +911,11 @@ service cloud.firestore {
         && validString(data.quotationId, 1, 128)
         && validString(data.clientId, 1, 128)
         && validString(data.agentId, 1, 128)
+        && (!('attemptNumber' in data)
+          || (data.attemptNumber is int
+            && data.attemptNumber >= 1
+            && data.attemptNumber <= 100))
+        && validOptionalString(data, 'previousPaymentId', 128)
         && data.method in ['Yape', 'Plin', 'Transferencia BCP']
         && isPositiveBoundedNumber(data.amount, 200000000)
         && data.currency in ['USD', 'PEN']
@@ -901,7 +973,8 @@ service cloud.firestore {
           'createdAtMillis', 'updatedAtMillis'
         ])
         && hasOnlyAllowedFields(data, [
-          'id', 'reservationId', 'clientId', 'agentId', 'title',
+          'id', 'reservationId', 'reservationServiceId', 'clientId',
+          'agentId', 'title',
           'description', 'category', 'locationName', 'latitude',
           'longitude', 'startAtMillis', 'endAtMillis', 'dayIndex',
           'sortOrder', 'providerName', 'status', 'notes', 'source',
@@ -909,6 +982,7 @@ service cloud.firestore {
         ])
         && validString(data.id, 1, 128)
         && validString(data.reservationId, 1, 128)
+        && validOptionalString(data, 'reservationServiceId', 128)
         && validString(data.clientId, 1, 128)
         && validString(data.agentId, 1, 128)
         && validString(data.title, 3, 120)
@@ -931,10 +1005,14 @@ service cloud.firestore {
         && data.sortOrder >= 0
         && data.providerName is string
         && data.providerName.size() <= 120
-        && data.status in ['Programado', 'Completado', 'Cancelado']
+        && data.status in [
+          'Programado', 'Completado', 'Cancelado', 'Horario por confirmar'
+        ]
         && data.notes is string
         && data.notes.size() <= 500
-        && data.source == 'agent'
+        && data.source in ['agent', 'reservation']
+        && (data.source != 'reservation'
+          || validString(data.reservationServiceId, 1, 128))
         && isValidStoredMillis(data.createdAtMillis)
         && isValidStoredMillis(data.updatedAtMillis)
         && data.updatedAtMillis >= data.createdAtMillis;
@@ -1025,6 +1103,20 @@ service cloud.firestore {
         && get(reservationPath(reservationId)).data.status == 'Pagado';
     }
 
+    function isValidAgentClaimRequest(requestId) {
+      let data = request.resource.data;
+      return isAgent()
+        && resource.data.id == requestId
+        && resource.data.status == 'Pendiente de cotizacion'
+        && (!('assignedAgentId' in resource.data)
+          || resource.data.assignedAgentId == ''
+          || resource.data.assignedAgentId == request.auth.uid)
+        && data.assignedAgentId == request.auth.uid
+        && isRecentMillis(data.claimedAtMillis)
+        && data.diff(resource.data).affectedKeys()
+          .hasOnly(['assignedAgentId', 'claimedAtMillis']);
+    }
+
     function isValidAgentQuotationCreate(quotationId) {
       let data = request.resource.data;
       let requestAfter = getAfter(requestPath(data.requestId)).data;
@@ -1035,7 +1127,14 @@ service cloud.firestore {
         && data.id == quotationId
         && data.agentId == request.auth.uid
         && data.agentName == agent.name
+        && requestAfter.assignedAgentId == request.auth.uid
         && requestAfter.userId == data.clientId
+        && requestAfter.destination == data.destination
+        && requestAfter.travelerCount == data.travelerCount
+        && requestAfter.get('packageId', '') == data.get('packageId', '')
+        && requestAfter.get('destinationId', '') == data.get('destinationId', '')
+        && (data.get('packageId', '') == ''
+          || requestAfter.packageSnapshot == data.packageSnapshot)
         && requestAfter.status == 'Cotizado'
         && requestAfter.quotationId == quotationId;
     }
@@ -1105,6 +1204,7 @@ service cloud.firestore {
       let data = request.resource.data;
       let quotationAfter = getAfter(quotationPath(data.quotationId)).data;
       return resource.data.status == 'Pendiente de cotizacion'
+        && resource.data.assignedAgentId == request.auth.uid
         && data.status == 'Cotizado'
         && data.id == requestId
         && data.quotationId is string
@@ -1134,6 +1234,7 @@ service cloud.firestore {
       let data = request.resource.data;
       let quotationAfter = getAfter(quotationPath(data.quotationId)).data;
       return data.id == requestId
+        && resource.data.assignedAgentId == request.auth.uid
         && data.diff(resource.data).affectedKeys().hasOnly(['status'])
         && quotationAfter.requestId == requestId
         && quotationAfter.agentId == request.auth.uid
@@ -1150,9 +1251,8 @@ service cloud.firestore {
         && data.paymentId.size() <= 128
         && (
           (data.status == 'Confirmada' && data.paymentId == '')
-          || (data.status in ['Pago enviado', 'Pago rechazado']
-            && data.paymentId == data.id)
-          || (data.status == 'Pagado' && data.paymentId == data.id)
+          || (data.status in ['Pago enviado', 'Pago rechazado', 'Pagado']
+            && data.paymentId.size() > 0)
         );
     }
 
@@ -1161,17 +1261,17 @@ service cloud.firestore {
     function isValidClientPaymentSubmit() {
       let data = request.resource.data;
       let changed = data.diff(resource.data).affectedKeys();
-      let reservationAfter = getAfter(reservationPath(data.id)).data;
+      let paymentAfter = getAfter(paymentPath(data.paymentId)).data;
       return isClient()
         && resource.data.clientId == request.auth.uid
         && resource.data.status in ['Confirmada', 'Pago rechazado']
         && data.status == 'Pago enviado'
         && changed.hasOnly(['status', 'paymentId'])
-        && data.paymentId == data.id
-        && reservationAfter.id == data.id
-        && reservationAfter.clientId == request.auth.uid
-        && reservationAfter.status == 'Pago enviado'
-        && reservationAfter.paymentId == data.id;
+        && data.paymentId.size() > 0
+        && paymentAfter.id == data.paymentId
+        && paymentAfter.reservationId == data.id
+        && paymentAfter.clientId == request.auth.uid
+        && paymentAfter.status == 'Pendiente';
     }
 
     // HU07: solo el agente asignado resuelve el pago pendiente.
@@ -1184,10 +1284,40 @@ service cloud.firestore {
         && resource.data.status == 'Pago enviado'
         && data.status == reservationStatus
         && changed.hasOnly(['status'])
-        && data.paymentId == data.id
         && paymentAfter.id == data.paymentId
         && paymentAfter.reservationId == data.id
         && paymentAfter.status == paymentStatus;
+    }
+
+    function isValidClientPaymentCreate(paymentId) {
+      let data = request.resource.data;
+      let reservationBefore = get(reservationPath(data.reservationId)).data;
+      let reservationAfter = getAfter(reservationPath(data.reservationId)).data;
+      return !exists(paymentPath(paymentId))
+        && isClient()
+        && isValidPayment(data)
+        && data.id == paymentId
+        && data.clientId == request.auth.uid
+        && data.status == 'Pendiente'
+        && isRecentMillis(data.submittedAtMillis)
+        && reservationBefore.clientId == request.auth.uid
+        && reservationBefore.status in ['Confirmada', 'Pago rechazado']
+        && reservationAfter.clientId == request.auth.uid
+        && reservationAfter.status == 'Pago enviado'
+        && reservationAfter.paymentId == paymentId
+        && reservationAfter.totalAmount == data.amount
+        && reservationAfter.currency == data.currency
+        && reservationAfter.agentId == data.agentId
+        && reservationAfter.quotationId == data.quotationId
+        && (
+          !('attemptNumber' in data)
+          || (
+            data.attemptNumber >= 1
+            && data.previousPaymentId == reservationBefore.paymentId
+            && (reservationBefore.status != 'Confirmada'
+              || (data.attemptNumber == 1 && data.previousPaymentId == ''))
+          )
+        );
     }
 
     // ===============================================================
@@ -1215,30 +1345,22 @@ service cloud.firestore {
       allow read: if isAuthenticated()
         && (resource.data.userId == request.auth.uid || isAgent() || isManager());
 
-      allow create: if !exists(requestPath(requestId))
-        && isClient()
-        && isValidTravelRequest(request.resource.data)
-        && request.resource.data.id == requestId
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'Pendiente de cotizacion'
-        && request.resource.data.destinationLatitude is number
-        && request.resource.data.destinationLongitude is number
-        // La app serializa quotationId vacío al crear; el agente lo llena
-        // de verdad al cotizar (isValidAgentRequestQuotationUpdate).
-        && (!('quotationId' in request.resource.data)
-          || request.resource.data.quotationId == '')
-        && isRecentMillis(request.resource.data.createdAtMillis);
+      allow create: if isValidTravelRequestCreate(requestId);
 
       // El vínculo de la cotización prueba que el actor es el agente que fue
       // validado al crearla, evitando otra lectura de perfil en este batch.
       // Las demás transiciones mantienen su comprobación explícita de rol.
-      allow update: if isValidAgentRequestQuotationUpdate(requestId)
-        || (
-          isClient()
-          && isValidClientRequestResponseUpdate(requestId)
-        ) || (
-          isAgent()
-          && isValidAssignedAgentRequestUpdate(requestId)
+      allow update: if request.resource.data.status == resource.data.status
+        ? isValidAgentClaimRequest(requestId)
+        : (
+          isValidAgentRequestQuotationUpdate(requestId)
+          || (
+            isClient()
+            && isValidClientRequestResponseUpdate(requestId)
+          ) || (
+            isAgent()
+            && isValidAssignedAgentRequestUpdate(requestId)
+          )
         );
 
       allow delete: if false;
@@ -1246,9 +1368,11 @@ service cloud.firestore {
 
     match /catalog_services/{serviceId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAgent()
+      allow create, update: if isAdmin()
         && isValidCatalogService(request.resource.data)
-        && request.resource.data.id == serviceId;
+        && request.resource.data.id == serviceId
+        && exists(/databases/$(database)/documents/destinations/$(request.resource.data.destinationId))
+        && exists(/databases/$(database)/documents/providers/$(request.resource.data.providerId));
       allow delete: if false;
     }
 
@@ -1318,8 +1442,9 @@ service cloud.firestore {
       allow delete: if false;
 
       match /included_services/{serviceId} {
-        allow read: if isAuthenticated();
-        allow write: if isAdmin();
+        // La relación canónica vive en packages.includedServiceIds.
+        // Se mantiene un cierre explícito para documentos legados.
+        allow read, write: if false;
       }
     }
 
@@ -1370,6 +1495,28 @@ service cloud.firestore {
 
         allow update, delete: if false;
       }
+
+      match /versions/{versionId} {
+        allow read: if isAuthenticated()
+          && exists(quotationPath(quotationId))
+          && (
+            get(quotationPath(quotationId)).data.clientId == request.auth.uid
+            || (isAgent()
+              && get(quotationPath(quotationId)).data.agentId == request.auth.uid)
+          );
+
+        allow create: if isAgent()
+          && exists(quotationPath(quotationId))
+          && get(quotationPath(quotationId)).data.agentId == request.auth.uid
+          && request.resource.data.id == quotationId
+          && request.resource.data.agentId == request.auth.uid
+          && request.resource.data.clientId
+            == get(quotationPath(quotationId)).data.clientId
+          && request.resource.data.version is int
+          && request.resource.data.status == 'Observada';
+
+        allow update, delete: if false;
+      }
     }
 
     // HU07/HU06: la reserva creada por el cliente debe reflejar exactamente
@@ -1397,6 +1544,13 @@ service cloud.firestore {
         && quotationAfter.agentId == data.agentId
         && quotationAfter.totalAmount == data.totalAmount
         && quotationAfter.currency == data.currency
+        && quotationAfter.destination == data.destination
+        && quotationAfter.travelerCount == data.travelerCount
+        && quotationAfter.services == data.services
+        && quotationAfter.get('packageId', '') == data.get('packageId', '')
+        && quotationAfter.get('destinationId', '') == data.get('destinationId', '')
+        && (data.get('packageId', '') == ''
+          || quotationAfter.packageSnapshot == data.packageSnapshot)
         && requestAfter.originCity == data.originCity
         && requestAfter.departureAtMillis == data.departureAtMillis
         && requestAfter.returnAtMillis == data.returnAtMillis;
@@ -1416,9 +1570,9 @@ service cloud.firestore {
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.status == 'Confirmada'
         && request.resource.data.paymentId == ''
-        && request.resource.data.paymentVoucherUrl == ''
-        && request.resource.data.paymentMethod == ''
-        && request.resource.data.paidAtMillis == null
+        && request.resource.data.get('paymentVoucherUrl', '') == ''
+        && request.resource.data.get('paymentMethod', '') == ''
+        && request.resource.data.get('paidAtMillis', null) == null
         && isRecentMillis(request.resource.data.createdAtMillis)
         && isValidAcceptedReservation(reservationId);
 
@@ -1426,6 +1580,7 @@ service cloud.firestore {
         && isValidReservationStatusChange(request.resource.data)
         && areImmutableFieldsUnchanged([
           'id', 'quotationId', 'requestId', 'clientId', 'agentId',
+          'packageId', 'destinationId', 'packageSnapshot',
           'destination', 'originCity', 'departureAtMillis',
           'returnAtMillis', 'travelerCount', 'services', 'totalAmount',
           'currency', 'validityDate', 'conditions', 'createdAtMillis',
@@ -1444,8 +1599,8 @@ service cloud.firestore {
       }
     }
 
-    // HU07: pago independiente de la reserva. El ID del pago es el ID de
-    // la reserva, por lo que nunca pueden existir dos pagos por reserva.
+    // HU07: cada envío es un pago independiente. La reserva apunta al
+    // intento vigente y los intentos anteriores conservan la auditoría.
     match /payments/{paymentId} {
       allow read: if isAuthenticated()
         && (resource.data.clientId == request.auth.uid
@@ -1455,34 +1610,12 @@ service cloud.firestore {
       // El cliente registra su comprobante junto con el cambio de la
       // reserva a 'Pago enviado' (la verificación de importe y moneda se
       // hace contra la reserva en la misma tanda).
-      allow create: if !exists(paymentPath(paymentId))
-        && isClient()
-        && isValidPayment(request.resource.data)
-        && request.resource.data.id == paymentId
-        && request.resource.data.reservationId == paymentId
-        && request.resource.data.clientId == request.auth.uid
-        && request.resource.data.status == 'Pendiente'
-        && isRecentMillis(request.resource.data.submittedAtMillis)
-        && existsAfter(reservationPath(paymentId))
-        && getAfter(reservationPath(paymentId)).data.clientId
-          == request.auth.uid
-        && getAfter(reservationPath(paymentId)).data.status
-          == 'Pago enviado'
-        && getAfter(reservationPath(paymentId)).data.paymentId == paymentId
-        && getAfter(reservationPath(paymentId)).data.totalAmount
-          == request.resource.data.amount
-        && getAfter(reservationPath(paymentId)).data.currency
-          == request.resource.data.currency
-        // El agente y la cotización del pago deben coincidir con la
-        // reserva: nadie puede reasignar la revisión a otro agente.
-        && getAfter(reservationPath(paymentId)).data.agentId
-          == request.resource.data.agentId
-        && getAfter(reservationPath(paymentId)).data.quotationId
-          == request.resource.data.quotationId;
+      allow create: if isValidClientPaymentCreate(paymentId);
 
       allow update: if exists(paymentPath(paymentId)) && (
         // El cliente reenvía un comprobante tras un rechazo.
         isClient()
+        && !('attemptNumber' in resource.data)
         && resource.data.clientId == request.auth.uid
         && resource.data.status == 'Rechazado'
         && request.resource.data.status == 'Pendiente'
@@ -1520,10 +1653,10 @@ service cloud.firestore {
         && isRecentMillis(request.resource.data.reviewedAtMillis)
         && request.resource.data.reviewedBy == request.auth.uid
         && (request.resource.data.status == 'Aprobado'
-          ? getAfter(reservationPath(paymentId)).data.status == 'Pagado'
-          : getAfter(reservationPath(paymentId)).data.status
+          ? getAfter(reservationPath(resource.data.reservationId)).data.status == 'Pagado'
+          : getAfter(reservationPath(resource.data.reservationId)).data.status
             == 'Pago rechazado')
-        && getAfter(reservationPath(paymentId)).data.paymentId == paymentId
+        && getAfter(reservationPath(resource.data.reservationId)).data.paymentId == paymentId
       )
         && isValidPayment(request.resource.data);
 
@@ -1569,6 +1702,7 @@ service cloud.firestore {
 
       allow delete: if isAgent()
         && resource.data.agentId == request.auth.uid
+        && resource.data.source != 'reservation'
         && paidReservationAssignedToAgent(
           resource.data.reservationId,
           request.auth.uid
