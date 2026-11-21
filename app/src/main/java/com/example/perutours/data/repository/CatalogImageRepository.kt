@@ -36,6 +36,18 @@ class CatalogImageRepository(
         return destination.downloadUrl.await().toString()
     }
 
+    suspend fun uploadPackageCover(packageId: String, imageUri: Uri): String {
+        require(packageId.isNotBlank()) {
+            "Guarda el paquete antes de subir una imagen propia."
+        }
+        val reference = storage.reference
+            .child(PACKAGE_IMAGES_PATH)
+            .child(packageId)
+            .child("${System.currentTimeMillis()}_${auth.currentUser?.uid.orEmpty().ifBlank { "anon" }}.jpg")
+        reference.putFile(imageUri).await()
+        return reference.downloadUrl.await().toString()
+    }
+
     /** Elimina una imagen previamente subida; ignora ausencias. */
     suspend fun deleteDestinationCover(imageUrl: String) {
         val reference = storage.getReferenceFromUrl(imageUrl)
@@ -44,5 +56,6 @@ class CatalogImageRepository(
 
     companion object {
         const val DESTINATION_IMAGES_PATH = "destination_images"
+        const val PACKAGE_IMAGES_PATH = "package_images"
     }
 }

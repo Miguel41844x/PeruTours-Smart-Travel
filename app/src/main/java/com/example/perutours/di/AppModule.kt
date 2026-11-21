@@ -45,6 +45,7 @@ import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormVi
 import com.example.perutours.ui.screens.admin.destination.AdminDestinationsViewModel
 import com.example.perutours.ui.screens.admin.packages.AdminPackagesViewModel
 import com.example.perutours.ui.screens.admin.provider.AdminProvidersViewModel
+import com.example.perutours.ui.screens.admin.service.AdminServicesViewModel
 import com.example.perutours.ui.screens.destination.DestinationDetailViewModel
 import com.example.perutours.ui.screens.agent.AgentRequestsViewModel
 import com.example.perutours.ui.screens.agent.AgentHomeViewModel
@@ -490,10 +491,19 @@ val appModule = module {
     }
 
     viewModel {
+        AdminServicesViewModel(
+            serviceRepository = get(),
+            destinationRepository = get(),
+            providerRepository = get()
+        )
+    }
+
+    viewModel {
         AdminPackagesViewModel(
             packageRepository = get(),
             destinationRepository = get(),
             serviceCatalogRepository = get(),
+            imageRepository = get(),
             auth = get()
         )
     }

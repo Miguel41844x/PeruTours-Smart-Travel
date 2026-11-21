@@ -2,6 +2,7 @@ package com.example.perutours.ui.screens.admin.packages
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.net.Uri
 import com.example.perutours.data.model.CatalogStatus
 import com.example.perutours.data.model.CatalogService
 import com.example.perutours.data.model.TourDestination
@@ -9,6 +10,7 @@ import com.example.perutours.data.model.TourPackage
 import com.example.perutours.data.repository.DestinationCatalogRepository
 import com.example.perutours.data.repository.PackageRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
+import com.example.perutours.data.repository.CatalogImageRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +41,7 @@ class AdminPackagesViewModel(
     private val packageRepository: PackageRepository,
     private val destinationRepository: DestinationCatalogRepository,
     private val serviceCatalogRepository: ServiceCatalogRepository,
+    private val imageRepository: CatalogImageRepository,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -93,7 +96,39 @@ class AdminPackagesViewModel(
         _uiState.update { it.copy(isEditorOpen = false, editingPackage = null) }
     }
 
-    /** Persiste el paquete y su subcolección de servicios incluidos. */
+    fun uploadPackageCover(tourPackage: TourPackage, imageUri: Uri) {
+        if (tourPackage.id.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Guarda primero el paquete como borrador.") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            runCatching {
+                val oldUrl = tourPackage.coverImageUrl
+                val newUrl = imageRepository.uploadPackageCover(tourPackage.id, imageUri)
+                val saved = packageRepository.savePackage(tourPackage.copy(coverImageUrl = newUrl))
+                if (oldUrl.contains("firebasestorage") && oldUrl != newUrl) {
+                    imageRepository.deleteDestinationCover(oldUrl)
+                }
+                saved
+            }.onSuccess { saved ->
+                _uiState.update { state ->
+                    state.copy(
+                        isSaving = false,
+                        editingPackage = saved,
+                        packages = state.packages.map { if (it.id == saved.id) saved else it },
+                        feedbackMessage = "Imagen del paquete actualizada."
+                    )
+                }
+            }.onFailure {
+                _uiState.update {
+                    it.copy(isSaving = false, errorMessage = "No pudimos subir la imagen del paquete.")
+                }
+            }
+        }
+    }
+
+    /** Persiste el paquete; includedServiceIds es la única fuente de verdad. */
     fun savePackage(tourPackage: TourPackage) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
@@ -102,9 +137,7 @@ class AdminPackagesViewModel(
                 val toPersist = tourPackage.copy(
                     createdBy = tourPackage.createdBy.ifBlank { uid }
                 )
-                val saved = packageRepository.savePackage(toPersist)
-                packageRepository.replaceIncludedServices(saved.id, saved.includedServiceIds)
-                saved
+                packageRepository.savePackage(toPersist)
             }
             result.fold(
                 onSuccess = { saved ->
@@ -138,6 +171,27 @@ class AdminPackagesViewModel(
                     val destination = destinationRepository.getDestination(tourPackage.destinationId)
                     require(destination?.published == true) {
                         "Publica primero el destino asociado al paquete."
+                    }
+                    require(tourPackage.coverImageUrl.isNotBlank()) {
+                        "Agrega una imagen antes de publicar el paquete."
+                    }
+                    require(tourPackage.includedServiceIds.isNotEmpty()) {
+                        "Incluye al menos un servicio antes de publicar el paquete."
+                    }
+                    require(
+                        tourPackage.includedServiceIds.size <=
+                            PackageFormValidator.MAX_INCLUDED_SERVICES
+                    ) {
+                        "Un paquete admite hasta ${PackageFormValidator.MAX_INCLUDED_SERVICES} servicios."
+                    }
+                    val servicesById = _uiState.value.catalogServices.associateBy(CatalogService::id)
+                    require(tourPackage.includedServiceIds.all { servicesById[it]?.active == true }) {
+                        "Todos los servicios incluidos deben existir y estar activos."
+                    }
+                    require(tourPackage.includedServiceIds.all {
+                        servicesById[it]?.destinationId == tourPackage.destinationId
+                    }) {
+                        "Todos los servicios deben pertenecer al destino del paquete."
                     }
                 }
                 packageRepository.updateStatus(tourPackage.id, status)

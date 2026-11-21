@@ -66,6 +66,7 @@ class PackageRepository(
         destinationIds.distinct().chunked(FIRESTORE_WHERE_IN_LIMIT).forEach { chunk ->
             val snapshot = firestore
                 .collection(DestinationCatalogRepository.COLLECTION_DESTINATIONS)
+                .whereEqualTo(FIELD_STATUS, CatalogStatus.PUBLICADO.name)
                 .whereIn(FieldPath.documentId(), chunk)
                 .get()
                 .await()
@@ -112,40 +113,8 @@ class PackageRepository(
             .await()
     }
 
-    /**
-     * Publica los servicios incluidos en la subcolección
-     * `packages/{packageId}/included_services` para poder auditarlos
-     * documento por documento desde la consola de Firebase.
-     */
-    suspend fun replaceIncludedServices(
-        packageId: String,
-        serviceIds: List<String>
-    ) {
-        val subcollection = firestore.collection(COLLECTION_PACKAGES)
-            .document(packageId)
-            .collection(SUBCOLLECTION_SERVICES)
-
-        val snapshot = subcollection.get().await()
-        val batch = firestore.batch()
-        snapshot.documents.forEach { batch.delete(it.reference) }
-        serviceIds.forEach { serviceId ->
-            batch.set(subcollection.document(serviceId), mapOf("serviceId" to serviceId))
-        }
-        batch.commit().await()
-    }
-
-    suspend fun getIncludedServiceIds(packageId: String): List<String> =
-        firestore.collection(COLLECTION_PACKAGES)
-            .document(packageId)
-            .collection(SUBCOLLECTION_SERVICES)
-            .get()
-            .await()
-            .documents
-            .mapNotNull { it.getString("serviceId") }
-
     companion object {
         const val COLLECTION_PACKAGES = "packages"
-        const val SUBCOLLECTION_SERVICES = "included_services"
         const val FIELD_DESTINATION_ID = "destinationId"
         const val FIELD_STATUS = "status"
         const val FIELD_UPDATED_AT = "updatedAtMillis"

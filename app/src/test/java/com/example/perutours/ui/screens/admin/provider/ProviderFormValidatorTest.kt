@@ -38,12 +38,6 @@ class ProviderFormValidatorTest {
     }
 
     @Test
-    fun `parsea servicios y descarta vacios`() {
-        val services = ProviderFormValidator.parseServices("Hoteles, Transporte, , Guías")
-        assertEquals(listOf("Hoteles", "Transporte", "Guías"), services)
-    }
-
-    @Test
     fun `buildProvider conserva id y createdAt al editar`() {
         val existing = com.example.perutours.data.model.TourProvider(
             id = "prov_1",
@@ -58,7 +52,6 @@ class ProviderFormValidatorTest {
             phone = "987654321",
             email = "maria@andestavel.pe",
             city = "Cusco",
-            servicesText = "Hoteles",
             active = false,
             nowMillis = 900L
         )
@@ -67,6 +60,5 @@ class ProviderFormValidatorTest {
         assertEquals(500L, updated.createdAtMillis)
         assertEquals(900L, updated.updatedAtMillis)
         assertEquals(false, updated.active)
-        assertEquals(listOf("Hoteles"), updated.serviceNames)
     }
 }

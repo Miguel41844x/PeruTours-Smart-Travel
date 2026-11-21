@@ -126,8 +126,8 @@ fun AdminProvidersScreen(
             provider = uiState.editingProvider,
             isSaving = uiState.isSaving,
             onDismiss = viewModel::closeEditor,
-            onSave = { name, contactName, phone, email, city, services, active ->
-                viewModel.saveProvider(name, contactName, phone, email, city, services, active)
+            onSave = { name, contactName, phone, email, city, active ->
+                viewModel.saveProvider(name, contactName, phone, email, city, active)
             }
         )
     }
@@ -175,14 +175,6 @@ private fun ProviderCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (provider.serviceNames.isNotEmpty()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = provider.serviceNames.joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onEdit) { Text("Editar") }
@@ -200,16 +192,13 @@ private fun ProviderEditorDialog(
     provider: TourProvider?,
     isSaving: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String, String, String, Boolean) -> Unit
+    onSave: (String, String, String, String, String, Boolean) -> Unit
 ) {
     var name by remember(provider) { mutableStateOf(provider?.name.orEmpty()) }
     var contactName by remember(provider) { mutableStateOf(provider?.contactName.orEmpty()) }
     var phone by remember(provider) { mutableStateOf(provider?.phone.orEmpty()) }
     var email by remember(provider) { mutableStateOf(provider?.email.orEmpty()) }
     var city by remember(provider) { mutableStateOf(provider?.city.orEmpty()) }
-    var services by remember(provider) {
-        mutableStateOf(provider?.serviceNames.orEmpty().joinToString(", "))
-    }
     var active by remember(provider) { mutableStateOf(provider?.active ?: true) }
 
     AlertDialog(
@@ -255,12 +244,6 @@ private fun ProviderEditorDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = services,
-                    onValueChange = { services = it },
-                    label = { Text("Servicios (separados por coma)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -274,7 +257,7 @@ private fun ProviderEditorDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(name, contactName, phone, email, city, services, active)
+                    onSave(name, contactName, phone, email, city, active)
                 },
                 enabled = !isSaving
             ) { Text("Guardar") }

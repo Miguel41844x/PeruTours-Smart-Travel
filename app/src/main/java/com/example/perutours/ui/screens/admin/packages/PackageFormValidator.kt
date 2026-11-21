@@ -12,6 +12,7 @@ object PackageFormValidator {
     const val MAX_TITLE_LENGTH = 140
     const val MAX_SUMMARY_LENGTH = 1000
     const val MAX_CONDITIONS_LENGTH = 2000
+    const val MAX_INCLUDED_SERVICES = 5
 
     fun validateTitle(title: String): String? = when {
         title.trim().length < 3 -> "El título debe tener al menos 3 caracteres."
@@ -85,7 +86,7 @@ object PackageFormValidator {
             category = category.trim().ifBlank { "Popular" },
             coverImageUrl = coverImageUrl.trim(),
             conditions = conditions.trim(),
-            includedServiceIds = includedServiceIds.distinct().take(10),
+            includedServiceIds = includedServiceIds.distinct().take(MAX_INCLUDED_SERVICES),
             status = status.name,
             createdBy = createdBy.ifBlank { base.createdBy },
             createdAtMillis = base.createdAtMillis.takeIf { it > 0L } ?: nowMillis,

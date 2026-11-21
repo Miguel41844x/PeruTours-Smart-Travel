@@ -1,5 +1,8 @@
 package com.example.perutours.ui.screens.admin.packages
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,9 +47,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.perutours.data.model.CatalogStatus
 import com.example.perutours.data.model.TourPackage
 import com.example.perutours.ui.screens.admin.destination.StatusTag
@@ -141,7 +146,8 @@ fun AdminPackagesScreen(
             catalogServices = uiState.catalogServices,
             isSaving = uiState.isSaving,
             onDismiss = viewModel::closeEditor,
-            onSave = viewModel::savePackage
+            onSave = viewModel::savePackage,
+            onUploadImage = viewModel::uploadPackageCover
         )
     }
 }
@@ -217,7 +223,8 @@ private fun PackageEditorDialog(
     catalogServices: List<com.example.perutours.data.model.CatalogService>,
     isSaving: Boolean,
     onDismiss: () -> Unit,
-    onSave: (TourPackage) -> Unit
+    onSave: (TourPackage) -> Unit,
+    onUploadImage: (TourPackage, Uri) -> Unit
 ) {
     var destinationId by remember(tourPackage) {
         mutableStateOf(tourPackage?.destinationId.orEmpty())
@@ -250,6 +257,11 @@ private fun PackageEditorDialog(
     var titleError by remember { mutableStateOf<String?>(null) }
     var priceError by remember { mutableStateOf<String?>(null) }
     var destinationError by remember { mutableStateOf<String?>(null) }
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null && tourPackage != null) onUploadImage(tourPackage, uri)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -361,13 +373,27 @@ private fun PackageEditorDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                OutlinedTextField(
-                    value = coverImageUrl,
-                    onValueChange = { coverImageUrl = it },
-                    label = { Text("URL de la imagen") },
-                    singleLine = true,
+                if (coverImageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = coverImageUrl,
+                        contentDescription = "Portada del paquete",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(150.dp)
+                    )
+                }
+                OutlinedButton(
+                    onClick = { imagePicker.launch("image/*") },
+                    enabled = tourPackage?.id?.isNotBlank() == true && !isSaving,
                     modifier = Modifier.fillMaxWidth()
-                )
+                ) {
+                    Text(
+                        if (tourPackage?.id?.isNotBlank() == true) {
+                            "Subir imagen del paquete"
+                        } else {
+                            "Guarda el borrador para subir una imagen"
+                        }
+                    )
+                }
 
                 OutlinedTextField(
                     value = conditions,
@@ -417,7 +443,10 @@ private fun PackageEditorDialog(
                             currency = if (isUsd) "USD" else "PEN",
                             ratingScore = ratingText.toDoubleOrNull() ?: 4.5,
                             category = category,
-                            coverImageUrl = coverImageUrl,
+                            coverImageUrl = coverImageUrl.ifBlank {
+                                destinations.firstOrNull { it.id == destinationId }
+                                    ?.coverImageUrl.orEmpty()
+                            },
                             conditions = conditions,
                             includedServiceIds = includedServiceIds,
                             status = CatalogStatus.from(tourPackage?.status),
@@ -434,8 +463,16 @@ private fun PackageEditorDialog(
     )
 
     if (isServicesDialogOpen) {
+        val destinationName = destinations.firstOrNull { it.id == destinationId }?.name.orEmpty()
+        val servicesForDestination = catalogServices.filter { service ->
+            service.active && (
+                service.destinationId == destinationId ||
+                    (service.destinationId.isBlank() &&
+                        service.city.equals(destinationName, ignoreCase = true))
+                )
+        }
         ServicesPickerDialog(
-            catalogServices = catalogServices,
+            catalogServices = servicesForDestination,
             selectedIds = includedServiceIds,
             onDismiss = { isServicesDialogOpen = false },
             onConfirm = { selected ->
@@ -459,7 +496,9 @@ private fun ServicesPickerDialog(
         onDismissRequest = onDismiss,
         title = { Text("Servicios incluidos") },
         text = {
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            if (catalogServices.isEmpty()) {
+                Text("No hay servicios activos vinculados a este destino. Créalo primero en Servicios.")
+            } else LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 items(catalogServices, key = { it.id }) { service ->
                     Row(
                         modifier = Modifier
@@ -469,8 +508,13 @@ private fun ServicesPickerDialog(
                     ) {
                         androidx.compose.material3.Checkbox(
                             checked = selection.contains(service.id),
+                            enabled = selection.contains(service.id) ||
+                                selection.size < PackageFormValidator.MAX_INCLUDED_SERVICES,
                             onCheckedChange = { checked ->
-                                selection = if (checked) selection + service.id
+                                selection = if (
+                                    checked &&
+                                    selection.size < PackageFormValidator.MAX_INCLUDED_SERVICES
+                                ) selection + service.id
                                 else selection - service.id
                             }
                         )
@@ -487,7 +531,13 @@ private fun ServicesPickerDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(selection.toList().take(10)) }) { Text("Listo") }
+            Button(
+                onClick = {
+                    onConfirm(
+                        selection.toList().take(PackageFormValidator.MAX_INCLUDED_SERVICES)
+                    )
+                }
+            ) { Text("Listo (${selection.size}/${PackageFormValidator.MAX_INCLUDED_SERVICES})") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }

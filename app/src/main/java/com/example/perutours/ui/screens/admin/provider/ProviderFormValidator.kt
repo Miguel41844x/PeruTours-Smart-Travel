@@ -37,13 +37,6 @@ object ProviderFormValidator {
         return if (valid) null else "El teléfono debe tener entre 7 y 12 dígitos."
     }
 
-    fun parseServices(raw: String): List<String> = raw
-        .split(',', '·', '/', '\n')
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .distinct()
-        .take(10)
-
     fun buildProvider(
         existing: TourProvider?,
         name: String,
@@ -51,7 +44,6 @@ object ProviderFormValidator {
         phone: String,
         email: String,
         city: String,
-        servicesText: String,
         active: Boolean,
         nowMillis: Long
     ): TourProvider {
@@ -62,7 +54,6 @@ object ProviderFormValidator {
             phone = phone.trim(),
             email = email.trim(),
             city = city.trim(),
-            serviceNames = parseServices(servicesText),
             active = active,
             createdAtMillis = base.createdAtMillis.takeIf { it > 0L } ?: nowMillis,
             updatedAtMillis = nowMillis

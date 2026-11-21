@@ -49,15 +49,33 @@ class TourProviderRepository(
     }
 
     suspend fun setActive(providerId: String, active: Boolean) {
-        firestore.collection(COLLECTION_PROVIDERS)
-            .document(providerId)
-            .update(
+        val providerRef = firestore.collection(COLLECTION_PROVIDERS).document(providerId)
+        if (active) {
+            providerRef.update(
                 mapOf(
-                    FIELD_ACTIVE to active,
+                    FIELD_ACTIVE to true,
                     FIELD_UPDATED_AT to System.currentTimeMillis()
                 )
-            )
+            ).await()
+            return
+        }
+
+        // Un proveedor inactivo no puede continuar ofreciendo servicios para
+        // nuevas cotizaciones. Los paquetes publicados deberán corregirse.
+        val services = firestore.collection(ServiceCatalogRepository.COLLECTION_SERVICES)
+            .whereEqualTo("providerId", providerId)
+            .get()
             .await()
+        val batch = firestore.batch()
+        batch.update(
+            providerRef,
+            mapOf(
+                FIELD_ACTIVE to false,
+                FIELD_UPDATED_AT to System.currentTimeMillis()
+            )
+        )
+        services.documents.forEach { batch.update(it.reference, "active", false) }
+        batch.commit().await()
     }
 
     companion object {

@@ -71,7 +71,6 @@ class AdminProvidersViewModel(
         phone: String,
         email: String,
         city: String,
-        servicesText: String,
         active: Boolean
     ) {
         val nameError = ProviderFormValidator.validateName(name)
@@ -93,7 +92,6 @@ class AdminProvidersViewModel(
             phone = phone,
             email = email,
             city = city,
-            servicesText = servicesText,
             active = active,
             nowMillis = System.currentTimeMillis()
         )
