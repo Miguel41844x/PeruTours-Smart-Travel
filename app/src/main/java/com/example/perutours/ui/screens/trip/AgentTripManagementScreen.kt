@@ -34,6 +34,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -141,7 +142,7 @@ private fun AgentTripManagementContent(
     isSaving: Boolean,
     itemInProgress: String?,
     onSaveItinerary: (AgentItineraryDraft, TripItineraryItem?) -> Unit,
-    onDeleteItinerary: (String) -> Unit,
+    onDeleteItinerary: (TripItineraryItem) -> Unit,
     onRespondIncident: (String, String, String) -> Unit,
     contentPadding: PaddingValues
 ) {
@@ -201,6 +202,43 @@ private fun AgentTripManagementContent(
         }
 
         if (selectedSection == AgentTripSection.ITINERARY) {
+            if (reservation.services.isNotEmpty()) {
+                item {
+                    val scheduledCount = itinerary.count {
+                        it.source == TripItineraryItem.SOURCE_RESERVATION &&
+                            it.status != TripItineraryItem.STATUS_PENDING_SCHEDULE
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 760.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "$scheduledCount de ${reservation.services.size} servicios programados",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            LinearProgressIndicator(
+                                progress = {
+                                    scheduledCount.toFloat() / reservation.services.size
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                text = "Edita los servicios con horario por confirmar para asignarles día, hora y ubicación.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+            }
             item {
                 Button(
                     onClick = {
@@ -239,7 +277,7 @@ private fun AgentTripManagementContent(
                                 editedItem = item
                                 showItineraryDialog = true
                             },
-                            onDelete = { onDeleteItinerary(item.id) }
+                            onDelete = { onDeleteItinerary(item) }
                         )
                     }
                 }
@@ -340,8 +378,10 @@ private fun AgentItineraryCard(
             IconButton(onClick = onEdit, enabled = !isBusy) {
                 Icon(Icons.Default.Edit, contentDescription = "Editar ${item.title}")
             }
-            IconButton(onClick = onDelete, enabled = !isBusy) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = "Eliminar ${item.title}")
+            if (item.source != TripItineraryItem.SOURCE_RESERVATION) {
+                IconButton(onClick = onDelete, enabled = !isBusy) {
+                    Icon(Icons.Default.DeleteOutline, contentDescription = "Eliminar ${item.title}")
+                }
             }
         }
     }

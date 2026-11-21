@@ -66,6 +66,7 @@ object AgentItineraryForm {
         return TripItineraryItem(
             id = existing?.id ?: UUID.randomUUID().toString(),
             reservationId = reservation.id,
+            reservationServiceId = existing?.reservationServiceId.orEmpty(),
             clientId = reservation.clientId,
             agentId = reservation.agentId,
             title = draft.title.trim(),
@@ -82,7 +83,7 @@ object AgentItineraryForm {
             providerName = draft.providerName.trim(),
             status = existing?.status ?: TripItineraryItem.STATUS_SCHEDULED,
             notes = draft.notes.trim(),
-            source = TripItineraryItem.SOURCE_AGENT,
+            source = existing?.source ?: TripItineraryItem.SOURCE_AGENT,
             createdAtMillis = existing?.createdAtMillis?.takeIf { it > 0L } ?: nowMillis,
             updatedAtMillis = nowMillis
         )

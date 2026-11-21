@@ -82,8 +82,14 @@ class AgentTripViewModel(
         }
     }
 
-    fun deleteItinerary(itemId: String) {
-        runItemAction(itemId) { repository.deleteItineraryItem(itemId) }
+    fun deleteItinerary(item: TripItineraryItem) {
+        if (item.source == TripItineraryItem.SOURCE_RESERVATION) {
+            _uiState.update {
+                it.copy(message = "Los servicios comprados se reprograman o cancelan, no se eliminan.")
+            }
+            return
+        }
+        runItemAction(item.id) { repository.deleteItineraryItem(item.id) }
     }
 
     fun respondToIncident(incidentId: String, response: String, status: String) {

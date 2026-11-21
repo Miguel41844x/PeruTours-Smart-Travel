@@ -198,8 +198,12 @@ class TripRepository(
         scheduler.scheduleDepartureReminder(reservation)
 
         val remoteItinerary = remote.getItinerary(reservationId)
-        val itinerary = remoteItinerary.ifEmpty {
-            ReservationItineraryBuilder.build(reservation)
+        val purchasedServices = ReservationItineraryBuilder.build(reservation)
+        val scheduledServiceIds = remoteItinerary
+            .mapNotNull { it.reservationServiceId.takeIf(String::isNotBlank) }
+            .toSet()
+        val itinerary = remoteItinerary + purchasedServices.filter { provisional ->
+            provisional.reservationServiceId !in scheduledServiceIds
         }
         tripDao.replaceItinerary(
             reservationId = reservationId,

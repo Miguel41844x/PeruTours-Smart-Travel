@@ -1,6 +1,7 @@
 package com.example.perutours.data.repository
 
 import com.example.perutours.data.model.Reservation
+import com.example.perutours.data.model.ReservationItineraryBuilder
 import com.example.perutours.data.model.TripDomainRules
 import com.example.perutours.data.model.TripIncident
 import com.example.perutours.data.model.TripItineraryItem
@@ -48,6 +49,8 @@ class AgentTripRepository(
         reservationId: String
     ): Flow<List<TripItineraryItem>> = callbackFlow {
         val agentId = currentAgentId()
+        val reservation = getAssignedTrip(reservationId)
+        val purchasedServices = ReservationItineraryBuilder.build(reservation)
         val listener = firestore.collection(FirestoreTripRemoteDataSource.COLLECTION_ITINERARY)
             .whereEqualTo("reservationId", reservationId)
             .whereEqualTo("agentId", agentId)
@@ -56,8 +59,13 @@ class AgentTripRepository(
                     close(error)
                     return@addSnapshotListener
                 }
-                val items = snapshot?.toObjects(TripItineraryItem::class.java)
-                    .orEmpty()
+                val remoteItems = snapshot?.toObjects(TripItineraryItem::class.java).orEmpty()
+                val scheduledServiceIds = remoteItems
+                    .mapNotNull { it.reservationServiceId.takeIf(String::isNotBlank) }
+                    .toSet()
+                val items = (remoteItems + purchasedServices.filter { provisional ->
+                    provisional.reservationServiceId !in scheduledServiceIds
+                })
                     .sortedWith(
                         compareBy<TripItineraryItem> { it.dayIndex }
                             .thenBy { it.sortOrder }
@@ -128,6 +136,11 @@ class AgentTripRepository(
             ?: return
         if (item.agentId != agentId) {
             throw IllegalAccessException("No puedes eliminar esta actividad.")
+        }
+        if (item.source == TripItineraryItem.SOURCE_RESERVATION) {
+            throw IllegalStateException(
+                "Un servicio comprado no se elimina; puedes reprogramarlo o marcarlo como cancelado."
+            )
         }
         document.delete().await()
     }

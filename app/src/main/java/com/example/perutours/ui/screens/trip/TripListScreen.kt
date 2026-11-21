@@ -52,6 +52,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.data.model.TripDomainRules
 import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.CustomerNavigationBar
+import com.example.perutours.ui.components.CustomerSection
 import com.example.perutours.ui.theme.StatusApproved
 import com.example.perutours.ui.theme.StatusReview
 import org.koin.androidx.compose.koinViewModel
@@ -64,6 +66,8 @@ fun TripListScreen(
     onNavigateBack: () -> Unit,
     onTripSelected: (String) -> Unit,
     onViewReservations: () -> Unit,
+    onHome: () -> Unit = {},
+    onQuotations: () -> Unit = {},
     viewModel: TripListViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,6 +100,15 @@ fun TripListScreen(
                         }
                     }
                 }
+            )
+        },
+        bottomBar = {
+            CustomerNavigationBar(
+                selected = CustomerSection.TRIPS,
+                onHome = onHome,
+                onQuotations = onQuotations,
+                onReservations = onViewReservations,
+                onTrips = {}
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
