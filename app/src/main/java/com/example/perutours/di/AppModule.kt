@@ -25,6 +25,7 @@ import com.example.perutours.data.repository.TripDataSource
 import com.example.perutours.data.repository.TripRemoteDataSource
 import com.example.perutours.data.repository.TripRepository
 import com.example.perutours.data.repository.PaymentRepository
+import com.example.perutours.data.repository.AgentDashboardRepository
 import com.example.perutours.data.ocr.MlKitVoucherTextReader
 import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.repository.PaymentReviewDataSource
@@ -376,12 +377,8 @@ val appModule = module {
         )
     }
 
-    viewModel {
-        AgentHomeViewModel(
-            auth = get(),
-            firestore = get()
-        )
-    }
+    single { AgentDashboardRepository(get(), get(), get(), get()) }
+    viewModel { AgentHomeViewModel(repository = get()) }
 
     viewModel {
         QuotationViewModel(

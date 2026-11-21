@@ -57,6 +57,7 @@ import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
+import com.example.perutours.ui.screens.sales.components.QuotationStatusBarChart
 import com.google.firebase.auth.FirebaseAuth
 
 import android.Manifest
@@ -171,12 +172,12 @@ fun AgentHomeScreen(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Resumen de hoy",
+                        text = "Mi cartera de viajes",
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Prioriza las solicitudes pendientes y prepara las propuestas de los clientes.",
+                        text = "Solicitudes disponibles y expedientes asignados a tu cuenta.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -202,6 +203,21 @@ fun AgentHomeScreen(
                         onClick = onViewRequests,
                         modifier = Modifier.weight(1f)
                     )
+                }
+
+                uiState.errorMessage?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(onClick = viewModel::refresh, enabled = !uiState.isRefreshing) {
+                    Text(if (uiState.isRefreshing) "Actualizando…" else "Actualizar mi cartera")
+                }
+                SectionHeading(
+                    title = "Estado de solicitudes",
+                    supportingText = "Distribución de los expedientes que puedes atender."
+                )
+                QuotationStatusBarChart(metrics = uiState.statuses)
+                OutlinedButton(onClick = onViewPayments, modifier = Modifier.fillMaxWidth()) {
+                    Text("Comprobantes por revisar (${uiState.pendingPayments})")
                 }
 
                 SectionHeading(
