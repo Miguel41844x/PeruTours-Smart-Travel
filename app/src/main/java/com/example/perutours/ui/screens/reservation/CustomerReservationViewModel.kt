@@ -64,7 +64,7 @@ class CustomerReservationViewModel(
                 // estado de la revisión y el motivo de rechazo; si falla,
                 // la reserva se muestra igual.
                 val payment = runCatching {
-                    paymentRepository.getPaymentForReservation(reservationId)
+                    paymentRepository.getPaymentById(reservation.paymentId)
                 }.getOrNull()
                 CustomerReservationDetailUiState(reservation = reservation, payment = payment)
             } catch (error: Exception) {

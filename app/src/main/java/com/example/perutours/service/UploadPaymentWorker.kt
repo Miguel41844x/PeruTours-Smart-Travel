@@ -24,8 +24,8 @@ import java.io.File
  * para que el agente lo verifique. La reserva NO se marca 'Pagado' aquí:
  * eso solo lo hace el agente al aprobar el comprobante.
  *
- * El ID del pago es el ID de la reserva, por lo que un segundo envío
- * sobrescribe el intento anterior en lugar de crear pagos duplicados.
+ * Cada reenvío crea un intento nuevo y enlaza el intento anterior. El ID del
+ * WorkRequest se reutiliza en reintentos para mantener idempotencia.
  */
 class UploadPaymentWorker(
     appContext: Context,
@@ -97,8 +97,17 @@ class UploadPaymentWorker(
             val currency = reservation.getString("currency")
                 ?: return failure("La reserva no tiene una moneda válida")
 
+            val paymentId = id.toString()
+            val previousPaymentId = reservation.getString("paymentId").orEmpty()
+            val attemptNumber = if (previousPaymentId.isBlank()) {
+                1
+            } else {
+                val previous = firestore.collection(COLLECTION_PAYMENTS)
+                    .document(previousPaymentId).get().await()
+                ((previous.getLong("attemptNumber") ?: 1L) + 1L).toInt()
+            }
             val storageRef = storage.reference.child(
-                "payment_vouchers/$userId/$reservationId/${file.name}"
+                "payment_vouchers/$userId/$reservationId/$paymentId/${file.name}"
             )
 
             val downloadUrl = try {
@@ -111,11 +120,13 @@ class UploadPaymentWorker(
             }
 
             val payment = Payment(
-                id = reservationId,
+                id = paymentId,
                 reservationId = reservationId,
                 quotationId = quotationId,
                 clientId = userId,
                 agentId = reservation.getString("agentId").orEmpty(),
+                attemptNumber = attemptNumber,
+                previousPaymentId = previousPaymentId,
                 method = paymentMethod,
                 amount = totalAmount,
                 currency = currency,
@@ -126,14 +137,14 @@ class UploadPaymentWorker(
 
             val batch = firestore.batch()
             batch.set(
-                firestore.collection(COLLECTION_PAYMENTS).document(reservationId),
+                firestore.collection(COLLECTION_PAYMENTS).document(paymentId),
                 payment
             )
             batch.update(
                 reservationRef,
                 mapOf(
                     "status" to Reservation.STATUS_PAYMENT_PENDING,
-                    "paymentId" to reservationId
+                    "paymentId" to paymentId
                 )
             )
             batch.commit().await()

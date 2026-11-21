@@ -87,14 +87,10 @@ class UploadPaymentWorkerTest {
         every { mockFirestore.collection("reservations") } returns mockReservations
         every { mockFirestore.collection("payments") } returns mockPayments
         every { mockReservations.document(reservationId) } returns mockReservationRef
-        every { mockPayments.document(reservationId) } returns mockPaymentRef
         every { mockFirestore.batch() } returns mockBatch
         every { mockBatch.commit() } returns Tasks.forResult<Void>(null)
 
         every { mockStorage.reference } returns mockStorageRef
-        every {
-            mockStorageRef.child("payment_vouchers/$testUid/$reservationId/$fileName")
-        } returns mockFileRef
 
         startKoin {
             modules(
@@ -124,10 +120,15 @@ class UploadPaymentWorkerTest {
         every { mockReservationSnapshot.getString("status") } returns status
         every { mockReservationSnapshot.getString("agentId") } returns "agente_1"
         every { mockReservationSnapshot.getString("currency") } returns "PEN"
+        every { mockReservationSnapshot.getString("paymentId") } returns null
         every { mockReservationSnapshot.getDouble("totalAmount") } returns totalAmount
     }
 
-    private fun stubExistingVoucherInStorage() {
+    private fun stubPaymentAttempt(paymentId: String) {
+        every { mockPayments.document(paymentId) } returns mockPaymentRef
+        every {
+            mockStorageRef.child("payment_vouchers/$testUid/$reservationId/$paymentId/$fileName")
+        } returns mockFileRef
         every { mockFileRef.metadata } returns Tasks.forResult(mockk<StorageMetadata>())
         every { mockFileRef.downloadUrl } returns
             Tasks.forResult(Uri.parse("https://firebasestorage.test/voucher.jpg"))
@@ -153,8 +154,9 @@ class UploadPaymentWorkerTest {
     fun `al subir el comprobante la reserva pasa a Pago enviado y el pago queda Pendiente`() =
         runBlocking {
             stubReservation(Reservation.STATUS_CONFIRMED)
-            stubExistingVoucherInStorage()
             val worker = buildWorker(method = "Yape")
+            val paymentId = worker.id.toString()
+            stubPaymentAttempt(paymentId)
 
             val result = worker.doWork()
 
@@ -168,7 +170,7 @@ class UploadPaymentWorkerTest {
             val paymentSlot = slot<Payment>()
             verify { mockBatch.set(mockPaymentRef, capture(paymentSlot)) }
             val payment = paymentSlot.captured
-            assertEquals(reservationId, payment.id)
+            assertEquals(paymentId, payment.id)
             assertEquals(reservationId, payment.reservationId)
             assertEquals(testUid, payment.clientId)
             assertEquals("agente_1", payment.agentId)
@@ -176,6 +178,8 @@ class UploadPaymentWorkerTest {
             assertEquals(1500.0, payment.amount, 0.01)
             assertEquals("PEN", payment.currency)
             assertEquals(Payment.STATUS_PENDING, payment.status)
+            assertEquals(1, payment.attemptNumber)
+            assertEquals("", payment.previousPaymentId)
 
             // La reserva solo cambia estado y vínculo; nunca a Pagado.
             val updateSlot = slot<Map<String, Any>>()
@@ -184,8 +188,28 @@ class UploadPaymentWorkerTest {
                 Reservation.STATUS_PAYMENT_PENDING,
                 updateSlot.captured["status"]
             )
-            assertEquals(reservationId, updateSlot.captured["paymentId"])
+            assertEquals(paymentId, updateSlot.captured["paymentId"])
         }
+
+    @Test
+    fun `enlaza el reenvio al ultimo pago rechazado`() = runBlocking {
+        stubReservation(Reservation.STATUS_PAYMENT_REJECTED)
+        val previousPaymentId = "pago_anterior"
+        val previousRef = mockk<DocumentReference>()
+        val previousSnapshot = mockk<DocumentSnapshot>()
+        every { mockReservationSnapshot.getString("paymentId") } returns previousPaymentId
+        every { mockPayments.document(previousPaymentId) } returns previousRef
+        every { previousRef.get() } returns Tasks.forResult(previousSnapshot)
+        every { previousSnapshot.getLong("attemptNumber") } returns 2L
+        val worker = buildWorker()
+        stubPaymentAttempt(worker.id.toString())
+
+        assertTrue(worker.doWork() is ListenableWorker.Result.Success)
+        val payment = slot<Payment>()
+        verify { mockBatch.set(mockPaymentRef, capture(payment)) }
+        assertEquals(previousPaymentId, payment.captured.previousPaymentId)
+        assertEquals(3, payment.captured.attemptNumber)
+    }
 
     @Test
     fun `es idempotente cuando la reserva ya esta Pagado`() = runBlocking {

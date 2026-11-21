@@ -15,7 +15,7 @@ import kotlinx.coroutines.tasks.await
  * validen el cruce de forma atómica.
  */
 interface PaymentReviewDataSource {
-    suspend fun getPaymentForReservation(reservationId: String): Payment?
+    suspend fun getPaymentById(paymentId: String): Payment?
 
     /** Pagos 'Pendiente' asignados al agente autenticado. */
     suspend fun getPendingPaymentsForAgent(): List<Payment>
@@ -38,14 +38,13 @@ class PaymentReviewRepository(
     private val firestore: FirebaseFirestore
 ) : PaymentReviewDataSource {
 
-    override suspend fun getPaymentForReservation(reservationId: String): Payment? {
-        if (reservationId.isBlank()) return null
-        val snapshot = firestore.collection(COLLECTION_PAYMENTS)
-            .document(reservationId)
+    override suspend fun getPaymentById(paymentId: String): Payment? {
+        if (paymentId.isBlank()) return null
+        return firestore.collection(COLLECTION_PAYMENTS)
+            .document(paymentId)
             .get()
             .await()
-        if (!snapshot.exists()) return null
-        return snapshot.toObject(Payment::class.java)
+            .toObject(Payment::class.java)
     }
 
     override suspend fun getPendingPaymentsForAgent(): List<Payment> {
@@ -104,7 +103,10 @@ class PaymentReviewRepository(
         )
         batch.update(
             reservationRef,
-            mapOf("status" to Reservation.STATUS_PAID)
+            mapOf(
+                "status" to Reservation.STATUS_PAID,
+                "paymentId" to payment.id
+            )
         )
         batch.commit().await()
     }
@@ -137,7 +139,10 @@ class PaymentReviewRepository(
         )
         batch.update(
             reservationRef,
-            mapOf("status" to Reservation.STATUS_PAYMENT_REJECTED)
+            mapOf(
+                "status" to Reservation.STATUS_PAYMENT_REJECTED,
+                "paymentId" to payment.id
+            )
         )
         batch.commit().await()
     }

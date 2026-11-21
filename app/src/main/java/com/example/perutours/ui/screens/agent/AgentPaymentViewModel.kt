@@ -106,7 +106,7 @@ class AgentPaymentViewModel(
 
         detailLoadJob = viewModelScope.launch {
             try {
-                val payment = repository.getPaymentForReservation(paymentId)
+                val payment = repository.getPaymentById(paymentId)
                     ?: throw IllegalStateException("No se encontró el pago.")
                 val reservation = runCatching {
                     repository.getReservationForAgent(payment.reservationId)
