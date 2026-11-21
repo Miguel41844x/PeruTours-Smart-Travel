@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Remove
@@ -30,8 +29,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,13 +36,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -68,12 +63,6 @@ import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
 import com.example.perutours.data.model.TravelRequest
 import com.example.perutours.data.model.formatCatalogPrice
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
-import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -513,157 +502,3 @@ private fun RequestedActivities(
         }
     }
 }
-
-@Composable
-private fun DateTimeField(
-    label: String,
-    value: Long,
-    error: String?,
-    onClick: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge)
-        OutlinedButton(
-            onClick = onClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-        ) {
-            Icon(Icons.Default.CalendarMonth, contentDescription = null)
-            Text(
-                text = if (value == 0L) "Seleccionar fecha y hora" else formatDateTime(value),
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
-        error?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RequestDateTimePicker(
-    initialValue: Long,
-    minimumValue: Long,
-    onDismiss: () -> Unit,
-    onConfirm: (Long) -> Unit
-) {
-    val baseValue = initialValue.takeIf { it > minimumValue }
-        ?: (minimumValue + DEFAULT_DATE_TIME_OFFSET_MILLIS)
-    val initialCalendar = remember(baseValue) {
-        Calendar.getInstance().apply { timeInMillis = baseValue }
-    }
-    val minimumDateMillis = remember(minimumValue) { toDatePickerUtcMillis(minimumValue) }
-    val selectableDates = remember(minimumDateMillis) {
-        object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
-                utcTimeMillis >= minimumDateMillis
-        }
-    }
-    val datePickerState = androidx.compose.material3.rememberDatePickerState(
-        initialSelectedDateMillis = toDatePickerUtcMillis(baseValue),
-        selectableDates = selectableDates
-    )
-    val timePickerState = androidx.compose.material3.rememberTimePickerState(
-        initialHour = initialCalendar.get(Calendar.HOUR_OF_DAY),
-        initialMinute = initialCalendar.get(Calendar.MINUTE),
-        is24Hour = true
-    )
-    var selectingTime by remember { mutableStateOf(false) }
-
-    if (!selectingTime) {
-        DatePickerDialog(
-            onDismissRequest = onDismiss,
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (datePickerState.selectedDateMillis != null) selectingTime = true
-                    }
-                ) { Text("Continuar") }
-            },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    } else {
-        val selectedDateTime = datePickerState.selectedDateMillis?.let { selectedDate ->
-            combineDateAndTime(selectedDate, timePickerState.hour, timePickerState.minute)
-        }
-        val isValidTime = selectedDateTime != null && selectedDateTime > minimumValue
-
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Selecciona la hora") },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    TimePicker(state = timePickerState)
-                    if (!isValidTime) {
-                        Text(
-                            text = "Selecciona una hora posterior a la fecha mínima.",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = isValidTime,
-                    onClick = { selectedDateTime?.let(onConfirm) }
-                ) { Text("Aceptar") }
-            },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
-        )
-    }
-}
-
-private fun formatDateTime(value: Long): String =
-    SimpleDateFormat("EEE d MMM, HH:mm", Locale.forLanguageTag("es-PE")).format(Date(value))
-
-private fun tripDurationText(departure: Long, returnAt: Long): String? {
-    if (departure <= 0L || returnAt <= departure) return null
-    val difference = returnAt - departure
-    val days = TimeUnit.MILLISECONDS.toDays(difference)
-    val hours = TimeUnit.MILLISECONDS.toHours(difference) % 24
-    return when {
-        days > 0 && hours > 0 -> "$days días y $hours horas"
-        days > 0 -> "$days días"
-        else -> "$hours horas"
-    }
-}
-
-private fun toDatePickerUtcMillis(value: Long): Long {
-    val localDate = Calendar.getInstance().apply { timeInMillis = value }
-    return Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-        clear()
-        set(
-            localDate.get(Calendar.YEAR),
-            localDate.get(Calendar.MONTH),
-            localDate.get(Calendar.DAY_OF_MONTH)
-        )
-    }.timeInMillis
-}
-
-private fun combineDateAndTime(selectedDateMillis: Long, hour: Int, minute: Int): Long {
-    val utcDate = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-        timeInMillis = selectedDateMillis
-    }
-    return Calendar.getInstance().apply {
-        clear()
-        set(
-            utcDate.get(Calendar.YEAR),
-            utcDate.get(Calendar.MONTH),
-            utcDate.get(Calendar.DAY_OF_MONTH),
-            hour,
-            minute
-        )
-    }.timeInMillis
-}
-
-private const val DEFAULT_DATE_TIME_OFFSET_MILLIS = 60 * 60 * 1000L

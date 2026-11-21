@@ -227,6 +227,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itineraryItems(
         return
     }
 
+    item { ReadItineraryButton(overview.itinerary) }
     grouped.forEach { (day, dayItems) ->
         item(key = "day-$day") {
             ItineraryDayHeading(
