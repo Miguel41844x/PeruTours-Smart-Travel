@@ -49,6 +49,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.CustomerNavigationBar
+import com.example.perutours.ui.components.CustomerSection
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -65,6 +67,9 @@ private enum class QuotationFilter(val label: String) {
 fun CustomerQuotationsScreen(
     onNavigateBack: () -> Unit,
     onQuotationSelected: (String) -> Unit,
+    onHome: () -> Unit = {},
+    onReservations: () -> Unit = {},
+    onTrips: () -> Unit = {},
     viewModel: CustomerQuotationViewModel = koinViewModel()
 ) {
     val state by viewModel.quotationsState.collectAsStateWithLifecycle()
@@ -74,6 +79,15 @@ fun CustomerQuotationsScreen(
 
     Scaffold(
         topBar = { PeruToursTopBar(title = "Mis cotizaciones", onBack = onNavigateBack) },
+        bottomBar = {
+            CustomerNavigationBar(
+                selected = CustomerSection.QUOTATIONS,
+                onHome = onHome,
+                onQuotations = {},
+                onReservations = onReservations,
+                onTrips = onTrips
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when (val currentState = state) {
@@ -248,13 +262,18 @@ private fun CustomerQuotationCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = quotation.destination,
+                        text = quotation.packageSnapshot.title
+                            .ifBlank { quotation.destination },
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Preparada por ${quotation.agentName}",
+                        text = if (quotation.packageSnapshot.isPresent) {
+                            "${quotation.destination} · ${quotation.packageSnapshot.durationText}"
+                        } else {
+                            "Preparada por ${quotation.agentName}"
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

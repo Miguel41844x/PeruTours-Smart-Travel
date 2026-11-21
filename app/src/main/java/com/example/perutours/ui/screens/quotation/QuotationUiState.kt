@@ -2,6 +2,7 @@ package com.example.perutours.ui.screens.quotation
 
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.QuotationServiceItem
+import com.example.perutours.data.model.TravelPackageSnapshot
 
 data class QuotationFormState(
     val quotationId: String = "",
@@ -9,6 +10,11 @@ data class QuotationFormState(
     val clientId: String = "",
     val clientName: String = "",
     val clientEmail: String = "",
+    val packageId: String = "",
+    val destinationId: String = "",
+    val packageSnapshot: TravelPackageSnapshot = TravelPackageSnapshot(),
+    val requestedServiceIds: List<String> = emptyList(),
+    val requestNotes: String = "",
     val destination: String = "",
     val travelerCount: Int = 2,
     val selectedServices: List<QuotationServiceItem> = emptyList(),

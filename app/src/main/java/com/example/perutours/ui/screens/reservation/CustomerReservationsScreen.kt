@@ -43,6 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.CustomerNavigationBar
+import com.example.perutours.ui.components.CustomerSection
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.screens.quotation.formatQuotationCreatedAt
 
@@ -50,6 +52,9 @@ import com.example.perutours.ui.screens.quotation.formatQuotationCreatedAt
 fun CustomerReservationsScreen(
     onNavigateBack: () -> Unit,
     onReservationSelected: (String) -> Unit,
+    onHome: () -> Unit = {},
+    onQuotations: () -> Unit = {},
+    onTrips: () -> Unit = {},
     viewModel: CustomerReservationViewModel = koinViewModel()
 ) {
     val state by viewModel.reservationsState.collectAsStateWithLifecycle()
@@ -58,6 +63,15 @@ fun CustomerReservationsScreen(
 
     Scaffold(
         topBar = { PeruToursTopBar(title = "Mis reservas", onBack = onNavigateBack) },
+        bottomBar = {
+            CustomerNavigationBar(
+                selected = CustomerSection.RESERVATIONS,
+                onHome = onHome,
+                onQuotations = onQuotations,
+                onReservations = {},
+                onTrips = onTrips
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when (val currentState = state) {
@@ -140,13 +154,18 @@ private fun ReservationCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = reservation.destination,
+                        text = reservation.packageSnapshot.title
+                            .ifBlank { reservation.destination },
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Confirmada el ${formatQuotationCreatedAt(reservation.createdAtMillis)}",
+                        text = if (reservation.packageSnapshot.isPresent) {
+                            "${reservation.destination} · ${reservation.packageSnapshot.durationText}"
+                        } else {
+                            "Confirmada el ${formatQuotationCreatedAt(reservation.createdAtMillis)}"
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

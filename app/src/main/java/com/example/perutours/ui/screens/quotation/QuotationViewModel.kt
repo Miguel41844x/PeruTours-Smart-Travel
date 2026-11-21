@@ -49,16 +49,15 @@ class QuotationViewModel(
         _catalogLoading.asStateFlow()
 
     private var allCatalogServices: List<CatalogService> = emptyList()
+    private var initialServicesApplied = false
 
     fun loadCatalogServices() {
         viewModelScope.launch {
             _catalogLoading.value = true
             try {
-                // Para actualizar/subir los servicios a Firestore
-                // catalogRepository.syncCatalog()
-
                 allCatalogServices = catalogRepository.getServices()
                 filterCatalogForCurrentDestination()
+                selectInitialServicesIfNeeded()
             } catch (_: Exception) {
                 _uiState.value =
                     QuotationUiState.Error(
@@ -99,11 +98,17 @@ class QuotationViewModel(
                         clientId = request.userId,
                         clientName = clientProfile.name,
                         clientEmail = clientProfile.email,
+                        packageId = request.packageId,
+                        destinationId = request.destinationId,
+                        packageSnapshot = request.packageSnapshot,
+                        requestedServiceIds = request.requestedServiceIds,
+                        requestNotes = request.notes,
                         destination = request.destination,
                         travelerCount = request.travelerCount
                     )
                 }
                 filterCatalogForCurrentDestination()
+                selectInitialServicesIfNeeded()
 
                 // Ya cargamos correctamente la solicitud.
                 _uiState.value = QuotationUiState.Idle
@@ -154,6 +159,9 @@ class QuotationViewModel(
                     clientId = quotation.clientId,
                     clientName = quotation.clientName,
                     clientEmail = quotation.clientEmail,
+                    packageId = quotation.packageId,
+                    destinationId = quotation.destinationId,
+                    packageSnapshot = quotation.packageSnapshot,
                     destination = quotation.destination,
                     travelerCount = quotation.travelerCount,
                     selectedServices = quotation.services,
@@ -176,19 +184,15 @@ class QuotationViewModel(
     }
 
     fun addServiceFromCatalog(catalog: CatalogService) {
-        val newItem = QuotationServiceItem(
-            id = catalog.id,
-            name = catalog.name,
-            category = catalog.category,
-            unitCost = catalog.unitCost,
-            quantity = _formState.value.travelerCount.coerceAtLeast(1)
-        )
         _formState.update { current ->
             val exists = current.selectedServices.any { it.id == catalog.id }
             if (exists) {
                 current.copy(selectedServices = current.selectedServices.filter { it.id != catalog.id })
             } else {
-                current.copy(selectedServices = current.selectedServices + newItem)
+                current.copy(
+                    selectedServices = current.selectedServices +
+                        catalog.toQuotationItem(current.travelerCount)
+                )
             }
         }
     }
@@ -285,6 +289,9 @@ class QuotationViewModel(
             clientId = form.clientId,
             clientName = form.clientName,
             clientEmail = form.clientEmail,
+            packageId = form.packageId,
+            destinationId = form.destinationId,
+            packageSnapshot = form.packageSnapshot,
             destination = form.destination,
             travelerCount = form.travelerCount,
             services = form.selectedServices,
@@ -320,9 +327,45 @@ class QuotationViewModel(
     private fun filterCatalogForCurrentDestination() {
         _catalogServices.value = QuotationCatalogFilter.forDestination(
             services = allCatalogServices,
-            destination = _formState.value.destination
+            destination = _formState.value.destination,
+            destinationId = _formState.value.destinationId
         )
     }
+
+    private fun selectInitialServicesIfNeeded() {
+        val form = _formState.value
+        if (initialServicesApplied || form.requestId.isBlank() ||
+            form.quotationId.isNotBlank() || allCatalogServices.isEmpty()
+        ) return
+        initialServicesApplied = true
+        val servicesById = _catalogServices.value.associateBy(CatalogService::id)
+        val initialItems = (form.packageSnapshot.includedServiceIds + form.requestedServiceIds)
+            .distinct()
+            .mapNotNull(servicesById::get)
+            .map { it.toQuotationItem(form.travelerCount) }
+        _formState.update { state ->
+            state.copy(
+                selectedServices = (state.selectedServices + initialItems)
+                    .distinctBy { it.id }
+                    .take(QuotationValidator.MAX_SERVICES)
+            )
+        }
+    }
+
+    private fun CatalogService.toQuotationItem(travelers: Int) = QuotationServiceItem(
+        id = id,
+        catalogServiceId = id,
+        destinationId = destinationId,
+        providerId = providerId,
+        name = name,
+        category = category,
+        unitCost = unitCost,
+        commercialCost = commercialCost,
+        supplierName = supplierName,
+        description = description,
+        requiresScheduling = requiresScheduling,
+        quantity = travelers.coerceAtLeast(1)
+    )
 
     private fun quotationSaveErrorMessage(error: Exception): String = when {
         error is FirebaseFirestoreException &&

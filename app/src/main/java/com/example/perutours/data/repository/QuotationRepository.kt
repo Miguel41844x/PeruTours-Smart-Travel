@@ -81,24 +81,29 @@ class QuotationRepository(
             createdAtMillis = System.currentTimeMillis()
         )
 
-        val batch = firestore.batch()
-
-        // 1. Guardar documento principal de cotización
-        batch.set(docRef, quotationToSave)
-
-        // 2. Actualizar estado de la solicitud en 'travel_requests'
-        if (quotation.requestId.isNotBlank()) {
-            val requestRef = firestore.collection(COLLECTION_REQUESTS).document(quotation.requestId)
-            batch.update(
+        require(quotation.requestId.isNotBlank()) {
+            "La cotización no tiene una solicitud asociada."
+        }
+        val requestRef = firestore.collection(COLLECTION_REQUESTS)
+            .document(quotation.requestId)
+        firestore.runTransaction { transaction ->
+            val request = transaction.get(requestRef).toObject(TravelRequest::class.java)
+                ?: throw IllegalStateException("La solicitud ya no existe.")
+            if (request.status != TravelRequest.STATUS_PENDING_QUOTE) {
+                throw IllegalStateException("La solicitud ya fue atendida.")
+            }
+            if (request.assignedAgentId != agentUid) {
+                throw IllegalAccessException("Primero debes tomar la solicitud.")
+            }
+            transaction.set(docRef, quotationToSave)
+            transaction.update(
                 requestRef,
                 mapOf(
                     "status" to Quotation.STATUS_QUOTED,
                     "quotationId" to quotationId
                 )
             )
-        }
-
-        batch.commit().await()
+        }.await()
         return quotationToSave
     }
 
@@ -219,8 +224,15 @@ class QuotationRepository(
                 conditions = revision.conditions,
                 status = Quotation.STATUS_QUOTED,
                 version = newVersion,
-                parentQuotationId = current.id
+                parentQuotationId = current.parentQuotationId.ifBlank { current.id }
             )
+
+            // La versión anterior queda congelada para auditoría. El documento
+            // raíz continúa siendo la versión vigente que observa la UI.
+            val previousVersionRef = quotationRef
+                .collection(SUBCOLLECTION_VERSIONS)
+                .document(current.version.toString())
+            transaction.set(previousVersionRef, current)
 
             transaction.update(
                 quotationRef,
@@ -295,6 +307,9 @@ class QuotationRepository(
                 requestId = quotation.requestId,
                 clientId = quotation.clientId,
                 agentId = quotation.agentId,
+                packageId = quotation.packageId,
+                destinationId = quotation.destinationId,
+                packageSnapshot = quotation.packageSnapshot,
                 destination = quotation.destination,
                 originCity = travelRequest.originCity,
                 departureAtMillis = travelRequest.departureAtMillis,
@@ -333,12 +348,16 @@ class QuotationRepository(
             // cotización ya esté 'Aceptada' con getAfter, que aquí lee el
             // resultado confirmado de la primera tanda).
             //
-            // La confirmación de esta escritura también forma parte del proceso. Si falla, el
-            // repositorio propaga el error para que la interfaz no informe una aceptación completa.
-            firestore.collection(COLLECTION_REQUESTS)
-                .document(acceptedQuotation.requestId)
-                .update("status", Quotation.STATUS_ACCEPTED)
-                .await()
+            // La cotización aceptada y la reserva son la fuente de verdad. El
+            // estado de la solicitud es una proyección para listados: una
+            // caída puntual al actualizarlo no puede convertir una reserva
+            // ya creada en un falso error para el cliente.
+            runCatching {
+                firestore.collection(COLLECTION_REQUESTS)
+                    .document(acceptedQuotation.requestId)
+                    .update("status", Quotation.STATUS_ACCEPTED)
+                    .await()
+            }
         }
     }
 
@@ -463,5 +482,6 @@ class QuotationRepository(
         const val COLLECTION_REQUESTS = "travel_requests"
         const val COLLECTION_RESERVATIONS = "reservations"
         const val SUBCOLLECTION_OBSERVATIONS = "observations"
+        const val SUBCOLLECTION_VERSIONS = "versions"
     }
 }

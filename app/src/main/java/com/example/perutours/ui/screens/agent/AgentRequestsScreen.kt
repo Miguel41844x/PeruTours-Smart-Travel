@@ -54,8 +54,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.koin.androidx.compose.koinViewModel
-import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.TravelRequest
+import com.example.perutours.data.model.TravelRequestStatus
 import com.example.perutours.ui.components.PeruToursTopBar
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -81,30 +81,30 @@ fun AgentRequestsScreen(
     val error by viewModel.error.collectAsState()
     var selectedFilter by remember { mutableStateOf(RequestFilter.PENDING) }
     val pendingCount = remember(requests) {
-        requests.count { it.status.contains("Pendiente", ignoreCase = true) }
+        requests.count { it.workflowStatus == TravelRequestStatus.SUBMITTED }
     }
     val quotedCount = remember(requests) {
-        requests.count { it.status.equals("Cotizado", ignoreCase = true) || it.status.equals(Quotation.STATUS_QUOTED, ignoreCase = true) }
+        requests.count { it.workflowStatus == TravelRequestStatus.QUOTED }
     }
     val acceptedCount = remember(requests) {
-        requests.count { it.status.equals("Aceptada", ignoreCase = true) || it.status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || it.status.contains("Aceptad", ignoreCase = true) }
+        requests.count { it.workflowStatus == TravelRequestStatus.ACCEPTED }
     }
     val observedCount = remember(requests) {
-        requests.count { it.status.equals("Observada", ignoreCase = true) || it.status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || it.status.contains("Observad", ignoreCase = true) || it.status.contains("Cambios", ignoreCase = true) }
+        requests.count { it.workflowStatus == TravelRequestStatus.CHANGES_REQUESTED }
     }
     val filteredRequests = remember(requests, selectedFilter) {
         when (selectedFilter) {
             RequestFilter.PENDING -> requests.filter {
-                it.status.contains("Pendiente", ignoreCase = true)
+                it.workflowStatus == TravelRequestStatus.SUBMITTED
             }
             RequestFilter.QUOTED -> requests.filter {
-                it.status.equals("Cotizado", ignoreCase = true) || it.status.equals(Quotation.STATUS_QUOTED, ignoreCase = true)
+                it.workflowStatus == TravelRequestStatus.QUOTED
             }
             RequestFilter.ACCEPTED -> requests.filter {
-                it.status.equals("Aceptada", ignoreCase = true) || it.status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || it.status.contains("Aceptad", ignoreCase = true)
+                it.workflowStatus == TravelRequestStatus.ACCEPTED
             }
             RequestFilter.OBSERVED -> requests.filter {
-                it.status.equals("Observada", ignoreCase = true) || it.status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || it.status.contains("Observad", ignoreCase = true) || it.status.contains("Cambios", ignoreCase = true)
+                it.workflowStatus == TravelRequestStatus.CHANGES_REQUESTED
             }
             RequestFilter.ALL -> requests
         }
@@ -266,7 +266,7 @@ private fun TravelRequestCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isPending = request.status.contains("Pendiente", ignoreCase = true)
+    val isPending = request.workflowStatus == TravelRequestStatus.SUBMITTED
     val dateFormat = remember {
         SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("es-PE"))
     }
@@ -308,7 +308,7 @@ private fun TravelRequestCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                RequestStatus(status = request.status, isPending = isPending)
+                RequestStatus(status = request.status)
             }
 
             Row(
@@ -350,6 +350,22 @@ private fun TravelRequestCard(
                 }
             }
 
+            if (request.isPackageRequest && request.packageSnapshot.isPresent) {
+                Text(
+                    text = "Paquete: ${request.packageSnapshot.title}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            if (request.assignedAgentId.isNotBlank()) {
+                Text(
+                    text = "Asignada a ti",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
+
             Text(
                 text = "Solicitud #${request.id.takeLast(6).uppercase()}",
                 style = MaterialTheme.typography.labelSmall,
@@ -370,7 +386,15 @@ private fun TravelRequestCard(
                     )
                 }
             ) {
-                Text(if (isPending) "Crear cotización" else "Ver cotización")
+                Text(
+                    if (isPending && request.assignedAgentId.isBlank()) {
+                        "Tomar y cotizar"
+                    } else if (isPending) {
+                        "Continuar cotización"
+                    } else {
+                        "Ver cotización"
+                    }
+                )
                 Spacer(Modifier.width(8.dp))
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
             }
@@ -411,26 +435,21 @@ private fun getFilterColors(filter: RequestFilter, selected: Boolean) = run {
 }
 
 @Composable
-private fun RequestStatus(status: String, isPending: Boolean) {
-    val (container, content) = when {
-        isPending || status.contains("Pendiente", ignoreCase = true) ->
-            PeruMaizeContainer to StatusPending // Ámbar
-        status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || status.contains("Aceptad", ignoreCase = true) ->
-            PeruValleyContainer to StatusApproved // Verde
-        status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || status.contains("Observad", ignoreCase = true) || status.contains("Cambios", ignoreCase = true) ->
-            PeruMaizeContainer to StatusPending // Naranja
-        status.equals(Quotation.STATUS_CANCELLED, ignoreCase = true) || status.contains("Cancelad", ignoreCase = true) ->
-            MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant // Gris
+private fun RequestStatus(status: String) {
+    val workflowStatus = TravelRequestStatus.fromWire(status)
+    val (container, content) = when (workflowStatus) {
+        TravelRequestStatus.SUBMITTED ->
+            PeruMaizeContainer to StatusPending
+        TravelRequestStatus.ACCEPTED ->
+            PeruValleyContainer to StatusApproved
+        TravelRequestStatus.CHANGES_REQUESTED ->
+            PeruMaizeContainer to StatusPending
+        TravelRequestStatus.CANCELLED ->
+            MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
         else ->
             PeruValleyContainer to StatusReview // Azul
     }
-    val label = when {
-        isPending || status.contains("Pendiente", ignoreCase = true) -> "Pendiente"
-        status.equals(Quotation.STATUS_OBSERVED, ignoreCase = true) || status.contains("Observad", ignoreCase = true) -> "Observada"
-        status.equals(Quotation.STATUS_ACCEPTED, ignoreCase = true) || status.contains("Aceptad", ignoreCase = true) -> "Aceptada"
-        status.equals(Quotation.STATUS_QUOTED, ignoreCase = true) || status.equals("Cotizado", ignoreCase = true) -> "Cotizado"
-        else -> status
-    }
+    val label = workflowStatus.takeIf { it != TravelRequestStatus.UNKNOWN }?.label ?: status
 
     Surface(
         color = container,

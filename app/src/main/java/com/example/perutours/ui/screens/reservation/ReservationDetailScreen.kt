@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.example.perutours.data.model.Payment
 import com.example.perutours.data.model.Reservation
 import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.JourneyProgress
 import com.example.perutours.ui.components.SectionHeading
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.screens.quotation.formatQuotationCreatedAt
@@ -131,6 +132,55 @@ fun ReservationDetailScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                    }
+                }
+            }
+
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 720.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    JourneyProgress(
+                        currentStep = if (reservation.status == Reservation.STATUS_PAID) 4 else 3,
+                        statusText = reservationJourneyMessage(reservation.status),
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+
+            if (reservation.packageSnapshot.isPresent) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Paquete reservado",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = reservation.packageSnapshot.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = reservation.packageSnapshot.durationText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
                     }
                 }
             }
@@ -340,6 +390,13 @@ fun ReservationDetailScreen(
             }
         }
     }
+}
+
+private fun reservationJourneyMessage(status: String): String = when (status) {
+    Reservation.STATUS_PAID -> "Pago aprobado · tu viaje ya está confirmado"
+    Reservation.STATUS_PAYMENT_PENDING -> "Comprobante enviado · estamos verificando el pago"
+    Reservation.STATUS_PAYMENT_REJECTED -> "Comprobante observado · debes enviar uno nuevo"
+    else -> "Reserva creada · completa el pago para confirmar el viaje"
 }
 
 /**

@@ -9,14 +9,20 @@ object QuotationCatalogFilter {
 
     fun forDestination(
         services: List<CatalogService>,
-        destination: String
+        destination: String,
+        destinationId: String = ""
     ): List<CatalogService> {
         val destinationCity = destination.substringBefore(',').normalizePlaceName()
         if (destinationCity.isBlank()) return emptyList()
 
         return services.filter { service ->
             val serviceCity = service.city.normalizePlaceName()
-            serviceCity.isBlank() || serviceCity == destinationCity
+            when {
+                destinationId.isNotBlank() && service.destinationId.isNotBlank() -> {
+                    service.destinationId == destinationId
+                }
+                else -> serviceCity.isBlank() || serviceCity == destinationCity
+            }
         }
     }
 

@@ -68,14 +68,17 @@ fun CreateQuotationScreen(
         val selectedOutsideCatalog = formState.selectedServices.map { selected ->
             CatalogService(
                 id = selected.id,
+                destinationId = selected.destinationId,
+                providerId = selected.providerId,
                 name = selected.name,
                 city = QuotationCatalogFilter.destinationLabel(formState.destination),
                 category = selected.category,
                 unitCost = selected.unitCost,
                 commercialCost = selected.commercialCost,
                 supplierName = selected.supplierName,
-                description = "Servicio agregado a esta cotización.",
-                defaultQuantity = selected.quantity
+                description = selected.description.ifBlank { "Servicio agregado a esta cotización." },
+                defaultQuantity = selected.quantity,
+                requiresScheduling = selected.requiresScheduling
             )
         }
         (catalogServices + selectedOutsideCatalog).distinctBy { it.id }
@@ -184,6 +187,33 @@ fun CreateQuotationScreen(
                         .fillMaxWidth()
                         .widthIn(max = 900.dp)
                 )
+            }
+
+            if (formState.requestedServiceIds.isNotEmpty() || formState.requestNotes.isNotBlank()) {
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().widthIn(max = 900.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        SectionHeading(title = "Preferencias del viajero")
+                        if (formState.requestNotes.isNotBlank()) {
+                            Text(formState.requestNotes, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (formState.requestedServiceIds.isNotEmpty()) {
+                            val names = catalogServices.associate { it.id to it.name }
+                            val selectedIds = formState.selectedServices.map { it.id }.toSet()
+                            formState.requestedServiceIds.forEach { id ->
+                                val name = names[id]
+                                val label = when {
+                                    name == null -> "Actividad solicitada ya no disponible en el catálogo"
+                                    id in selectedIds -> "$name · Incluida en el borrador"
+                                    else -> "$name · Pendiente de incluir"
+                                }
+                                Text(label, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
             }
 
             item {

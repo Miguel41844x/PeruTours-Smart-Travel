@@ -3,6 +3,7 @@ package com.example.perutours.ui.screens.agent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.TravelRequest
+import com.example.perutours.data.model.TravelRequestStatus
 import com.example.perutours.data.repository.QuotationRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +34,6 @@ class AgentRequestsViewModel(
             _isLoading.value = true
             _error.value = null
             try {
-                // Ahora trae TODAS las solicitudes (Pendientes y Cotizadas)
                 _requests.value = repository.getAllRequests()
             } catch (_: Exception) {
                 _error.value = "Revisa tu conexión e inténtalo nuevamente."
@@ -49,16 +49,21 @@ class AgentRequestsViewModel(
         onNavigateToDetail: (String) -> Unit
     ) {
         viewModelScope.launch {
-            val isPending = request.status.contains("Pendiente", ignoreCase = true)
-            if (isPending) {
-                onNavigateToCreate(request.id)
-            } else {
-                val quotation = quotationRepository.getQuotationByRequestId(request.id)
-                if (quotation != null) {
-                    onNavigateToDetail(quotation.id)
+            _error.value = null
+            runCatching {
+                if (request.workflowStatus == TravelRequestStatus.SUBMITTED) {
+                    repository.claimRequest(request.id)
+                    request.id to null
                 } else {
-                    onNavigateToCreate(request.id)
+                    val quotation = quotationRepository.getQuotationByRequestId(request.id)
+                    request.id to quotation?.id
                 }
+            }.onSuccess { (requestId, quotationId) ->
+                if (quotationId == null) onNavigateToCreate(requestId)
+                else onNavigateToDetail(quotationId)
+            }.onFailure { error ->
+                _error.value = error.localizedMessage ?: "No pudimos abrir la solicitud."
+                loadRequests()
             }
         }
     }

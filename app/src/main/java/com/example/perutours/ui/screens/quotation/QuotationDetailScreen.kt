@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.example.perutours.data.model.Quotation
 import com.example.perutours.data.model.QuotationObservation
 import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.JourneyProgress
 import com.example.perutours.ui.components.SectionHeading
 
 @Composable
@@ -197,6 +198,57 @@ fun QuotationDetailScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                    }
+                }
+            }
+
+            if (showCustomerActions) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        JourneyProgress(
+                            currentStep = 2,
+                            statusText = quotationJourneyMessage(quotation.status),
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
+
+            if (quotation.packageSnapshot.isPresent) {
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 720.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Paquete solicitado",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = quotation.packageSnapshot.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = quotation.packageSnapshot.durationText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
                     }
                 }
             }
@@ -420,6 +472,13 @@ fun QuotationDetailScreen(
             }
         }
     }
+}
+
+private fun quotationJourneyMessage(status: String): String = when (status) {
+    Quotation.STATUS_ACCEPTED -> "Cotización aceptada · el siguiente paso es completar el pago"
+    Quotation.STATUS_OBSERVED -> "Cambios solicitados · el agente preparará una nueva versión"
+    Quotation.STATUS_CANCELLED -> "Cotización cerrada"
+    else -> "Cotización lista · revisa los servicios y responde"
 }
 
 @Composable
