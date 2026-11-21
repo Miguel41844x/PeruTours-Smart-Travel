@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.perutours.data.model.TourDestination
 import com.example.perutours.data.model.TourPackage
+import com.example.perutours.data.model.formatCatalogPrice
 
 /**
  * Caché local de los paquetes publicados que ve el cliente.
@@ -33,7 +34,9 @@ data class DestinationEntity(
     val latitude: Double = 0.0,
     @ColumnInfo(defaultValue = "0.0")
     val longitude: Double = 0.0,
-    val updatedAtMillis: Long = System.currentTimeMillis()
+    val updatedAtMillis: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "'PEN'")
+    val currency: String = "PEN"
 ) {
     fun toDto(): com.example.perutours.data.remote.DestinationDto {
         return com.example.perutours.data.remote.DestinationDto(
@@ -42,7 +45,7 @@ data class DestinationEntity(
             title = title,
             location = location,
             duration = durationText,
-            price = "S/ ${priceAmount.toInt()}",
+            price = formatCatalogPrice(priceAmount, currency),
             rating = ratingScore.toString(),
             category = category,
             imageUrl = imageUrl,
@@ -60,12 +63,15 @@ data class DestinationEntity(
  * coordenadas que después alimentan los puntos de interés cercanos.
  */
 fun TourPackage.toEntity(destination: TourDestination?): DestinationEntity {
-    val place = destination?.department?.takeIf { it.isNotBlank() } ?: "Perú"
+    val place = listOfNotNull(
+        destination?.name?.takeIf { it.isNotBlank() },
+        destination?.department?.takeIf { it.isNotBlank() }
+    ).distinct().joinToString(", ").ifBlank { "Perú" }
     return DestinationEntity(
         id = id,
         destinationId = destinationId,
         title = title,
-        location = "$place, Perú",
+        location = if (place.endsWith("Perú", ignoreCase = true)) place else "$place, Perú",
         durationText = durationLabel(),
         durationDays = durationDays,
         priceAmount = priceAmount,
@@ -76,6 +82,7 @@ fun TourPackage.toEntity(destination: TourDestination?): DestinationEntity {
         summary = destination?.summary.orEmpty(),
         latitude = destination?.latitude ?: 0.0,
         longitude = destination?.longitude ?: 0.0,
-        updatedAtMillis = updatedAtMillis
+        updatedAtMillis = updatedAtMillis,
+        currency = currency
     )
 }

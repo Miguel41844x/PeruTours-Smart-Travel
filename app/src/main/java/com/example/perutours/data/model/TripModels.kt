@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit
 data class TripItineraryItem(
     val id: String = "",
     val reservationId: String = "",
+    val reservationServiceId: String = "",
     val clientId: String = "",
     val agentId: String = "",
     val title: String = "",
@@ -267,6 +268,7 @@ object ReservationItineraryBuilder {
             TripItineraryItem(
                 id = "reservation-${service.id.ifBlank { index.toString() }}",
                 reservationId = reservation.id,
+                reservationServiceId = service.id,
                 clientId = reservation.clientId,
                 agentId = reservation.agentId,
                 title = service.name,

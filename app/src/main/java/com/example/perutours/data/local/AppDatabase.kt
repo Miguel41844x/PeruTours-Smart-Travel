@@ -18,7 +18,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AdminMetricsEntity::class,
         ReservationEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -255,6 +255,8 @@ abstract class AppDatabase : RoomDatabase() {
         // Migración de versión 6 a 7: caché local de reservas para el dashboard admin.
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                // La versión 6 de la rama experimental aún no tenía métricas.
+                MIGRATION_5_6.migrate(db)
                 db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS reservation_cache (
@@ -285,6 +287,24 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE destinations ADD COLUMN currency TEXT NOT NULL DEFAULT 'PEN'")
+                db.execSQL("UPDATE destinations SET updatedAtMillis = 0")
+                val hasServiceId = db.query("PRAGMA table_info(trip_itinerary_items)").use { cursor ->
+                    val nameIndex = cursor.getColumnIndexOrThrow("name")
+                    generateSequence { if (cursor.moveToNext()) cursor.getString(nameIndex) else null }
+                        .any { it == "reservationServiceId" }
+                }
+                if (!hasServiceId) {
+                    db.execSQL(
+                        "ALTER TABLE trip_itinerary_items " +
+                            "ADD COLUMN reservationServiceId TEXT NOT NULL DEFAULT ''"
+                    )
+                }
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -298,7 +318,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_3_4,
                         MIGRATION_4_5,
                         MIGRATION_5_6,
-                        MIGRATION_6_7
+                        MIGRATION_6_7,
+                        MIGRATION_7_8
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()

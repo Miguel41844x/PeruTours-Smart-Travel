@@ -31,6 +31,7 @@ data class TripEntity(
 data class TripItineraryEntity(
     @PrimaryKey val id: String,
     val reservationId: String,
+    val reservationServiceId: String,
     val clientId: String,
     val agentId: String,
     val title: String,
