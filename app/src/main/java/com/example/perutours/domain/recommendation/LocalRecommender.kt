@@ -88,7 +88,7 @@ object LocalRecommender {
         }
 
         // 3. Presupuesto vs precio real del paquete
-        val price = parsePrice(destination.price)
+        val price = destination.price.takeIf { it.startsWith("S/") }?.let(::parsePrice)
         val budgetRange = budgetRange(preferences.budget)
         if (price != null && budgetRange != null) {
             if (price >= budgetRange.start && price <= budgetRange.endInclusive) {

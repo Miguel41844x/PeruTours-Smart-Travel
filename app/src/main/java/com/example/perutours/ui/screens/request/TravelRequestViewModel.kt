@@ -1,30 +1,147 @@
 package com.example.perutours.ui.screens.request
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.location.DetectedLocation
 import com.example.perutours.data.location.LocationDataSource
+import com.example.perutours.data.model.TourDestination
+import com.example.perutours.data.model.TravelPackageSnapshot
 import com.example.perutours.data.model.TravelRequest
+import com.example.perutours.data.model.TravelRequestType
+import com.example.perutours.data.repository.DestinationCatalogRepository
+import com.example.perutours.data.repository.PackageRepository
+import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.Normalizer
+import java.util.Locale
 
 class TravelRequestViewModel(
-    application: Application,
     private val requestRepository: TravelRequestDataSource,
     private val locationRepository: LocationDataSource,
-    private val placeResolver: TravelRequestPlaceResolver
-) : AndroidViewModel(application) {
+    private val placeResolver: TravelRequestPlaceResolver,
+    private val packageRepository: PackageRepository,
+    private val destinationRepository: DestinationCatalogRepository,
+    private val serviceCatalogRepository: ServiceCatalogRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(TravelRequestUiState())
     val uiState: StateFlow<TravelRequestUiState> = _uiState.asStateFlow()
+    private var activitiesJob: Job? = null
+    private var publishedDestinations: List<TourDestination>? = null
 
     fun onDestinationChanged(value: String) {
+        if (_uiState.value.isSaving || _uiState.value.isLoadingPackage) return
+        activitiesJob?.cancel()
         _uiState.value = _uiState.value.copy(
+            requestType = TravelRequestType.CUSTOM.wireValue,
+            packageId = "",
+            destinationId = "",
+            packageSnapshot = TravelPackageSnapshot(),
+            catalogDestination = null,
+            destinationSuggestions = emptyList(),
+            availableActivities = emptyList(),
+            requestedServiceIds = emptyList(),
+            isLoadingActivities = false,
+            activityLoadFailed = false,
             destination = value.take(MAX_PLACE_LENGTH),
+            destinationLatitude = null,
+            destinationLongitude = null,
             destinationError = null
         )
+        loadActivities(debounce = true)
+    }
+
+    fun loadActivities(debounce: Boolean = false) {
+        activitiesJob?.cancel()
+        val form = _uiState.value
+        if (form.destination.trim().length < 2) return
+        activitiesJob = viewModelScope.launch {
+            if (debounce) delay(450)
+            _uiState.value = _uiState.value.copy(
+                isLoadingActivities = true,
+                activityLoadFailed = false
+            )
+            try {
+                val suggestions = if (form.catalogDestination == null) {
+                    findCatalogDestinations(form.destination)
+                } else {
+                    emptyList()
+                }
+                val destination = form.catalogDestination ?: suggestions.singleOrNull()?.takeIf {
+                    normalizeDestination(form.destination) in destinationSearchLabels(it)
+                }
+                val includedIds = form.packageSnapshot.includedServiceIds
+                val activities = destination?.let {
+                    serviceCatalogRepository.getRequestableActivities(it.id)
+                }.orEmpty().filterNot { it.id in includedIds }
+                _uiState.value = _uiState.value.copy(
+                    catalogDestination = destination,
+                    destinationSuggestions = if (destination == null) suggestions.take(4) else emptyList(),
+                    availableActivities = activities,
+                    requestedServiceIds = _uiState.value.requestedServiceIds.filter { id ->
+                        activities.any { it.id == id }
+                    },
+                    isLoadingActivities = false
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoadingActivities = false,
+                    activityLoadFailed = true
+                )
+            }
+        }
+    }
+
+    private suspend fun findCatalogDestinations(query: String): List<TourDestination> {
+        val destinations = publishedDestinations ?: destinationRepository.getPublishedDestinations()
+            .also { publishedDestinations = it }
+        val input = normalizeDestination(query)
+        val matches = destinations.filter { destination ->
+            destinationSearchLabels(destination).any { it.startsWith(input) }
+        }
+        val exactMatches = matches.filter { input in destinationSearchLabels(it) }
+        return exactMatches.ifEmpty { matches }.sortedBy(::destinationLabel)
+    }
+
+    private fun destinationSearchLabels(destination: TourDestination): List<String> = listOf(
+        destination.name,
+        "${destination.name}, Perú",
+        "${destination.name}, ${destination.department}",
+        destinationLabel(destination)
+    ).map(::normalizeDestination)
+
+    fun selectCatalogDestination(destination: TourDestination) {
+        if (_uiState.value.isSaving || _uiState.value.isPackageRequest) return
+        _uiState.value = _uiState.value.copy(
+            destinationId = destination.id,
+            catalogDestination = destination,
+            destinationSuggestions = emptyList(),
+            destination = destinationLabel(destination),
+            destinationLatitude = destination.latitude,
+            destinationLongitude = destination.longitude,
+            destinationError = null
+        )
+        loadActivities()
+    }
+
+    fun toggleActivity(serviceId: String) {
+        val state = _uiState.value
+        if (state.isSaving || state.availableActivities.none { it.id == serviceId }) return
+        val selected = state.requestedServiceIds
+        val next = when {
+            serviceId in selected -> selected - serviceId
+            selected.size < TravelRequest.MAX_REQUESTED_ACTIVITIES -> selected + serviceId
+            else -> return
+        }
+        _uiState.value = state.copy(requestedServiceIds = next)
     }
 
     fun onOriginCityChanged(value: String) {
@@ -75,30 +192,64 @@ class TravelRequestViewModel(
         }
     }
 
-    fun prefillFromPackage(
-        destination: String,
-        packageTitle: String,
-        duration: String,
-        description: String
-    ) {
-        if (destination.isBlank() || packageTitle.isBlank()) return
+    fun prefillFromPackage(packageId: String) {
+        if (packageId.isBlank() || _uiState.value.packageId == packageId) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingPackage = true, message = null)
+            runCatching {
+                val tourPackage = packageRepository.getPackage(packageId)
+                    ?.takeIf { it.published }
+                    ?: throw NoSuchElementException("El paquete ya no está disponible.")
+                val destination = destinationRepository.getDestination(tourPackage.destinationId)
+                    ?.takeIf { it.published }
+                    ?: throw NoSuchElementException("El destino del paquete ya no está disponible.")
+                tourPackage to destination
+            }.onSuccess { (tourPackage, destination) ->
+                _uiState.value = _uiState.value.copy(
+                    requestType = TravelRequestType.PACKAGE.wireValue,
+                    packageId = tourPackage.id,
+                    destinationId = destination.id,
+                    packageSnapshot = TravelPackageSnapshot.from(tourPackage),
+                    catalogDestination = destination,
+                    destination = destinationLabel(destination),
+                    destinationLatitude = destination.latitude,
+                    destinationLongitude = destination.longitude,
+                    destinationError = null,
+                    isLoadingPackage = false,
+                    message = "El paquete quedó vinculado a tu solicitud."
+                )
+                loadActivities()
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoadingPackage = false,
+                    message = error.localizedMessage ?: "No pudimos cargar el paquete seleccionado."
+                )
+            }
+        }
+    }
 
-        val state = _uiState.value
-        if (state.destination.isNotBlank() || state.notes.isNotBlank()) return
-
-        val referenceNote = buildString {
-            append("Paquete de referencia: ")
-            append(packageTitle.trim())
-            if (duration.isNotBlank()) append(" (${duration.trim()})")
-            if (description.isNotBlank()) append(". ${description.trim()}")
-        }.take(MAX_NOTES_LENGTH)
-
-        _uiState.value = state.copy(
-            destination = destination.trim().take(MAX_PLACE_LENGTH),
-            notes = referenceNote,
-            destinationError = null,
-            message = "Usamos $packageTitle como referencia para tu solicitud."
-        )
+    fun prefillFromDestination(destinationId: String) {
+        if (
+            destinationId.isBlank() ||
+            _uiState.value.packageId.isNotBlank() ||
+            _uiState.value.destinationId == destinationId
+        ) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingPackage = true, message = null)
+            runCatching {
+                destinationRepository.getDestination(destinationId)
+                    ?.takeIf { it.published }
+                    ?: throw NoSuchElementException("El destino ya no está disponible.")
+            }.onSuccess { destination ->
+                _uiState.value = _uiState.value.copy(isLoadingPackage = false)
+                selectCatalogDestination(destination)
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoadingPackage = false,
+                    message = error.localizedMessage ?: "No pudimos cargar el destino seleccionado."
+                )
+            }
+        }
     }
 
     fun detectCurrentLocation() {
@@ -160,19 +311,24 @@ class TravelRequestViewModel(
     }
 
     fun submitRequest() {
+        if (_uiState.value.isSaving || _uiState.value.isLoadingPackage) return
         if (!validate()) return
 
+        val form = _uiState.value
+        _uiState.value = form.copy(isSaving = true, message = null)
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSaving = true, message = null)
-
             try {
-                var state = _uiState.value
+                var state = form
+                val catalogDestination = state.catalogDestination
                 val places = when (
                     val result = placeResolver.resolve(
                         destinationQuery = state.destination,
                         originCity = state.originCity,
                         originLatitude = state.originLatitude,
-                        originLongitude = state.originLongitude
+                        originLongitude = state.originLongitude,
+                        knownDestination = catalogDestination?.let {
+                            DetectedLocation(destinationLabel(it), it.latitude, it.longitude)
+                        }
                     )
                 ) {
                     PlaceResolutionResult.InvalidDestination -> {
@@ -194,9 +350,27 @@ class TravelRequestViewModel(
                     is PlaceResolutionResult.Success -> result
                 }
 
+                val resolvedDestination = if (state.isPackageRequest) {
+                    state.destination
+                } else {
+                    places.destination.city.take(TravelRequestValidator.MAX_PLACE_LENGTH)
+                }
+                val resolvedDestinationLatitude = if (state.isPackageRequest) {
+                    state.destinationLatitude
+                } else {
+                    places.destination.latitude
+                }
+                val resolvedDestinationLongitude = if (state.isPackageRequest) {
+                    state.destinationLongitude
+                } else {
+                    places.destination.longitude
+                }
+
                 state = state.copy(
-                    destination = places.destination.city
-                        .take(TravelRequestValidator.MAX_PLACE_LENGTH),
+                    destinationId = catalogDestination?.id ?: state.destinationId,
+                    destination = resolvedDestination,
+                    destinationLatitude = resolvedDestinationLatitude,
+                    destinationLongitude = resolvedDestinationLongitude,
                     originCity = places.origin.city
                         .take(TravelRequestValidator.MAX_PLACE_LENGTH),
                     originLatitude = places.origin.latitude,
@@ -206,9 +380,14 @@ class TravelRequestViewModel(
 
                 val savedRequest = requestRepository.save(
                     TravelRequest(
+                        requestType = state.requestType,
+                        packageId = state.packageId,
+                        destinationId = state.destinationId,
+                        packageSnapshot = state.packageSnapshot,
+                        requestedServiceIds = state.requestedServiceIds,
                         destination = state.destination.trim(),
-                        destinationLatitude = places.destination.latitude,
-                        destinationLongitude = places.destination.longitude,
+                        destinationLatitude = state.destinationLatitude,
+                        destinationLongitude = state.destinationLongitude,
                         originCity = state.originCity.trim(),
                         originLatitude = state.originLatitude,
                         originLongitude = state.originLongitude,
@@ -240,8 +419,19 @@ class TravelRequestViewModel(
         _uiState.value = _uiState.value.copy(message = null)
     }
 
+    private fun destinationLabel(destination: TourDestination): String =
+        listOf(destination.name, destination.department, "Perú")
+            .filter(String::isNotBlank)
+            .distinct()
+            .joinToString(", ")
+            .take(MAX_PLACE_LENGTH)
+
+    private fun normalizeDestination(value: String): String =
+        Normalizer.normalize(value.trim(), Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "")
+            .lowercase(Locale.ROOT)
+
     companion object {
         private const val MAX_PLACE_LENGTH = 120
-        private const val MAX_NOTES_LENGTH = 500
     }
 }

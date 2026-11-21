@@ -2,11 +2,13 @@ package com.example.perutours.ui.screens.destination
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.perutours.data.model.CatalogService
 import com.example.perutours.data.model.TourDestination
 import com.example.perutours.data.model.TourPackage
 import com.example.perutours.data.repository.DestinationCatalogRepository
 import com.example.perutours.data.repository.PackageRepository
 import com.example.perutours.data.repository.PointsOfInterestRepository
+import com.example.perutours.data.repository.ServiceCatalogRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +19,7 @@ data class DestinationDetailUiState(
     val isLoading: Boolean = true,
     val destination: TourDestination? = null,
     val packages: List<TourPackage> = emptyList(),
+    val includedServices: Map<String, CatalogService> = emptyMap(),
     val places: List<PointsOfInterestRepository.NearbyPlace> = emptyList(),
     val arePlacesLoading: Boolean = false,
     val arePlacesFromCache: Boolean = false,
@@ -34,7 +37,8 @@ data class DestinationDetailUiState(
 class DestinationDetailViewModel(
     private val destinationRepository: DestinationCatalogRepository,
     private val packageRepository: PackageRepository,
-    private val pointsOfInterestRepository: PointsOfInterestRepository
+    private val pointsOfInterestRepository: PointsOfInterestRepository,
+    private val serviceCatalogRepository: ServiceCatalogRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DestinationDetailUiState())
@@ -76,6 +80,14 @@ class DestinationDetailViewModel(
 
                     if (destination.hasCoordinates) {
                         loadNearbyPlaces(destination, forceRefresh = false)
+                    }
+                    val serviceIds = packagesResult.getOrNull().orEmpty()
+                        .flatMap(TourPackage::includedServiceIds)
+                    if (serviceIds.isNotEmpty()) {
+                        val services = runCatching {
+                            serviceCatalogRepository.getServicesByIds(serviceIds)
+                        }.getOrDefault(emptyMap())
+                        _uiState.update { it.copy(includedServices = services) }
                     }
                 },
                 onFailure = {

@@ -20,9 +20,10 @@ class TravelRequestPlaceResolver(
         destinationQuery: String,
         originCity: String,
         originLatitude: Double?,
-        originLongitude: Double?
+        originLongitude: Double?,
+        knownDestination: DetectedLocation? = null
     ): PlaceResolutionResult {
-        val destination = locationDataSource.findPlace(destinationQuery)
+        val destination = knownDestination ?: locationDataSource.findPlace(destinationQuery)
             ?: return PlaceResolutionResult.InvalidDestination
 
         val origin = if (originLatitude != null && originLongitude != null) {

@@ -46,6 +46,7 @@ import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormSc
 import com.example.perutours.ui.screens.admin.destination.AdminDestinationsScreen
 import com.example.perutours.ui.screens.admin.packages.AdminPackagesScreen
 import com.example.perutours.ui.screens.admin.provider.AdminProvidersScreen
+import com.example.perutours.ui.screens.admin.service.AdminServicesScreen
 import com.example.perutours.ui.screens.destination.DestinationDetailScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
 import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
@@ -173,8 +174,7 @@ fun NavigationWrapper(
 
         composable(route = "role_router") {
             RoleRouterScreen(
-                navController = navHostController,
-                auth = auth
+                navController = navHostController
             )
         }
 
@@ -200,6 +200,7 @@ fun NavigationWrapper(
                 onManageDestinations = { navHostController.navigate("admin_destinations") },
                 onManagePackages = { navHostController.navigate("admin_packages") },
                 onManageProviders = { navHostController.navigate("admin_providers") },
+                onManageServices = { navHostController.navigate("admin_services") },
                 // Si el panel es el único destino en la pila (sesión persistida),
                 // popBackStack lo dejaría vacío: volvemos a la pantalla inicial.
                 onNavigateBack = {
@@ -231,6 +232,12 @@ fun NavigationWrapper(
         // HU catálogo: proveedores turísticos del administrador
         composable(route = "admin_providers") {
             AdminProvidersScreen(
+                onNavigateBack = { navHostController.popBackStack() }
+            )
+        }
+
+        composable(route = "admin_services") {
+            AdminServicesScreen(
                 onNavigateBack = { navHostController.popBackStack() }
             )
         }
@@ -326,15 +333,10 @@ fun NavigationWrapper(
             HomeScreen(
                 auth = auth,
                 navigateToTravelRequest = { destination ->
-                    val route = if (destination == null) {
-                        "travelRequest"
-                    } else {
-                        "travelRequest" +
-                            "?destination=${Uri.encode(destination.location)}" +
-                            "&packageTitle=${Uri.encode(destination.title)}" +
-                            "&duration=${Uri.encode(destination.duration)}" +
-                            "&description=${Uri.encode(destination.description.orEmpty())}"
-                    }
+                    val route = destination?.id
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { "travelRequest?packageId=${Uri.encode(it)}" }
+                        ?: "travelRequest"
                     navHostController.navigate(route)
                 },
                 navigateToQuotations = {
@@ -381,7 +383,15 @@ fun NavigationWrapper(
                 destinationId = backStackEntry.arguments
                     ?.getString("destinationId")
                     .orEmpty(),
-                onNavigateBack = { navHostController.popBackStack() }
+                onNavigateBack = { navHostController.popBackStack() },
+                onPlanDestination = { id ->
+                    navHostController.navigate("travelRequest?destinationId=${Uri.encode(id)}")
+                },
+                onRequestQuote = { tourPackage ->
+                    navHostController.navigate(
+                        "travelRequest?packageId=${Uri.encode(tourPackage.id)}"
+                    )
+                }
             )
         }
 
@@ -395,39 +405,24 @@ fun NavigationWrapper(
         }
 
         composable(
-            route = "travelRequest?destination={destination}" +
-                "&packageTitle={packageTitle}&duration={duration}&description={description}",
+            route = "travelRequest?packageId={packageId}&destinationId={destinationId}",
             arguments = listOf(
-                navArgument("destination") {
+                navArgument("packageId") {
                     type = NavType.StringType
                     defaultValue = ""
                 },
-                navArgument("packageTitle") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                },
-                navArgument("duration") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                },
-                navArgument("description") {
+                navArgument("destinationId") {
                     type = NavType.StringType
                     defaultValue = ""
                 }
             )
         ) { backStackEntry ->
             TravelRequestScreen(
-                suggestedDestination = backStackEntry.arguments
-                    ?.getString("destination")
+                referencePackageId = backStackEntry.arguments
+                    ?.getString("packageId")
                     .orEmpty(),
-                referencePackageTitle = backStackEntry.arguments
-                    ?.getString("packageTitle")
-                    .orEmpty(),
-                referencePackageDuration = backStackEntry.arguments
-                    ?.getString("duration")
-                    .orEmpty(),
-                referencePackageDescription = backStackEntry.arguments
-                    ?.getString("description")
+                referenceDestinationId = backStackEntry.arguments
+                    ?.getString("destinationId")
                     .orEmpty(),
                 onBack = { navHostController.popBackStack() },
                 onSaved = {
@@ -579,7 +574,12 @@ fun NavigationWrapper(
                 onNavigateBack = { navHostController.popBackStack() },
                 onQuotationSelected = { quotationId ->
                     navHostController.navigate("customer_quotation/$quotationId")
-                }
+                },
+                onHome = { navHostController.navigateCustomerSection("home") },
+                onReservations = {
+                    navHostController.navigateCustomerSection("customer_reservations")
+                },
+                onTrips = { navHostController.navigateCustomerSection("trips") }
             )
         }
 
@@ -588,7 +588,12 @@ fun NavigationWrapper(
                 onNavigateBack = { navHostController.popBackStack() },
                 onReservationSelected = { reservationId ->
                     navHostController.navigate("customer_reservation/$reservationId")
-                }
+                },
+                onHome = { navHostController.navigateCustomerSection("home") },
+                onQuotations = {
+                    navHostController.navigateCustomerSection("customer_quotations")
+                },
+                onTrips = { navHostController.navigateCustomerSection("trips") }
             )
         }
 
@@ -599,7 +604,11 @@ fun NavigationWrapper(
                     navHostController.navigate("trip/$reservationId")
                 },
                 onViewReservations = {
-                    navHostController.navigate("customer_reservations")
+                    navHostController.navigateCustomerSection("customer_reservations")
+                },
+                onHome = { navHostController.navigateCustomerSection("home") },
+                onQuotations = {
+                    navHostController.navigateCustomerSection("customer_quotations")
                 }
             )
         }
@@ -720,5 +729,13 @@ fun NavigationWrapper(
                 }
             )
         }
+    }
+}
+
+private fun NavHostController.navigateCustomerSection(route: String) {
+    navigate(route) {
+        launchSingleTop = true
+        restoreState = true
+        popUpTo("home") { saveState = true }
     }
 }

@@ -46,6 +46,7 @@ import com.example.perutours.ui.screens.admin.destination.AdminDestinationsViewM
 import com.example.perutours.ui.screens.admin.packages.AdminPackagesViewModel
 import com.example.perutours.ui.screens.admin.provider.AdminProvidersViewModel
 import com.example.perutours.ui.screens.admin.service.AdminServicesViewModel
+import com.example.perutours.navigation.RoleRouterViewModel
 import com.example.perutours.ui.screens.destination.DestinationDetailViewModel
 import com.example.perutours.ui.screens.agent.AgentRequestsViewModel
 import com.example.perutours.ui.screens.agent.AgentHomeViewModel
@@ -352,6 +353,10 @@ val appModule = module {
     }
 
     viewModel {
+        RoleRouterViewModel(auth = get(), profileRepository = get(), fcmTokenManager = get())
+    }
+
+    viewModel {
         SignUpViewModel(
             authRepository = get()
         )
@@ -417,10 +422,12 @@ val appModule = module {
 
     viewModel {
         TravelRequestViewModel(
-            application = androidApplication(),
             requestRepository = get(),
             locationRepository = get(),
-            placeResolver = get()
+            placeResolver = get(),
+            packageRepository = get(),
+            destinationRepository = get(),
+            serviceCatalogRepository = get()
         )
     }
 
@@ -513,7 +520,8 @@ val appModule = module {
         DestinationDetailViewModel(
             destinationRepository = get(),
             packageRepository = get(),
-            pointsOfInterestRepository = get()
+            pointsOfInterestRepository = get(),
+            serviceCatalogRepository = get()
         )
     }
 

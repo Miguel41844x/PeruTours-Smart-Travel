@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,14 +56,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
+import com.example.perutours.data.model.TravelRequest
+import com.example.perutours.data.model.formatCatalogPrice
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -72,10 +78,8 @@ import java.util.concurrent.TimeUnit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TravelRequestScreen(
-    suggestedDestination: String = "",
-    referencePackageTitle: String = "",
-    referencePackageDuration: String = "",
-    referencePackageDescription: String = "",
+    referencePackageId: String = "",
+    referenceDestinationId: String = "",
     onBack: () -> Unit = {},
     onSaved: () -> Unit = {},
     viewModel: TravelRequestViewModel = koinViewModel()
@@ -85,18 +89,12 @@ fun TravelRequestScreen(
     val context = LocalContext.current
     var dateTimeTarget by rememberSaveable { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(
-        suggestedDestination,
-        referencePackageTitle,
-        referencePackageDuration,
-        referencePackageDescription
-    ) {
-        viewModel.prefillFromPackage(
-            destination = suggestedDestination,
-            packageTitle = referencePackageTitle,
-            duration = referencePackageDuration,
-            description = referencePackageDescription
-        )
+    LaunchedEffect(referencePackageId, referenceDestinationId) {
+        if (referencePackageId.isNotBlank()) {
+            viewModel.prefillFromPackage(referencePackageId)
+        } else {
+            viewModel.prefillFromDestination(referenceDestinationId)
+        }
     }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -191,7 +189,7 @@ fun TravelRequestScreen(
                 ) {
                     Button(
                         onClick = viewModel::submitRequest,
-                        enabled = !uiState.isSaving,
+                        enabled = !uiState.isSaving && !uiState.isLoadingPackage,
                         modifier = Modifier
                             .fillMaxWidth()
                             .widthIn(max = 720.dp)
@@ -239,6 +237,66 @@ fun TravelRequestScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                if (uiState.isLoadingPackage) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialTheme.shapes.large
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            Text("Cargando tu selección…", modifier = Modifier.padding(start = 12.dp))
+                        }
+                    }
+                } else if (uiState.isPackageRequest) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialTheme.shapes.large
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (uiState.packageSnapshot.coverImageUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = uiState.packageSnapshot.coverImageUrl,
+                                    contentDescription = uiState.packageSnapshot.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .width(96.dp)
+                                        .height(84.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Paquete seleccionado",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = uiState.packageSnapshot.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "${uiState.packageSnapshot.durationText} · Desde " +
+                                        formatCatalogPrice(
+                                            uiState.packageSnapshot.priceAmount,
+                                            uiState.packageSnapshot.currency
+                                        ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(6.dp))
                 SectionHeading(
                     title = "Ruta",
@@ -275,13 +333,40 @@ fun TravelRequestScreen(
                 OutlinedTextField(
                     value = uiState.destination,
                     onValueChange = viewModel::onDestinationChanged,
+                    readOnly = uiState.isPackageRequest || uiState.isSaving || uiState.isLoadingPackage,
                     label = { Text("Destino") },
                     placeholder = { Text("Ej. Cusco, Perú") },
                     leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
                     isError = uiState.destinationError != null,
-                    supportingText = uiState.destinationError?.let { error -> { Text(error) } },
+                    supportingText = {
+                        when {
+                            uiState.destinationError != null -> Text(uiState.destinationError.orEmpty())
+                            uiState.isPackageRequest -> Text("Destino definido por el paquete seleccionado.")
+                            else -> Text("Elige un destino del catálogo o escribe el lugar que quieres visitar.")
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
+                )
+
+                if (uiState.destinationSuggestions.isNotEmpty()) {
+                    Text("Destinos del catálogo", style = MaterialTheme.typography.labelLarge)
+                    uiState.destinationSuggestions.forEach { destination ->
+                        OutlinedButton(
+                            onClick = { viewModel.selectCatalogDestination(destination) },
+                            enabled = !uiState.isSaving,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(listOf(destination.name, destination.department)
+                                .filter(String::isNotBlank).distinct().joinToString(", "))
+                        }
+                    }
+                }
+
+                RequestedActivities(
+                    state = uiState,
+                    onToggle = viewModel::toggleActivity,
+                    onRetry = { viewModel.loadActivities() }
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -379,6 +464,51 @@ fun TravelRequestScreen(
                         .fillMaxWidth()
                         .height(140.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RequestedActivities(
+    state: TravelRequestUiState,
+    onToggle: (String) -> Unit,
+    onRetry: () -> Unit
+) {
+    if (state.isLoadingPackage ||
+        (state.catalogDestination == null && !state.isLoadingActivities && !state.activityLoadFailed)
+    ) return
+    SectionHeading(
+        title = "Actividades opcionales",
+        supportingText = "Marca lo que te gustaría hacer. El agente confirmará disponibilidad y precio en tu propuesta."
+    )
+    when {
+        state.isLoadingActivities -> Text("Buscando actividades…")
+        state.activityLoadFailed -> TextButton(onClick = onRetry, enabled = !state.isSaving) {
+            Text("Reintentar búsqueda de actividades")
+        }
+        state.availableActivities.isEmpty() -> Text(
+            "No hay actividades adicionales para este destino. Puedes pedir algo especial en observaciones.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        else -> state.availableActivities.forEach { activity ->
+            val checked = activity.id in state.requestedServiceIds
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = checked,
+                    enabled = !state.isSaving &&
+                        (checked || state.requestedServiceIds.size < TravelRequest.MAX_REQUESTED_ACTIVITIES),
+                    onCheckedChange = { onToggle(activity.id) }
+                )
+                Column {
+                    Text(activity.name, fontWeight = FontWeight.SemiBold)
+                    if (activity.description.isNotBlank()) {
+                        Text(activity.description, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
         }
     }

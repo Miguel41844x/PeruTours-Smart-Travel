@@ -29,12 +29,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Luggage
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -47,8 +43,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -79,12 +73,13 @@ import com.example.perutours.R
 import com.example.perutours.data.model.Recommendation
 import com.example.perutours.data.remote.DestinationDto
 import com.example.perutours.ui.components.PeruToursBrand
+import com.example.perutours.ui.components.CustomerNavigationBar
+import com.example.perutours.ui.components.CustomerSection
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
 import com.example.perutours.ui.screens.recommendation.RecommendationUiState
 import com.example.perutours.ui.screens.recommendation.RecommendationViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.example.perutours.data.messaging.FCMTokenManager
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -195,38 +190,14 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = {},
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    label = { Text("Inicio") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = ::openQuotations,
-                    icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null) },
-                    label = { Text("Cotizaciones") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = navigateToTrips,
-                    icon = { Icon(Icons.Default.Luggage, contentDescription = null) },
-                    label = { Text("Viajes") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = navigateToChat,
-                    icon = { Icon(Icons.Default.SmartToy, contentDescription = null) },
-                    label = { Text("Asistente") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = navigateToProfile,
-                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    label = { Text("Perfil") }
-                )
-            }
+            CustomerNavigationBar(
+                selected = CustomerSection.HOME,
+                onHome = {},
+                onQuotations = ::openQuotations,
+                onReservations = navigateToReservations,
+                onTrips = navigateToTrips,
+                onChat = navigateToChat
+            )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->

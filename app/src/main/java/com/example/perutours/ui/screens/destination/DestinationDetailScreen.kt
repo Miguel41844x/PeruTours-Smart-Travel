@@ -16,11 +16,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,6 +57,7 @@ import org.koin.androidx.compose.koinViewModel
 fun DestinationDetailScreen(
     destinationId: String,
     onNavigateBack: () -> Unit,
+    onPlanDestination: (String) -> Unit = {},
     onRequestQuote: (TourPackage) -> Unit = {},
     viewModel: DestinationDetailViewModel = koinViewModel()
 ) {
@@ -169,7 +173,22 @@ fun DestinationDetailScreen(
                             SectionTitle("Paquetes disponibles")
                         }
                         items(uiState.packages, key = { it.id }) { tourPackage ->
-                            PackageSummaryCard(tourPackage = tourPackage)
+                            PackageSummaryCard(
+                                tourPackage = tourPackage,
+                                includedServiceNames = tourPackage.includedServiceIds.mapNotNull { id ->
+                                    uiState.includedServices[id]?.takeIf { it.active }?.name
+                                },
+                                onRequestQuote = { onRequestQuote(tourPackage) }
+                            )
+                        }
+                    }
+
+                    item {
+                        OutlinedButton(
+                            onClick = { onPlanDestination(destination.id) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Personalizar viaje y elegir actividades")
                         }
                     }
 
@@ -227,7 +246,11 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun PackageSummaryCard(tourPackage: TourPackage) {
+private fun PackageSummaryCard(
+    tourPackage: TourPackage,
+    includedServiceNames: List<String>,
+    onRequestQuote: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -260,10 +283,30 @@ private fun PackageSummaryCard(tourPackage: TourPackage) {
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = tourPackage.priceLabel(),
+                    text = "Desde ${tourPackage.priceLabel()}",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+            if (includedServiceNames.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("Servicios incluidos", style = MaterialTheme.typography.labelLarge)
+                includedServiceNames.forEach { name ->
+                    Text("• $name", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            if (tourPackage.conditions.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(tourPackage.conditions, style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = onRequestQuote,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Solicitar este paquete")
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
             }
         }
     }

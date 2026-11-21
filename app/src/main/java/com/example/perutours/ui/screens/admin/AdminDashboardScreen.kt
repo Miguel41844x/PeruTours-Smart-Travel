@@ -34,6 +34,7 @@ fun AdminDashboardScreen(
     onManageDestinations: () -> Unit,
     onManagePackages: () -> Unit,
     onManageProviders: () -> Unit,
+    onManageServices: () -> Unit,
     onNavigateBack: () -> Unit = {},
     viewModel: AdminDashboardViewModel = koinViewModel()
 ) {
@@ -416,6 +417,12 @@ fun AdminDashboardScreen(
                         onClick = onManageProviders
                     )
                 }
+                CatalogShortcutCard(
+                    title = "Servicios y actividades",
+                    icon = Icons.Default.MiscellaneousServices,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onManageServices
+                )
             }
         }
     }

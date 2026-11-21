@@ -51,8 +51,10 @@ class DestinationRepository(
                 )
 
                 // 3. Reemplazo atómico transaccional en Room.
-                val entities = publishedPackages.map { tourPackage ->
-                    tourPackage.toEntity(destinationsById[tourPackage.destinationId])
+                val entities = publishedPackages.mapNotNull { tourPackage ->
+                    destinationsById[tourPackage.destinationId]?.let { destination ->
+                        tourPackage.toEntity(destination)
+                    }
                 }
                 destinationDao.syncRemoteDestinations(entities)
                 Result.success(Unit)
