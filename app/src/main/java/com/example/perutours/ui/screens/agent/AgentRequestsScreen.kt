@@ -43,6 +43,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.example.perutours.ui.components.AgentListSearch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -79,6 +81,7 @@ fun AgentRequestsScreen(
     val requests by viewModel.requests.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val query by viewModel.query.collectAsState()
     var selectedFilter by remember { mutableStateOf(RequestFilter.PENDING) }
     val pendingCount = remember(requests) {
         requests.count { it.workflowStatus == TravelRequestStatus.SUBMITTED }
@@ -92,7 +95,7 @@ fun AgentRequestsScreen(
     val observedCount = remember(requests) {
         requests.count { it.workflowStatus == TravelRequestStatus.CHANGES_REQUESTED }
     }
-    val filteredRequests = remember(requests, selectedFilter) {
+    val filteredRequests = remember(requests, selectedFilter, query) {
         when (selectedFilter) {
             RequestFilter.PENDING -> requests.filter {
                 it.workflowStatus == TravelRequestStatus.SUBMITTED
@@ -107,7 +110,7 @@ fun AgentRequestsScreen(
                 it.workflowStatus == TravelRequestStatus.CHANGES_REQUESTED
             }
             RequestFilter.ALL -> requests
-        }
+        }.let { query.copy(status = null).matching(it) }
     }
 
     Scaffold(
@@ -129,6 +132,10 @@ fun AgentRequestsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            AgentListSearch(query.text, viewModel::search, "Buscar destino, origen o solicitud")
+            TextButton(onClick = viewModel::toggleOrder) {
+                Text(if (query.upcomingFirst) "Orden: próximas salidas" else "Orden: más recientes")
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -146,7 +153,10 @@ fun AgentRequestsScreen(
                     }
                     FilterChip(
                         selected = selectedFilter == filter,
-                        onClick = { selectedFilter = filter },
+                        onClick = {
+                            selectedFilter = filter
+                            viewModel.filterStatus(null)
+                        },
                         label = { Text("${filter.label} ($count)") },
                         colors = getFilterColors(filter, selectedFilter == filter),
                         leadingIcon = if (selectedFilter == filter) {
@@ -169,7 +179,7 @@ fun AgentRequestsScreen(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(items = filteredRequests, key = TravelRequest::id) { request ->
+                    items(items = filteredRequests.take(query.visibleLimit), key = TravelRequest::id) { request ->
                         TravelRequestCard(
                             request = request,
                             onClick = {
@@ -183,6 +193,13 @@ fun AgentRequestsScreen(
                                 .fillMaxWidth()
                                 .widthIn(max = 900.dp)
                         )
+                    }
+                    if (filteredRequests.size > query.visibleLimit) {
+                        item {
+                            TextButton(onClick = viewModel::loadMore) {
+                                Text("Cargar más (${query.visibleLimit} de ${filteredRequests.size})")
+                            }
+                        }
                     }
                 }
             }
