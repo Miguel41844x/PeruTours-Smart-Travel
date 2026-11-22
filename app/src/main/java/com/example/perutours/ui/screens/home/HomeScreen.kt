@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
 import com.example.perutours.R
@@ -106,6 +107,16 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recommendationState by recommendationViewModel.uiState.collectAsStateWithLifecycle()
+
+    // HU10: al volver al Home (p. ej. desde Perfil tras guardar las
+    // preferencias) se reconsultan las recomendaciones para que no
+    // queden desactualizadas. El caché de Firestore se invalida solo
+    // si cambiaron las preferencias.
+    LifecycleResumeEffect(Unit) {
+        recommendationViewModel.onHomeResumed()
+        onPauseOrDispose { }
+    }
+
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showNotificationPrompt by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -313,7 +324,20 @@ fun HomeScreen(
                 // HU10: sección "Recomendado para ti" (IA + respaldo local)
                 SectionHeading(
                     title = "Recomendado para ti",
-                    supportingText = "Sugerencias según tus preferencias de viaje"
+                    supportingText = "Sugerencias según tus preferencias de viaje",
+                    action = {
+                        // Regenera con IA ignorando el caché (refresh() ya
+                        // existía); se oculta durante la carga inicial.
+                        if (recommendationState !is RecommendationUiState.Loading) {
+                            IconButton(onClick = { recommendationViewModel.refresh() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Actualizar recomendaciones",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                 )
 
                 when (val state = recommendationState) {

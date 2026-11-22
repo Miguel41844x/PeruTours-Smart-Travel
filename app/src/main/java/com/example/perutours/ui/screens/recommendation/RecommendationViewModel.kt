@@ -64,4 +64,19 @@ class RecommendationViewModel(
     fun refresh() {
         loadRecommendations(forceRefresh = true)
     }
+
+    /**
+     * Se llama cada vez que el Home vuelve a estar visible (p. ej. al
+     * regresar de Perfil tras guardar las preferencias).
+     *
+     * Si la carga inicial sigue en curso no la duplica; si ya hay
+     * resultado, vuelve a consultar. Con forceRefresh = false el caché
+     * de Firestore se invalida solo cuando cambiaron las preferencias,
+     * así no se gasta cuota de IA sin necesidad.
+     */
+    fun onHomeResumed() {
+        if (_uiState.value !is RecommendationUiState.Loading) {
+            loadRecommendations(forceRefresh = false)
+        }
+    }
 }
