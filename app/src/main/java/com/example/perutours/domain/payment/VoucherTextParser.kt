@@ -73,9 +73,12 @@ internal object VoucherTextParser {
             }
         }
 
+        val dateTime = VoucherDateTimeParser.parse(text)
         return VoucherOcrResult(
             amount = labeledAmounts.ifEmpty { amounts }.singleOrNull(),
-            operationNumber = operations.singleOrNull()
+            operationNumber = operations.singleOrNull(),
+            transactionDate = dateTime.date,
+            transactionTime = dateTime.time
         )
     }
 
@@ -95,9 +98,12 @@ internal object VoucherTextParser {
         }
         val labeled = classified.filter { it.second == AmountLabel.PAYMENT }.map { it.first.amount }.toSet()
         val remaining = classified.filter { it.second != AmountLabel.OTHER }.map { it.first.amount }.toSet()
+        val dateTime = VoucherDateTimeParser.parse("", lines)
         return VoucherOcrResult(
             amount = labeled.ifEmpty { remaining }.singleOrNull(),
-            operationNumber = operations.singleOrNull()
+            operationNumber = operations.singleOrNull(),
+            transactionDate = dateTime.date,
+            transactionTime = dateTime.time
         )
     }
 

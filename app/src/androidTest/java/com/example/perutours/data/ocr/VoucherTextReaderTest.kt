@@ -8,6 +8,8 @@ import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.perutours.domain.payment.VoucherAmount
+import com.example.perutours.domain.payment.VoucherDate
+import com.example.perutours.domain.payment.VoucherTime
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -29,8 +31,11 @@ class VoucherTextReaderTest {
                 textSize = 38f
             }
             canvas.drawColor(Color.WHITE)
+            canvas.drawText("13:20", 45f, 50f, paint)
             canvas.drawText("Comprobante de prueba", 45f, 100f, paint)
             canvas.drawText("S/ 12.00", 45f, 220f, paint)
+            canvas.drawText("21 nov. 2026", 45f, 310f, paint)
+            canvas.drawText("07:25 p.m.", 650f, 310f, paint)
             canvas.drawText("Codigo de seguridad", 45f, 400f, paint)
             canvas.drawText("8456", 750f, 400f, paint)
             canvas.drawText("Nro. de operacion", 45f, 650f, paint)
@@ -40,6 +45,8 @@ class VoucherTextReaderTest {
             val result = MlKitVoucherTextReader(context).read(Uri.fromFile(file))
             assertEquals(VoucherAmount(BigDecimal("12.00"), "PEN"), result.amount)
             assertEquals("00123456", result.operationNumber)
+            assertEquals(VoucherDate(2026, 11, 21), result.transactionDate)
+            assertEquals(VoucherTime(19, 25), result.transactionTime)
         } finally { file.delete() }
     }
 

@@ -15,7 +15,7 @@ sealed interface VoucherOcrState {
 
 internal suspend fun VoucherTextReader.readForReview(uri: Uri): VoucherOcrState = try {
     val result = withTimeoutOrNull(15_000) { read(uri) }
-    if (result == null || (result.amount == null && result.operationNumber == null)) {
+    if (result == null || !result.hasData) {
         VoucherOcrState.Unavailable
     } else {
         VoucherOcrState.Read(result)

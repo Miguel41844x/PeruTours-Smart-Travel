@@ -7,6 +7,8 @@ import com.example.perutours.data.repository.PaymentRepository
 import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.data.repository.ReservationDataSource
 import com.example.perutours.domain.payment.VoucherOcrResult
+import com.example.perutours.domain.payment.VoucherDate
+import com.example.perutours.domain.payment.VoucherTime
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -38,6 +40,19 @@ import java.util.UUID
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PaymentViewModelTest {
+    @Test
+    fun retainsAReadingThatOnlyContainsDateAndTime() = runTest {
+        val result = VoucherOcrResult(
+            amount = null, operationNumber = null,
+            transactionDate = VoucherDate(2026, 11, 21),
+            transactionTime = VoucherTime(19, 25)
+        )
+        coEvery { voucherTextReader.read(voucherUri) } returns result
+        viewModel.onVoucherCaptured(voucherUri)
+        advanceUntilIdle()
+        assertEquals(VoucherOcrState.Read(result), viewModel.uiState.value.voucherOcr)
+    }
+
 
     private lateinit var paymentRepository: PaymentRepository
     private lateinit var reservationRepository: ReservationDataSource

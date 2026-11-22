@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.perutours.ui.screens.payment.VoucherOcrState
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
+import java.util.Locale
 
 @Composable
 internal fun VoucherOcrPanel(
@@ -38,7 +39,7 @@ internal fun VoucherOcrPanel(
                 VoucherOcrState.Idle -> Unit
                 VoucherOcrState.Reading -> Text("Leyendo la imagen…")
                 VoucherOcrState.Unavailable -> Text(
-                    "No pudimos leer el importe ni el número de operación. Revisa la imagen."
+                    "No pudimos leer los datos del comprobante. Revisa la imagen."
                 )
                 is VoucherOcrState.Read -> {
                     val result = state.result
@@ -57,10 +58,27 @@ internal fun VoucherOcrPanel(
                     } ?: Text("Importe por verificar en la imagen.")
                     result.operationNumber?.let { Text("N.º de operación detectado: $it") }
                         ?: Text("N.º de operación por verificar en la imagen.")
+                    result.transactionDate?.let { date ->
+                        Text("Fecha detectada: " + String.format(
+                            Locale.ROOT, "%02d/%02d/%04d", date.day, date.month, date.year
+                        ))
+                    } ?: Text("Fecha por verificar en la imagen.")
+                    result.transactionTime?.let { time ->
+                        val value = if (time.second == null) {
+                            String.format(Locale.ROOT, "%02d:%02d", time.hour, time.minute)
+                        } else {
+                            String.format(Locale.ROOT, "%02d:%02d:%02d", time.hour, time.minute, time.second)
+                        }
+                        Text("Hora detectada: " + value)
+                    } ?: Text("Hora por verificar en la imagen.")
                 }
             }
+            val partialReading = state is VoucherOcrState.Read && (
+                state.result.amount == null || state.result.operationNumber == null ||
+                    state.result.transactionDate == null || state.result.transactionTime == null
+                )
             if (onRead != null &&
-                (state == VoucherOcrState.Idle || state == VoucherOcrState.Unavailable)
+                (state == VoucherOcrState.Idle || state == VoucherOcrState.Unavailable || partialReading)
             ) {
                 TextButton(onClick = onRead) {
                     Text(if (state == VoucherOcrState.Idle) "Leer comprobante" else "Reintentar lectura")
