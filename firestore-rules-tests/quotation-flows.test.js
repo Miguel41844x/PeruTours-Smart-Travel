@@ -22,7 +22,7 @@ import {
   assertSucceeds,
   assertFails
 } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -305,16 +305,51 @@ describe('HU05/HU06: cotizaciones y reservas (flujo completo)', () => {
     ));
   });
 
-  it('agente guarda una cotizacion con el maximo de 5 servicios', async () => {
+  it('agente guarda una cotizacion con el maximo de 6 servicios', async () => {
     await assertSucceeds(agentCreateQuotationTx(
-      dbAs(AGENT_UID), 5, 'cot_five_services'
+      dbAs(AGENT_UID), 6, 'cot_six_services'
     ));
   });
 
-  it('rechaza una cotizacion que supera el maximo de 5 servicios', async () => {
+  it('rechaza una cotizacion que supera el maximo de 6 servicios', async () => {
     await assertFails(agentCreateQuotationTx(
-      dbAs(AGENT_UID), 6, 'cot_six_services'
+      dbAs(AGENT_UID), 7, 'cot_seven_services'
     ));
+  });
+
+  it('cotiza y acepta seis servicios con sus referencias y snapshot de paquete', async () => {
+    const snapshot = {
+      title: 'Paquete de demostración', summary: 'Propuesta completa', durationText: '3 días',
+      durationDays: 3, priceAmount: 200, currency: 'PEN', coverImageUrl: '',
+      conditions: 'Sujeto a disponibilidad', includedServiceIds: ['svc_1', 'svc_2', 'svc_3']
+    };
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'travel_requests', REQUEST_ID), {
+        requestType: 'PACKAGE', packageId: 'pkg_demo', destinationId: 'dest_ica',
+        packageSnapshot: snapshot, requestedServiceIds: ['svc_4', 'svc_5']
+      });
+    });
+    const services = quotationServices(6).map((item) => ({
+      ...item, catalogServiceId: item.id, destinationId: 'dest_ica',
+      providerId: 'provider_ica', description: 'Servicio incluido',
+      requiresScheduling: true
+    }));
+    await assertSucceeds(agentCreateQuotationTx(dbAs(AGENT_UID), 6, 'cot_full', {
+      services, packageId: 'pkg_demo', destinationId: 'dest_ica', packageSnapshot: snapshot
+    }));
+    const client = dbAs(CLIENT_UID);
+    const quotation = (await getDoc(doc(client, 'cotizaciones', 'cot_full'))).data();
+    const batch = writeBatch(client);
+    batch.set(doc(client, 'reservations', 'cot_full'), reservationDoc({
+      id: 'cot_full', quotationId: 'cot_full', services,
+      totalAmount: quotation.totalAmount, packageId: 'pkg_demo', destinationId: 'dest_ica',
+      packageSnapshot: snapshot, createdAtMillis: Date.now()
+    }));
+    batch.update(doc(client, 'cotizaciones', 'cot_full'), {
+      status: 'Aceptada', reservationId: 'cot_full', respondedAtMillis: Date.now()
+    });
+    batch.update(doc(client, 'travel_requests', REQUEST_ID), { status: 'Aceptada' });
+    await assertSucceeds(batch.commit());
   });
 
   it('rechaza campos no permitidos en el segundo servicio', async () => {

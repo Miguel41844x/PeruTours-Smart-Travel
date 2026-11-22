@@ -1,10 +1,22 @@
 package com.example.perutours.ui.screens.quotation
 
+import com.example.perutours.data.model.QuotationServiceItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Test
 
 class QuotationValidatorTest {
+
+    @Test
+    fun acceptsSixServicesAndRejectsOverflowWithoutDroppingItems() {
+        val services = List(6) {
+            QuotationServiceItem(id = "service_$it", unitCost = 30.0, quantity = 2)
+        }
+        assertNull(QuotationValidator.validateServices(services))
+        assertNotNull(QuotationValidator.validateServices(services + services.first()))
+        assertEquals(6, services.size)
+    }
 
     @Test
     fun validityDaysAcceptConfiguredBoundaries() {

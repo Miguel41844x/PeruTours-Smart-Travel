@@ -728,42 +728,38 @@ service cloud.firestore {
         && data.order <= 10000;
     }
 
-    function isValidQuotationServiceItem(item) {
+    function isValidQuotationServiceItem(item, allowedKeys) {
+      let cost = item.unitCost;
+      let quantity = item.quantity;
+      let subtotal = item.subtotal;
+      let commercialCost = item.commercialCost;
       return item is map
-        && item.keys().hasOnly([
-          'id', 'name', 'category', 'unitCost', 'quantity', 'subtotal',
-          'commercialCost', 'supplierName', 'catalogServiceId',
-          'destinationId', 'providerId', 'description',
-          'requiresScheduling'
-        ])
-        && item.unitCost is number
-        && item.unitCost >= 0
-        && item.quantity is int
-        && item.quantity >= 1
-        && item.quantity <= 100
-        && item.subtotal is number
-        && item.subtotal >= 0
-        && item.commercialCost is number
-        && item.commercialCost >= 0
+        && item.keys().hasOnly(allowedKeys)
+        && cost is number && cost >= 0
+        && quantity is int && quantity >= 1 && quantity <= 100
+        && subtotal is number && subtotal >= 0
+        && commercialCost is number && commercialCost >= 0
         && item.supplierName is string;
     }
 
     // As with preferences, every allowed list position is inspected.
-    // NOTE: the rules evaluator allows at most 1000 expressions per request,
-    // and it charges every function call it reaches. Scanning 20 positions
-    // of this expensive per-item check made every quotation write exceed the
-    // budget and fail with PERMISSION_DENIED, so the app caps quotations at
-    // 5 services (QuotationValidator.MAX_SERVICES) and the rules mirror
-    // that limit with exactly 5 inspected positions.
+    // Keep in sync with QuotationValidator.MAX_SERVICES. Emulator tests
+    // exercise the maximum-size batch, including the evaluator budget.
     function isValidQuotationServices(items) {
+      let allowedKeys = [
+        'id', 'name', 'category', 'unitCost', 'quantity', 'subtotal',
+        'commercialCost', 'supplierName', 'catalogServiceId',
+        'destinationId', 'providerId', 'description', 'requiresScheduling'
+      ];
       return items is list
         && items.size() >= 1
-        && items.size() <= 5
-        && isValidQuotationServiceItem(items[0])
-        && (items.size() < 2 || isValidQuotationServiceItem(items[1]))
-        && (items.size() < 3 || isValidQuotationServiceItem(items[2]))
-        && (items.size() < 4 || isValidQuotationServiceItem(items[3]))
-        && (items.size() < 5 || isValidQuotationServiceItem(items[4]));
+        && items.size() <= 6
+        && isValidQuotationServiceItem(items[0], allowedKeys)
+        && (items.size() < 2 || isValidQuotationServiceItem(items[1], allowedKeys))
+        && (items.size() < 3 || isValidQuotationServiceItem(items[2], allowedKeys))
+        && (items.size() < 4 || isValidQuotationServiceItem(items[3], allowedKeys))
+        && (items.size() < 5 || isValidQuotationServiceItem(items[4], allowedKeys))
+        && (items.size() < 6 || isValidQuotationServiceItem(items[5], allowedKeys));
     }
 
     function isValidQuotation(data) {

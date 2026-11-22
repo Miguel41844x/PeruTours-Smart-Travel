@@ -347,7 +347,6 @@ class QuotationViewModel(
             state.copy(
                 selectedServices = (state.selectedServices + initialItems)
                     .distinctBy { it.id }
-                    .take(QuotationValidator.MAX_SERVICES)
             )
         }
     }

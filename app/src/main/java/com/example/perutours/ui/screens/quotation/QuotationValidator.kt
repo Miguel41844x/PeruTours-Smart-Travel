@@ -8,11 +8,10 @@ object QuotationValidator {
     /**
      * Tope de servicios por cotización. Debe coincidir con el número de
      * posiciones que inspecciona `isValidQuotationServices` en
-     * firestore.rules (5): el evaluador de reglas Firestore tiene un techo
-     * de 1000 expresiones por solicitud y cada posición inspeccionada cuesta
-     * expresiones en cada escritura de cotización.
+     * firestore.rules. Las pruebas del emulador verifican también el lote
+     * con seis servicios para evitar exceder el presupuesto de evaluación.
      */
-    const val MAX_SERVICES = 5
+    const val MAX_SERVICES = 6
 
     fun validateDestination(destination: String): String? {
         if (destination.trim().isEmpty()) {
