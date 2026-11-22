@@ -2,6 +2,7 @@ package com.example.perutours.ui.screens.admin.packages
 
 import com.example.perutours.data.model.CatalogStatus
 import com.example.perutours.data.model.TourPackage
+import com.example.perutours.data.model.TravelOfferLimits
 
 /**
  * Validación del formulario de paquetes turísticos.
@@ -12,7 +13,7 @@ object PackageFormValidator {
     const val MAX_TITLE_LENGTH = 140
     const val MAX_SUMMARY_LENGTH = 1000
     const val MAX_CONDITIONS_LENGTH = 2000
-    const val MAX_INCLUDED_SERVICES = 6
+    const val MAX_INCLUDED_SERVICES = TravelOfferLimits.MAX_SERVICES
 
     fun validateTitle(title: String): String? = when {
         title.trim().length < 3 -> "El título debe tener al menos 3 caracteres."

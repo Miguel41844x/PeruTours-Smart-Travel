@@ -138,7 +138,7 @@ class TravelRequestViewModel(
         val selected = state.requestedServiceIds
         val next = when {
             serviceId in selected -> selected - serviceId
-            selected.size < TravelRequest.MAX_REQUESTED_ACTIVITIES -> selected + serviceId
+            selected.size < state.optionalActivityLimit -> selected + serviceId
             else -> return
         }
         _uiState.value = state.copy(requestedServiceIds = next)

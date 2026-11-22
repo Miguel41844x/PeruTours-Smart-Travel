@@ -132,6 +132,24 @@ beforeEach(async () => {
 });
 
 describe('Envío de la solicitud de viaje por el cliente', () => {
+  it('un paquete de seis servicios no admite extras que no puedan cotizarse juntos', async () => {
+    await seedPublishedPackage();
+    await seedActivity(COLCA_ID);
+    const fullSnapshot = {
+      ...packageSnapshot, includedServiceIds: Array.from({ length: 6 }, (_, i) => 'included_' + i)
+    };
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'packages', PACKAGE_ID), fullSnapshot);
+    });
+    const reference = doc(dbAs(CLIENT_UID), 'travel_requests', REQUEST_ID);
+    const request = validRequest({
+      requestType: 'PACKAGE', packageId: PACKAGE_ID, destinationId: DESTINATION_ID,
+      packageSnapshot: fullSnapshot
+    });
+    await assertFails(setDoc(reference, { ...request, requestedServiceIds: [COLCA_ID] }));
+    await assertSucceeds(setDoc(reference, { ...request, requestedServiceIds: [] }));
+  });
+
   it('acepta actividades opcionales vigentes del destino', async () => {
     await seedPublishedPackage();
     const ids = [COLCA_ID, 'svc_sillar', 'svc_campina', 'svc_city', 'svc_museo'];

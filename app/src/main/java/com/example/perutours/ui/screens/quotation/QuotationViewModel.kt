@@ -212,7 +212,7 @@ class QuotationViewModel(
         _formState.update { current ->
             val updated = current.selectedServices.map { item ->
                 if (item.id == serviceId) {
-                    val newQty = (item.quantity + delta).coerceAtLeast(1)
+                    val newQty = (item.quantity + delta).coerceIn(1, 100)
                     val newSubtotal = BigDecimal.valueOf(item.unitCost)
                         .multiply(BigDecimal.valueOf(newQty.toLong()))
                         .setScale(2, RoundingMode.HALF_UP)

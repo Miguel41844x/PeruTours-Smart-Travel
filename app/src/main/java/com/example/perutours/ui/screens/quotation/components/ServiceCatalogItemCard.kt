@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +34,9 @@ fun ServiceCatalogItemCard(
     catalogService: CatalogService,
     isSelected: Boolean,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    quantity: Int? = null,
+    onQuantityDelta: (Int) -> Unit = {}
 ) {
     Card(
         modifier = modifier
@@ -91,6 +96,30 @@ fun ServiceCatalogItemCard(
                 text = formatCatalogPrice(catalogService.unitCost),
                 style = MaterialTheme.typography.titleSmall,
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+        if (isSelected && quantity != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Cantidad de unidades",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { onQuantityDelta(-1) }, enabled = quantity > 1) {
+                    Icon(Icons.Default.Remove, contentDescription = "Reducir cantidad de " + catalogService.name)
+                }
+                Text(quantity.toString(), style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { onQuantityDelta(1) }, enabled = quantity < 100) {
+                    Icon(Icons.Default.Add, contentDescription = "Aumentar cantidad de " + catalogService.name)
+                }
+            }
+            Text(
+                text = "Subtotal: " + formatCatalogPrice(catalogService.unitCost * quantity),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp)
             )
         }
     }

@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,7 +60,6 @@ import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
-import com.example.perutours.data.model.TravelRequest
 import com.example.perutours.data.model.formatCatalogPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -453,51 +451,6 @@ fun TravelRequestScreen(
                         .fillMaxWidth()
                         .height(140.dp)
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RequestedActivities(
-    state: TravelRequestUiState,
-    onToggle: (String) -> Unit,
-    onRetry: () -> Unit
-) {
-    if (state.isLoadingPackage ||
-        (state.catalogDestination == null && !state.isLoadingActivities && !state.activityLoadFailed)
-    ) return
-    SectionHeading(
-        title = "Actividades opcionales",
-        supportingText = "Marca lo que te gustaría hacer. El agente confirmará disponibilidad y precio en tu propuesta."
-    )
-    when {
-        state.isLoadingActivities -> Text("Buscando actividades…")
-        state.activityLoadFailed -> TextButton(onClick = onRetry, enabled = !state.isSaving) {
-            Text("Reintentar búsqueda de actividades")
-        }
-        state.availableActivities.isEmpty() -> Text(
-            "No hay actividades adicionales para este destino. Puedes pedir algo especial en observaciones.",
-            style = MaterialTheme.typography.bodySmall
-        )
-        else -> state.availableActivities.forEach { activity ->
-            val checked = activity.id in state.requestedServiceIds
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = checked,
-                    enabled = !state.isSaving &&
-                        (checked || state.requestedServiceIds.size < TravelRequest.MAX_REQUESTED_ACTIVITIES),
-                    onCheckedChange = { onToggle(activity.id) }
-                )
-                Column {
-                    Text(activity.name, fontWeight = FontWeight.SemiBold)
-                    if (activity.description.isNotBlank()) {
-                        Text(activity.description, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
             }
         }
     }

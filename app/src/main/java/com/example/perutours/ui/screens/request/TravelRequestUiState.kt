@@ -4,6 +4,8 @@ import com.example.perutours.data.model.TravelPackageSnapshot
 import com.example.perutours.data.model.CatalogService
 import com.example.perutours.data.model.TourDestination
 import com.example.perutours.data.model.TravelRequestType
+import com.example.perutours.data.model.TravelRequest
+import com.example.perutours.data.model.TravelOfferLimits
 
 data class TravelRequestUiState(
     val requestType: String = TravelRequestType.CUSTOM.wireValue,
@@ -37,6 +39,10 @@ data class TravelRequestUiState(
     val savedRequestId: String? = null,
     val message: String? = null
 ) {
+    val optionalActivityLimit: Int
+        get() = (TravelOfferLimits.MAX_SERVICES - packageSnapshot.includedServiceIds.distinct().size)
+            .coerceIn(0, TravelRequest.MAX_REQUESTED_ACTIVITIES)
+
     val isPackageRequest: Boolean
         get() = requestType == TravelRequestType.PACKAGE.wireValue && packageId.isNotBlank()
 }

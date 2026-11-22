@@ -1,6 +1,7 @@
 package com.example.perutours.ui.screens.quotation
 
 import com.example.perutours.data.model.QuotationServiceItem
+import com.example.perutours.data.model.TravelOfferLimits
 
 object QuotationValidator {
     const val MAX_CONDITIONS_LENGTH = 2000
@@ -11,7 +12,7 @@ object QuotationValidator {
      * firestore.rules. Las pruebas del emulador verifican también el lote
      * con seis servicios para evitar exceder el presupuesto de evaluación.
      */
-    const val MAX_SERVICES = 6
+    const val MAX_SERVICES = TravelOfferLimits.MAX_SERVICES
 
     fun validateDestination(destination: String): String? {
         if (destination.trim().isEmpty()) {
@@ -36,11 +37,17 @@ object QuotationValidator {
         }
         if (services.size > MAX_SERVICES) {
             return "La cotización puede incluir hasta $MAX_SERVICES servicios. " +
-                "Combina los servicios restantes en uno más general."
+                "Revisa la selección y confirma los cambios con el cliente."
         }
-        val hasInvalidCost = services.any { it.unitCost <= 0.0 || it.quantity <= 0 }
+        val hasInvalidCost = services.any {
+            !it.unitCost.isFinite() || it.unitCost <= 0.0 ||
+                it.unitCost > 1_000_000.0 || it.quantity !in 1..100
+        }
         if (hasInvalidCost) {
-            return "Todos los servicios deben tener un costo unitario y cantidad mayor a cero."
+            return "Cada servicio requiere un costo válido entre S/ 0.01 y S/ 1 000 000, y entre 1 y 100 unidades."
+        }
+        if (services.sumOf { it.unitCost * it.quantity } > 100_000_000.0) {
+            return "El costo total supera el máximo permitido."
         }
         return null
     }

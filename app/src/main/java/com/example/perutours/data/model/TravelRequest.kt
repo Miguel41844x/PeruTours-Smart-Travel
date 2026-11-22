@@ -37,6 +37,6 @@ data class TravelRequest(
 
     companion object {
         const val STATUS_PENDING_QUOTE = "Pendiente de cotizacion"
-        const val MAX_REQUESTED_ACTIVITIES = 5
+        const val MAX_REQUESTED_ACTIVITIES = TravelOfferLimits.MAX_ADDITIONAL_ACTIVITIES
     }
 }

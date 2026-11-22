@@ -35,6 +35,12 @@ enum class TravelRequestType(val wireValue: String) {
     }
 }
 
+/** Límites compartidos del formulario, catálogo y cotización. */
+object TravelOfferLimits {
+    const val MAX_SERVICES = 6
+    const val MAX_ADDITIONAL_ACTIVITIES = 5
+}
+
 /** Snapshot inmutable del paquete tal como lo vio el cliente al solicitarlo. */
 data class TravelPackageSnapshot(
     val title: String = "",

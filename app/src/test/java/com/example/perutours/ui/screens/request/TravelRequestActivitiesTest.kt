@@ -5,6 +5,8 @@ import com.example.perutours.data.location.LocationDataSource
 import com.example.perutours.data.model.CatalogService
 import com.example.perutours.data.model.TourDestination
 import com.example.perutours.data.model.TravelRequest
+import com.example.perutours.data.model.TourPackage
+import com.example.perutours.data.repository.PackageRepository
 import com.example.perutours.data.repository.DestinationCatalogRepository
 import com.example.perutours.data.repository.ServiceCatalogRepository
 import com.example.perutours.data.repository.TravelRequestDataSource
@@ -38,6 +40,7 @@ class TravelRequestActivitiesTest {
     private val requests = mockk<TravelRequestDataSource>()
     private val destinations = mockk<DestinationCatalogRepository>()
     private val services = mockk<ServiceCatalogRepository>()
+    private val packages = mockk<PackageRepository>()
 
     @Before
     fun setup() {
@@ -91,7 +94,26 @@ class TravelRequestActivitiesTest {
         assertEquals(emptyList<CatalogService>(), model.uiState.value.availableActivities)
     }
 
+    @Test
+    fun packageInclusionsAndExtrasTogetherStayWithinTheQuotationLimit() = runTest(dispatcher) {
+        val ids = List(5) { "included_" + it }
+        coEvery { packages.getPackage("pkg") } returns TourPackage(
+            id = "pkg", destinationId = arequipa.id, title = "Arequipa",
+            status = "PUBLICADO", includedServiceIds = ids
+        )
+        coEvery { destinations.getDestination(arequipa.id) } returns arequipa
+        val other = colca.copy(id = "sillar")
+        coEvery { services.getRequestableActivities(arequipa.id) } returns listOf(colca, other)
+        val model = viewModel()
+        model.prefillFromPackage("pkg")
+        advanceUntilIdle()
+        assertEquals(1, model.uiState.value.optionalActivityLimit)
+        model.toggleActivity(colca.id)
+        model.toggleActivity(other.id)
+        assertEquals(listOf(colca.id), model.uiState.value.requestedServiceIds)
+    }
+
     private fun viewModel() = TravelRequestViewModel(
-        requests, location, TravelRequestPlaceResolver(location), mockk(), destinations, services
+        requests, location, TravelRequestPlaceResolver(location), packages, destinations, services
     )
 }

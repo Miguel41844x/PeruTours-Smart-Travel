@@ -417,21 +417,39 @@ service cloud.firestore {
       };
     }
 
+    // Android guarda priceAmount como Double, incluso cuando vale 0.0.
+    // La igualdad de mapas distingue enteros de doubles; comparar los importes
+    // numéricamente evita rechazar una solicitud correcta por su serialización.
+    function isEmptyPackageSnapshot(snapshot) {
+      return snapshot is map
+        && snapshot.keys().hasOnly([
+          'title', 'summary', 'durationText', 'durationDays', 'priceAmount',
+          'currency', 'coverImageUrl', 'conditions', 'includedServiceIds'
+        ])
+        && snapshot.title == '' && snapshot.summary == ''
+        && snapshot.durationText == ''
+        && snapshot.durationDays is int && snapshot.durationDays == 0
+        && snapshot.priceAmount is number && snapshot.priceAmount == 0
+        && snapshot.currency == 'PEN' && snapshot.coverImageUrl == ''
+        && snapshot.conditions == '' && snapshot.includedServiceIds == [];
+    }
+
     function matchesPublishedPackage(packageId, destinationId, snapshot) {
       let offer = get(requestedPackagePath(packageId)).data;
       return offer.status == 'PUBLICADO'
         && offer.destinationId == destinationId
-        && snapshot == {
-          'title': offer.title,
-          'summary': offer.summary,
-          'durationText': offer.durationText == '' ? snapshot.durationText : offer.durationText,
-          'durationDays': offer.durationDays,
-          'priceAmount': offer.priceAmount,
-          'currency': offer.currency,
-          'coverImageUrl': offer.coverImageUrl,
-          'conditions': offer.conditions,
-          'includedServiceIds': offer.includedServiceIds
-        }
+        && snapshot.keys().hasOnly([
+          'title', 'summary', 'durationText', 'durationDays', 'priceAmount',
+          'currency', 'coverImageUrl', 'conditions', 'includedServiceIds'
+        ])
+        && snapshot.title == offer.title && snapshot.summary == offer.summary
+        && (offer.durationText == '' || snapshot.durationText == offer.durationText)
+        && snapshot.durationDays == offer.durationDays
+        && snapshot.priceAmount is number && snapshot.priceAmount == offer.priceAmount
+        && snapshot.currency == offer.currency
+        && snapshot.coverImageUrl == offer.coverImageUrl
+        && snapshot.conditions == offer.conditions
+        && snapshot.includedServiceIds == offer.includedServiceIds
         && validString(snapshot.durationText, 1, 80);
     }
 
@@ -442,7 +460,7 @@ service cloud.firestore {
       return (destinationId == '' || (destinationId.matches('^[^/]{1,128}$')
           && isPublishedRequestedDestination(destinationId)))
         && (type == 'CUSTOM'
-          ? packageId == '' && data.get('packageSnapshot', emptyPackageSnapshot()) == emptyPackageSnapshot()
+          ? packageId == '' && isEmptyPackageSnapshot(data.get('packageSnapshot', emptyPackageSnapshot()))
           : type == 'PACKAGE' && destinationId != '' && packageId.matches('^[^/]{1,128}$')
             && matchesPublishedPackage(packageId, destinationId, data.packageSnapshot));
     }
@@ -466,6 +484,7 @@ service cloud.firestore {
       let destinationId = data.get('destinationId', '');
       return ids is list
         && ids.size() <= 5
+        && ids.size() + included.size() <= 6
         && (ids.size() == 0 || (
           destinationId != ''
           && ids.toSet().size() == ids.size()

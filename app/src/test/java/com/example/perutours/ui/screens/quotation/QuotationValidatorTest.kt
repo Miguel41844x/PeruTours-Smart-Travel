@@ -19,6 +19,18 @@ class QuotationValidatorTest {
     }
 
     @Test
+    fun rejectsNonFiniteCostsAndQuantitiesThatFirestoreWouldReject() {
+        for (cost in listOf(Double.NaN, Double.POSITIVE_INFINITY, -1.0, 1_000_001.0)) {
+            assertNotNull(QuotationValidator.validateServices(listOf(
+                QuotationServiceItem(unitCost = cost, quantity = 1)
+            )))
+        }
+        assertNotNull(QuotationValidator.validateServices(listOf(
+            QuotationServiceItem(unitCost = 30.0, quantity = 101)
+        )))
+    }
+
+    @Test
     fun validityDaysAcceptConfiguredBoundaries() {
         assertNull(QuotationValidator.validateValidityDays(1))
         assertNull(QuotationValidator.validateValidityDays(30))

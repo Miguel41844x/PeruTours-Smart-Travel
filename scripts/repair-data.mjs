@@ -25,6 +25,16 @@ const destinationFor = (city) => {
   const first = normalize(city).split(",")[0].trim();
   return records.destinations.find((r) => normalize(r.data.name) === first);
 };
+const isSameArea = (request, destination) => {
+  const values = [request.destinationLatitude, request.destinationLongitude,
+    destination?.data.latitude, destination?.data.longitude];
+  if (!values.every(Number.isFinite)) return false;
+  const [latitude, longitude, targetLatitude, targetLongitude] = values.map((value) => value * Math.PI / 180);
+  const arc = Math.sin((targetLatitude - latitude) / 2) ** 2 +
+    Math.cos(latitude) * Math.cos(targetLatitude) * Math.sin((targetLongitude - longitude) / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(arc), Math.sqrt(1 - arc)) <= 300;
+};
+const incompatibleHistoricalRequests = new Set();
 
 for (const city of [...new Set(records.catalog_services.map((r) => r.data.city))]) {
   if (destinationFor(city)) continue;
@@ -140,12 +150,20 @@ for (const record of records.users) {
 
 for (const record of records.travel_requests) {
   const request = record.data;
+  const candidate = records.destinations.find((r) => r.id === request.destinationId)
+    ?? destinationFor(request.destination);
+  const incompatible = !request.packageId && candidate && !isSameArea(request, candidate);
+  if (incompatible) {
+    incompatibleHistoricalRequests.add(record.id);
+    console.log("Revisar ubicación histórica: " + record.id + ". Falta confirmar la ubicación; se conserva el lugar original sin asociarlo a otro destino.");
+  }
   const quotations = records.cotizaciones.filter((r) => r.data.requestId === record.id)
     .sort((a, b) => b.data.createdAtMillis - a.data.createdAtMillis);
   const latest = quotations[0];
   planPatch(changes, "travel_requests", record, {
     id: record.id, requestType: request.requestType ?? "CUSTOM",
-    packageId: request.packageId ?? "", destinationId: request.destinationId ?? destinationFor(request.destination)?.id ?? "",
+    packageId: request.packageId ?? "",
+    destinationId: incompatible ? "" : request.destinationId ?? candidate?.id ?? "",
     packageSnapshot: request.packageSnapshot ?? emptyPackageSnapshot(),
     requestedServiceIds: request.requestedServiceIds ?? [],
     assignedAgentId: request.assignedAgentId || latest?.data.agentId || "",
@@ -158,7 +176,8 @@ for (const name of ["cotizaciones", "reservations"]) {
     const request = records.travel_requests.find((r) => r.id === record.data.requestId)?.data;
     planPatch(changes, name, record, {
       id: record.id, packageId: record.data.packageId ?? request?.packageId ?? "",
-      destinationId: record.data.destinationId ?? request?.destinationId ?? "",
+      destinationId: incompatibleHistoricalRequests.has(record.data.requestId)
+        ? "" : record.data.destinationId ?? request?.destinationId ?? "",
       packageSnapshot: record.data.packageSnapshot ?? request?.packageSnapshot ?? emptyPackageSnapshot()
     });
   }

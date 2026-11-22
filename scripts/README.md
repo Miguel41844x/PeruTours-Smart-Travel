@@ -26,6 +26,10 @@ modelos actuales. Conserva importes, estados y snapshots históricos existentes.
 Las relaciones de los cuatro paquetes históricos están en `seed/catalog-links.json`;
 también corrige el paquete de Máncora que apuntaba a servicios de Piura ciudad.
 Los destinos sin contenido editorial suficiente se crean como borradores.
+Una coincidencia de nombre no basta para enlazar una solicitud histórica:
+el script comprueba que las coordenadas estén en la misma zona. Si faltan coordenadas
+o detecta una diferencia mayor a 300 km, conserva el lugar escrito, retira el vínculo incompatible
+y reporta el ID para revisión manual. No sustituye un destino por suposición.
 
 La carga de demostración añade dos clientes, un agente y un gerente, ocho
 expedientes en distintos estados, pagos simulados y actividades de itinerario.

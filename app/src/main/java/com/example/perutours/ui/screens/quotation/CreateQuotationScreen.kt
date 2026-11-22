@@ -81,7 +81,7 @@ fun CreateQuotationScreen(
                 requiresScheduling = selected.requiresScheduling
             )
         }
-        (catalogServices + selectedOutsideCatalog).distinctBy { it.id }
+        (selectedOutsideCatalog + catalogServices).distinctBy { it.id }
     }
     val baseCost = formState.selectedServices.sumOf { it.unitCost * it.quantity }
     val totalAmount = Math.round(
@@ -316,12 +316,14 @@ fun CreateQuotationScreen(
                 }
             } else {
                 items(items = displayedServices, key = { service -> service.id }) { service ->
-                    val isSelected = formState.selectedServices.any { it.id == service.id }
+                    val selected = formState.selectedServices.firstOrNull { it.id == service.id }
                     ServiceCatalogItemCard(
                         catalogService = service,
-                        isSelected = isSelected,
+                        isSelected = selected != null,
                         onToggle = { viewModel.addServiceFromCatalog(service) },
-                        modifier = Modifier.widthIn(max = 900.dp)
+                        modifier = Modifier.widthIn(max = 900.dp),
+                        quantity = selected?.quantity,
+                        onQuantityDelta = { viewModel.updateServiceQuantity(service.id, it) }
                     )
                 }
             }
