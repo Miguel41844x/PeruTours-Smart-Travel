@@ -6,17 +6,20 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
+import java.io.File
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class AppDatabaseMigrationTest {
     @Test
     fun versionSevenPreservesPendingOfflineEdits() = verifyUpgrade(7)
+
+    @Test
+    fun versionEightPreservesPendingOfflineEdits() = verifyUpgrade(8)
 
     @Test
     fun experimentalVersionSixWithServiceLinksPreservesPendingOfflineEdits() = verifyUpgrade(6)
@@ -61,7 +64,7 @@ class AppDatabaseMigrationTest {
         helper.writableDatabase
         helper.close()
         val database = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_6_7, AppDatabase.MIGRATION_7_8)
+            .addMigrations(AppDatabase.MIGRATION_6_7, AppDatabase.MIGRATION_7_8, AppDatabase.MIGRATION_8_9)
             .allowMainThreadQueries().build()
         try {
             database.openHelper.writableDatabase.query(

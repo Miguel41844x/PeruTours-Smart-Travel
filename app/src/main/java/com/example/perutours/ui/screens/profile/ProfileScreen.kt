@@ -1,6 +1,5 @@
 package com.example.perutours.ui.screens.profile
 
-import androidx.compose.foundation.layout.heightIn
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -28,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -74,8 +74,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -93,14 +93,15 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
+import com.example.perutours.data.model.TravelProfileOptions
+import com.example.perutours.ui.components.NotificationSettingsCard
 import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
-import com.example.perutours.data.model.TravelProfileOptions
-import kotlinx.coroutines.launch
 import java.io.File
+import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 private data class ProfileSignature(
     val name: String,
@@ -333,6 +334,8 @@ fun ProfileScreen(
                         onEditPhoto = { showPhotoSourceSheet = true },
                         onRetryPhoto = viewModel::retryPhotoUpload
                     )
+
+                    NotificationSettingsCard()
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 

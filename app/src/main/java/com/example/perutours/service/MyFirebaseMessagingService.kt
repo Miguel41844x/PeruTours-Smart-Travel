@@ -80,7 +80,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         val pendingIntent = PendingIntent.getActivity(
             this,
-            (quotationId + reservationId).hashCode(),
+            (notificationType + quotationId + reservationId).hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -89,6 +89,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
@@ -101,7 +102,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
         if (canNotify) {
-            notificationManager.notify(System.currentTimeMillis().toInt(), notification)
+            notificationManager.notify((notificationType + quotationId + reservationId +
+                body).hashCode(), notification)
         }
     }
 
@@ -112,6 +114,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         const val TYPE_QUOTATION = "quotation"
         const val TYPE_QUOTATION_RESPONSE = "quotation_response"
         const val TYPE_PAYMENT_REVIEW = "payment_review"
+        const val TYPE_TRIP_REMINDER = "trip_reminder"
         const val TYPE_TRIP_INCIDENT = "trip_incident"
         const val TYPE_TRIP_INCIDENT_RESPONSE = "trip_incident_response"
     }

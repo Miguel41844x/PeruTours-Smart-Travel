@@ -22,8 +22,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
@@ -31,9 +31,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import com.example.perutours.ui.theme.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -56,18 +59,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.perutours.ui.components.AgentListSearch
-import androidx.compose.material3.FilterChip
-import com.example.perutours.ui.components.VoucherOcrPanel
 import com.example.perutours.data.model.Payment
 import com.example.perutours.data.repository.PaymentValidator
+import com.example.perutours.ui.components.AgentListSearch
 import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.components.VoucherOcrPanel
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
+import com.example.perutours.ui.theme.*
 import com.example.perutours.ui.theme.PeruGold40
-import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * HU07: lista de comprobantes 'Pendiente' asignados al agente.
@@ -370,14 +373,32 @@ fun AgentPaymentDetailScreen(
                         expectedAmount = uiState.reservation?.totalAmount ?: payment.amount,
                         expectedCurrency = uiState.reservation?.currency ?: payment.currency,
                         modifier = Modifier.widthIn(max = 720.dp),
-                        onRead = viewModel::readVoucher
+                        onRead = viewModel::readVoucher,
+                        assessment = uiState.voucherAssessment
                     )
                 }
 
                 if (payment.status == Payment.STATUS_PENDING) {
+                    if (!uiState.matchesReservation) {
+                        Text("No se pudo cruzar este pago con la reserva vigente. Actualiza el expediente antes de aprobar.",
+                            color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Row(Modifier.widthIn(max = 720.dp).fillMaxWidth().toggleable(
+                        value = uiState.bankReceiptConfirmed, role = Role.Checkbox,
+                        enabled = !uiState.isSubmitting &&
+                            uiState.voucherOcr != com.example.perutours.ui.screens.payment.VoucherOcrState.Reading,
+                        onValueChange = viewModel::confirmBankReceipt),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = uiState.bankReceiptConfirmed,
+                            onCheckedChange = null,
+                            enabled = !uiState.isSubmitting &&
+                                uiState.voucherOcr != com.example.perutours.ui.screens.payment.VoucherOcrState.Reading)
+                        Text("Confirmé en la cuenta de la agencia el abono, el importe y la operación de este comprobante.",
+                            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    }
                     Button(
                         onClick = viewModel::approvePayment,
-                        enabled = !uiState.isSubmitting,
+                        enabled = uiState.canApprove,
                         modifier = Modifier
                             .widthIn(max = 720.dp)
                             .fillMaxWidth()
@@ -518,13 +539,14 @@ private fun RejectPaymentDialog(
                 )
                 OutlinedTextField(
                     value = reason,
-                    onValueChange = { reason = it },
+                    onValueChange = { reason = it.take(PaymentValidator.MAX_REJECTION_LENGTH) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 10.dp),
                     label = { Text("Motivo del rechazo") },
                     isError = reason.isNotBlank() && !reasonIsValid,
                     supportingText = {
+                        Text(reason.length.toString() + "/" + PaymentValidator.MAX_REJECTION_LENGTH)
                         if (reason.isNotBlank() && !reasonIsValid) {
                             Text("Faltan caracteres para llegar a ${PaymentValidator.MIN_REJECTION_LENGTH}.")
                         }

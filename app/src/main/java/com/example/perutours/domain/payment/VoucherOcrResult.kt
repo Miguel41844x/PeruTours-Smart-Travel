@@ -21,6 +21,7 @@ data class VoucherTime(val hour: Int, val minute: Int, val second: Int? = null)
 
 data class VoucherAmount(val value: BigDecimal, val currency: String) {
     fun matches(expectedAmount: Double, expectedCurrency: String): Boolean =
-        currency.equals(expectedCurrency.trim(), ignoreCase = true) &&
+        expectedAmount.isFinite() && expectedAmount > 0 &&
+            currency.equals(expectedCurrency.trim(), ignoreCase = true) &&
             value.compareTo(BigDecimal.valueOf(expectedAmount).setScale(2, RoundingMode.HALF_UP)) == 0
 }

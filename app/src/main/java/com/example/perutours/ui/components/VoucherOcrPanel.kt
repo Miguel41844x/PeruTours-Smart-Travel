@@ -11,6 +11,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.perutours.domain.payment.VoucherAssessment
+import com.example.perutours.domain.payment.VoucherAssessmentStatus
+import com.example.perutours.domain.payment.VoucherValidator
 import com.example.perutours.ui.screens.payment.VoucherOcrState
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import java.util.Locale
@@ -21,7 +24,8 @@ internal fun VoucherOcrPanel(
     expectedAmount: Double?,
     expectedCurrency: String,
     modifier: Modifier = Modifier,
-    onRead: (() -> Unit)? = null
+    onRead: (() -> Unit)? = null,
+    assessment: VoucherAssessment? = null
 ) {
     if (state == VoucherOcrState.Idle && onRead == null) return
 
@@ -35,11 +39,44 @@ internal fun VoucherOcrPanel(
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Text("Lectura del comprobante", style = MaterialTheme.typography.titleSmall)
+            val review = assessment ?: (state as? VoucherOcrState.Read)?.let {
+                VoucherValidator.assess(it.result, expectedAmount, expectedCurrency)
+            }
+            if (review != null) {
+                val reviewColor = when (review.status) {
+                    VoucherAssessmentStatus.INCONSISTENT -> MaterialTheme.colorScheme.errorContainer
+                    VoucherAssessmentStatus.NEEDS_REVIEW -> MaterialTheme.colorScheme.secondaryContainer
+                    VoucherAssessmentStatus.CONSISTENT -> MaterialTheme.colorScheme.primaryContainer
+                }
+                val onReviewColor = when (review.status) {
+                    VoucherAssessmentStatus.INCONSISTENT -> MaterialTheme.colorScheme.onErrorContainer
+                    VoucherAssessmentStatus.NEEDS_REVIEW -> MaterialTheme.colorScheme.onSecondaryContainer
+                    VoucherAssessmentStatus.CONSISTENT -> MaterialTheme.colorScheme.onPrimaryContainer
+                }
+                Surface(
+                    color = reviewColor,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(when (review.status) {
+                            VoucherAssessmentStatus.CONSISTENT -> "Sin inconsistencias detectadas"
+                            VoucherAssessmentStatus.INCONSISTENT -> "Hay datos que debes corregir"
+                            VoucherAssessmentStatus.NEEDS_REVIEW -> "Requiere revisión manual"
+                        }, style = MaterialTheme.typography.titleSmall,
+                            color = onReviewColor)
+                        review.issues.filter { it.highlighted }.forEach {
+                            Text(it.message, style = MaterialTheme.typography.bodySmall,
+                                color = onReviewColor)
+                        }
+                    }
+                }
+            }
             when (state) {
                 VoucherOcrState.Idle -> Unit
                 VoucherOcrState.Reading -> Text("Leyendo la imagen…")
                 VoucherOcrState.Unavailable -> Text(
-                    "No pudimos leer los datos del comprobante. Revisa la imagen."
+                    "No pudimos leer los datos del comprobante. Se necesitará una revisión manual de la imagen."
                 )
                 is VoucherOcrState.Read -> {
                     val result = state.result
@@ -73,9 +110,14 @@ internal fun VoucherOcrPanel(
                     } ?: Text("Hora por verificar en la imagen.")
                 }
             }
+            if (state is VoucherOcrState.Read || state == VoucherOcrState.Unavailable) {
+                Text("Esta lectura comprueba los datos visibles. La recepción del dinero se confirma en la cuenta de la agencia.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             val partialReading = state is VoucherOcrState.Read && (
                 state.result.amount == null || state.result.operationNumber == null ||
-                    state.result.transactionDate == null || state.result.transactionTime == null
+                    state.result.transactionDate == null || state.result.transactionTime == null ||
+                    review?.hasBlockingIssues == true
                 )
             if (onRead != null &&
                 (state == VoucherOcrState.Idle || state == VoucherOcrState.Unavailable || partialReading)

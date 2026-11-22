@@ -34,7 +34,7 @@ su disponibilidad y precio antes de que el cliente acepte.
 | MVVM e inyección | Screens y UiState en `ui/screens`, ViewModels, repositorios en `data/repository`, funciones de dominio en `domain`; Koin en `di/AppModule.kt`. |
 | Corrutinas y Retrofit | Geoapify para lugares y puntos de interés; Wikipedia para información; respaldo REST de Gemini. Funciones `suspend`, Flow y `await()` para Firebase. |
 | WorkManager | `UploadPaymentWorker`, `TripSyncWorker` y `TripReminderWorker`; reintentos, sincronización del checklist y recordatorios únicos. |
-| SQLite | Room: `AppDatabase` v8, DAOs y entidades de catálogo, lugares, viajes, checklist, incidencias y cachés administrativos. Migraciones conservan las ediciones pendientes. |
+| SQLite | Room: `AppDatabase` v9, DAOs y entidades de catálogo, lugares, viajes, checklist, incidencias y cachés administrativos. Migraciones conservan las ediciones pendientes. |
 | Tres dashboards | Administrador: Vico y Tehras; gerente: MPAndroidChart con conversión, ingresos por moneda y demanda; agente: cartera de solicitudes y pagos pendientes. |
 | Tres recursos móviles | Ubicación/GPS, cámara con CameraX para comprobantes y audio con TextToSpeech para leer el itinerario. |
 | Tres funciones de IA | Recomendaciones con Gemini, asistente contextual con Gemini y OCR de comprobantes con ML Kit. El respaldo por reglas se distingue de una respuesta generada con IA. |
@@ -142,3 +142,39 @@ domain/recommendation/                  → prompt, parser, recomendador local
 ui/screens/recommendation/              → ViewModel MVVM + estados sellados
 ui/screens/home/HomeScreen.kt           → sección "Recomendado para ti"
 ```
+
+
+## HU13 — Destinos y paquetes favoritos
+
+El corazón del catálogo y del detalle permite guardar o quitar destinos y paquetes.
+La lista Mis favoritos conserva título, ubicación, descripción, precio y duración
+cuando corresponde, permite buscar y filtrar, y se consulta sin red. Las imágenes
+pueden depender de la caché de Coil. Room separa cada selección por usuario, tipo e ID;
+el mismo ID de un destino y un paquete no se sobrescribe. La migración 8→9 conserva
+los registros anteriores y el checklist pendiente de sincronizar. Los precios
+guardados son informativos: una nueva solicitud valida el catálogo vigente.
+
+## HU14 — Notificaciones y recordatorios
+
+Los avisos FCM existentes abren la cotización, reserva o incidencia correspondiente.
+El acceso espera a que termine la autenticación y la resolución del rol.
+Los recordatorios de salidas pagadas se programan con WorkManager unas 24 horas antes;
+una sincronización periódica con red recoge cambios incluso con la app cerrada.
+Se comprueba la sesión, el propietario, el estado pagado y la fecha vigente antes
+de mostrar el aviso. El registro local de entregas evita repetir la misma salida.
+Perfil muestra el estado del permiso y permite activar o gestionar las notificaciones.
+WorkManager respeta las restricciones de batería de Android: el aviso no es una alarma exacta.
+
+## Revisión automática de comprobantes
+
+ML Kit lee importe, moneda, operación, fecha y hora; el validador compara lo obtenido
+con la reserva. Bloquea incoherencias conocidas como importe distinto, fecha futura
+(incluido un voucher de 2050) o anterior a la reserva. Las horas se interpretan en
+la zona de Perú, con cinco minutos de tolerancia de reloj. Un dato ilegible queda
+para revisión y nunca se completa con un dato inventado. En registros antiguos
+sin fecha de creación se informa que falta esa comprobación.
+
+El OCR no consulta el saldo bancario ni prueba la autenticidad de una imagen.
+El agente confirma el abono en la cuenta y solo puede aprobar el intento vigente,
+vinculado a su reserva y sin inconsistencias detectadas. Una lectura incompleta
+requiere esa comprobación manual; los rechazos admiten entre 10 y 500 caracteres.

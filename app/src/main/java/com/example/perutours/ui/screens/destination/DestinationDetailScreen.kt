@@ -17,24 +17,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -42,9 +46,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.perutours.ui.components.TravelPhoto
+import com.example.perutours.data.model.FavoriteItem
+import com.example.perutours.data.model.FavoriteType
 import com.example.perutours.data.model.TourPackage
 import com.example.perutours.data.repository.PointsOfInterestRepository
+import com.example.perutours.ui.components.TravelPhoto
+import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
+import com.example.perutours.ui.screens.favorites.FavoritesViewModel
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -60,13 +68,20 @@ fun DestinationDetailScreen(
     onNavigateBack: () -> Unit,
     onPlanDestination: (String) -> Unit = {},
     onRequestQuote: (TourPackage) -> Unit = {},
-    viewModel: DestinationDetailViewModel = koinViewModel()
+    viewModel: DestinationDetailViewModel = koinViewModel(),
+    favoritesViewModel: FavoritesViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val favorites by favoritesViewModel.uiState.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(favorites.message) {
+        favorites.message?.let { snackbar.showSnackbar(it); favoritesViewModel.clearMessage() }
+    }
 
     LaunchedEffect(destinationId) { viewModel.load(destinationId) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text(uiState.destination?.name ?: "Destino") },
@@ -79,6 +94,13 @@ fun DestinationDetailScreen(
                     }
                 },
                 actions = {
+                    uiState.destination?.let { destination ->
+                        val saved = favorites.contains(destination.id, FavoriteType.DESTINATION)
+                        IconButton(onClick = { favoritesViewModel.toggle(FavoriteItem.destination(destination)) }) {
+                            Icon(if (saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                if (saved) "Quitar destino de favoritos" else "Guardar destino favorito")
+                        }
+                    }
                     IconButton(
                         onClick = viewModel::refreshNearbyPlaces,
                         enabled = !uiState.arePlacesLoading
@@ -178,7 +200,11 @@ fun DestinationDetailScreen(
                                 includedServiceNames = tourPackage.includedServiceIds.mapNotNull { id ->
                                     uiState.includedServices[id]?.takeIf { it.active }?.name
                                 },
-                                onRequestQuote = { onRequestQuote(tourPackage) }
+                                onRequestQuote = { onRequestQuote(tourPackage) },
+                                isFavorite = favorites.contains(tourPackage.id, FavoriteType.PACKAGE),
+                                onToggleFavorite = {
+                                    favoritesViewModel.toggle(FavoriteItem.travel(tourPackage, destination.name))
+                                }
                             )
                         }
                     }
@@ -249,7 +275,9 @@ private fun SectionTitle(text: String) {
 private fun PackageSummaryCard(
     tourPackage: TourPackage,
     includedServiceNames: List<String>,
-    onRequestQuote: () -> Unit
+    onRequestQuote: () -> Unit,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -258,11 +286,14 @@ private fun PackageSummaryCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = tourPackage.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tourPackage.title, style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f))
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        if (isFavorite) "Quitar paquete de favoritos" else "Guardar paquete favorito")
+                }
+            }
             if (tourPackage.summary.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text(

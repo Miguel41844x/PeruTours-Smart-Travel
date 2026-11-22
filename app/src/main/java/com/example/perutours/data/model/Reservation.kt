@@ -22,7 +22,7 @@ data class Reservation(
     val validityDate: String = "",
     val conditions: String = "",
     val status: String = STATUS_CONFIRMED,
-    val createdAtMillis: Long = System.currentTimeMillis(),
+    val createdAtMillis: Long = 0L,
     val paymentId: String = "",
     // Compatibilidad de lectura con reservas antiguas. Los pagos nuevos se
     // gestionan en la colección payments.

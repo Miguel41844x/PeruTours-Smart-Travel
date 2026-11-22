@@ -24,6 +24,7 @@ import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
     private val auth: FirebaseAuth by inject()
+    private val reminders: com.example.perutours.service.TripReminderCoordinator by inject()
     private val pendingQuotationId = mutableStateOf<String?>(null)
     private val pendingReservationId = mutableStateOf<String?>(null)
     private val pendingNotificationType = mutableStateOf<String?>(null)
@@ -31,6 +32,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        reminders.start()
 
         pendingQuotationId.value = intent.quotationId()
         pendingReservationId.value = intent.reservationId()

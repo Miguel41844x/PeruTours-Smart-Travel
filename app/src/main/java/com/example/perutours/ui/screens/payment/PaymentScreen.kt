@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import com.example.perutours.ui.theme.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -41,16 +40,18 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.perutours.ui.components.VoucherOcrPanel
 import com.example.perutours.data.repository.PaymentUploadState
+import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
+import com.example.perutours.ui.components.VoucherOcrPanel
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
+import com.example.perutours.ui.theme.*
 import com.example.perutours.ui.theme.PeruGold40
-import kotlinx.coroutines.launch
-import org.koin.androidx.compose.koinViewModel
 import java.io.File
 import java.util.UUID
+import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PaymentScreen(
     quotationId: String,
@@ -174,11 +175,12 @@ fun PaymentScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     uiState.paymentMethods.forEach { method ->
                         FilterChip(
@@ -261,7 +263,9 @@ fun PaymentScreen(
                 state = uiState.voucherOcr,
                 expectedAmount = uiState.reservationAmount,
                 expectedCurrency = uiState.reservationCurrency,
-                modifier = Modifier.padding(top = 12.dp)
+                modifier = Modifier.padding(top = 12.dp),
+                onRead = if (uiState.canChangeVoucher) viewModel::retryVoucherReading else null,
+                assessment = uiState.voucherAssessment
             )
 
             if (uiState.errorMessage != null) {

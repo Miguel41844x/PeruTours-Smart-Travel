@@ -28,8 +28,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.ui.graphics.Color
-import com.example.perutours.ui.theme.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -42,19 +40,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.koin.androidx.compose.koinViewModel
 import com.example.perutours.data.model.Quotation
-import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.CustomerNavigationBar
 import com.example.perutours.ui.components.CustomerSection
+import com.example.perutours.ui.components.PeruToursTopBar
+import com.example.perutours.ui.theme.*
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.koin.androidx.compose.koinViewModel
 
 private enum class QuotationFilter(val label: String) {
     ALL("Todas"),
@@ -361,4 +361,5 @@ internal fun formatQuotationAmount(amount: Double, currency: String): String {
 }
 
 internal fun formatQuotationCreatedAt(value: Long): String =
-    SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("es-PE")).format(Date(value))
+    if (value <= 0L) "Sin fecha registrada"
+    else SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("es-PE")).format(Date(value))

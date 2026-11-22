@@ -1,6 +1,5 @@
 package com.example.perutours.ui.screens.reservation
 
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -20,11 +20,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -34,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import com.example.perutours.ui.theme.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,11 +43,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.perutours.data.model.Payment
 import com.example.perutours.data.model.Reservation
-import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.JourneyProgress
+import com.example.perutours.ui.components.PeruToursTopBar
 import com.example.perutours.ui.components.SectionHeading
 import com.example.perutours.ui.screens.quotation.formatQuotationAmount
 import com.example.perutours.ui.screens.quotation.formatQuotationCreatedAt
+import com.example.perutours.ui.theme.*
 import com.example.perutours.ui.theme.PeruGold40
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -129,7 +129,9 @@ fun ReservationDetailScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Confirmada el ${formatQuotationCreatedAt(reservation.createdAtMillis)}",
+                            text = if (reservation.createdAtMillis > 0)
+                                "Confirmada el ${formatQuotationCreatedAt(reservation.createdAtMillis)}"
+                                else "Fecha de confirmación no registrada",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )

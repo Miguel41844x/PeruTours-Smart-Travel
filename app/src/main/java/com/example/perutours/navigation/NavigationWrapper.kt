@@ -9,17 +9,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.koin.androidx.compose.koinViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.example.perutours.data.messaging.FCMTokenManager
+import com.example.perutours.service.MyFirebaseMessagingService
+import com.example.perutours.ui.screens.admin.AdminDashboardScreen
+import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormScreen
+import com.example.perutours.ui.screens.admin.destination.AdminDestinationsScreen
+import com.example.perutours.ui.screens.admin.packages.AdminPackagesScreen
+import com.example.perutours.ui.screens.admin.provider.AdminProvidersScreen
+import com.example.perutours.ui.screens.admin.service.AdminServicesScreen
+import com.example.perutours.ui.screens.agent.AgentHomeScreen
+import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
+import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
+import com.example.perutours.ui.screens.agent.AgentRequestsScreen
+import com.example.perutours.ui.screens.chat.ChatScreen
+import com.example.perutours.ui.screens.destination.DestinationDetailScreen
+import com.example.perutours.ui.screens.favorites.FavoritesScreen
 import com.example.perutours.ui.screens.home.HomeScreen
 import com.example.perutours.ui.screens.initial.InitialScreen
 import com.example.perutours.ui.screens.login.LoginScreen
+import com.example.perutours.ui.screens.payment.PaymentScreen
 import com.example.perutours.ui.screens.profile.ProfileScreen
 import com.example.perutours.ui.screens.quotation.CreateQuotationScreen
 import com.example.perutours.ui.screens.quotation.CustomerQuotationViewModel
@@ -28,36 +45,21 @@ import com.example.perutours.ui.screens.quotation.QuotationDetailScreen
 import com.example.perutours.ui.screens.quotation.QuotationResponseUiState
 import com.example.perutours.ui.screens.quotation.QuotationUiState
 import com.example.perutours.ui.screens.quotation.QuotationViewModel
+import com.example.perutours.ui.screens.request.TravelRequestScreen
 import com.example.perutours.ui.screens.reservation.CustomerReservationViewModel
 import com.example.perutours.ui.screens.reservation.CustomerReservationsScreen
 import com.example.perutours.ui.screens.reservation.ReservationDetailScreen
-import com.example.perutours.ui.screens.request.TravelRequestScreen
+import com.example.perutours.ui.screens.sales.SalesDashboardScreen
 import com.example.perutours.ui.screens.signup.SignUpScreen
-import com.example.perutours.ui.screens.payment.PaymentScreen
-import com.example.perutours.service.MyFirebaseMessagingService
-import com.example.perutours.data.messaging.FCMTokenManager
-import androidx.compose.runtime.rememberCoroutineScope
+import com.example.perutours.ui.screens.trip.AgentTripManagementScreen
+import com.example.perutours.ui.screens.trip.AgentTripsScreen
+import com.example.perutours.ui.screens.trip.TripDetailScreen
+import com.example.perutours.ui.screens.trip.TripListScreen
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import com.google.firebase.auth.FirebaseAuth
-import com.example.perutours.ui.screens.agent.AgentHomeScreen
-import com.example.perutours.ui.screens.admin.AdminDashboardScreen
-import com.example.perutours.ui.screens.admin.destination.AdminDestinationFormScreen
-import com.example.perutours.ui.screens.admin.destination.AdminDestinationsScreen
-import com.example.perutours.ui.screens.admin.packages.AdminPackagesScreen
-import com.example.perutours.ui.screens.admin.provider.AdminProvidersScreen
-import com.example.perutours.ui.screens.admin.service.AdminServicesScreen
-import com.example.perutours.ui.screens.destination.DestinationDetailScreen
-import com.example.perutours.ui.screens.agent.AgentPaymentDetailScreen
-import com.example.perutours.ui.screens.agent.AgentPaymentsScreen
-import com.example.perutours.ui.screens.agent.AgentRequestsScreen
-import com.example.perutours.ui.screens.sales.SalesDashboardScreen
-import com.example.perutours.ui.screens.trip.TripListScreen
-import com.example.perutours.ui.screens.trip.TripDetailScreen
-import com.example.perutours.ui.screens.trip.AgentTripsScreen
-import com.example.perutours.ui.screens.trip.AgentTripManagementScreen
+import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
-import com.example.perutours.ui.screens.chat.ChatScreen
 @Composable
 fun NavigationWrapper(
     navHostController: NavHostController,
@@ -78,59 +80,17 @@ fun NavigationWrapper(
             "initial"
         }
 
-    LaunchedEffect(
-        pendingQuotationId,
-        pendingReservationId,
-        pendingNotificationType,
-        currentUser?.uid
-    ) {
-        if (currentUser?.isEmailVerified != true) return@LaunchedEffect
-
-        // HU07: la notificación de revisión de pago abre la reserva del
-        // cliente para ver el resultado del comprobante.
-        val paymentReservationId = pendingReservationId?.takeIf { it.isNotBlank() }
-        if (
-            pendingNotificationType in setOf(
-                MyFirebaseMessagingService.TYPE_TRIP_INCIDENT,
-                MyFirebaseMessagingService.TYPE_TRIP_INCIDENT_RESPONSE
-            ) && paymentReservationId != null
-        ) {
-            val route = if (
-                pendingNotificationType == MyFirebaseMessagingService.TYPE_TRIP_INCIDENT
-            ) {
-                "agent_trip/$paymentReservationId"
-            } else {
-                "trip/$paymentReservationId"
-            }
-            navHostController.navigate(route) { launchSingleTop = true }
-            onPendingQuotationConsumed()
-            return@LaunchedEffect
-        }
-        if (
-            pendingNotificationType == MyFirebaseMessagingService.TYPE_PAYMENT_REVIEW &&
-            paymentReservationId != null
-        ) {
-            navHostController.navigate("customer_reservation/$paymentReservationId") {
-                launchSingleTop = true
-            }
-            onPendingQuotationConsumed()
-            return@LaunchedEffect
-        }
-
-        val quotationId = pendingQuotationId?.takeIf { it.isNotBlank() }
-        if (quotationId != null) {
-            val route = if (
-                pendingNotificationType == MyFirebaseMessagingService.TYPE_QUOTATION_RESPONSE
-            ) {
-                "agent_quotation_detail/$quotationId"
-            } else {
-                "customer_quotation/$quotationId"
-            }
-            navHostController.navigate(route) {
-                launchSingleTop = true
-            }
-            onPendingQuotationConsumed()
-        }
+    val currentEntry by navHostController.currentBackStackEntryAsState()
+    val currentRoute = currentEntry?.destination?.route
+    LaunchedEffect(pendingQuotationId, pendingReservationId, pendingNotificationType,
+        currentUser?.uid, currentRoute) {
+        // El rol debe terminar de resolverse antes de abrir el destino del aviso.
+        if (currentUser?.isEmailVerified != true || currentRoute == null ||
+            currentRoute in setOf("initial", "logIn", "signUp", "role_router")) return@LaunchedEffect
+        val target = NotificationDestinationResolver.resolve(
+            pendingNotificationType, pendingQuotationId, pendingReservationId)
+        if (target != null) navHostController.navigate(target) { launchSingleTop = true }
+        if (pendingQuotationId != null || pendingReservationId != null) onPendingQuotationConsumed()
     }
 
     NavHost(
@@ -196,7 +156,17 @@ fun NavigationWrapper(
 
         // HU08: panel del administrador y gestión del catálogo turístico
         composable(route = "admin_dashboard") {
+            val tokenManager: FCMTokenManager = koinInject()
+            val logoutScope = rememberCoroutineScope()
+            val logout: () -> Unit = {
+                logoutScope.launch {
+                    withTimeoutOrNull(3_000) { tokenManager.clearToken() }
+                    auth.signOut()
+                    navHostController.navigate("initial") { popUpTo(0) { inclusive = true } }
+                }
+            }
             AdminDashboardScreen(
+                onLogout = logout,
                 onManageDestinations = { navHostController.navigate("admin_destinations") },
                 onManagePackages = { navHostController.navigate("admin_packages") },
                 onManageProviders = { navHostController.navigate("admin_providers") },
@@ -207,9 +177,7 @@ fun NavigationWrapper(
                     if (navHostController.previousBackStackEntry != null) {
                         navHostController.popBackStack()
                     } else {
-                        navHostController.navigate("initial") {
-                            popUpTo(0) { inclusive = true }
-                        }
+                        logout()
                     }
                 }
             )
@@ -354,6 +322,7 @@ fun NavigationWrapper(
                 navigateToProfile = {
                     navHostController.navigate(route = "profile")
                 },
+                navigateToFavorites = { navHostController.navigate("favorites") { launchSingleTop = true } },
                 navigateToDetail = { destinationId ->
                     if (destinationId.isNotBlank()) {
                         navHostController.navigate(
@@ -560,6 +529,16 @@ fun NavigationWrapper(
         }
 
         // HU11: asistente virtual (chatbot turístico)
+        composable(route = "favorites") {
+            FavoritesScreen(
+                onBack = { navHostController.popBackStack() },
+                onExplore = { navHostController.navigateCustomerSection("home") },
+                onOpenDestination = { id ->
+                    navHostController.navigate("destination_detail?destinationId=" + Uri.encode(id))
+                }
+            )
+        }
+
         composable(route = "chat") {
             ChatScreen(
                 onNavigateBack = { navHostController.popBackStack() },

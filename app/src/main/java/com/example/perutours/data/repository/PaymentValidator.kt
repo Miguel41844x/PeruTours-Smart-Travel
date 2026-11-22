@@ -17,6 +17,7 @@ object PaymentValidator {
     val ALLOWED_CURRENCIES = listOf("PEN", "USD")
 
     const val MIN_REJECTION_LENGTH = 10
+    const val MAX_REJECTION_LENGTH = 500
 
     const val MAX_VOUCHER_BYTES = 10L * 1024L * 1024L
 
@@ -27,7 +28,7 @@ object PaymentValidator {
     fun isValidCurrency(currency: String): Boolean = currency in ALLOWED_CURRENCIES
 
     fun isValidRejectionReason(reason: String): Boolean =
-        reason.trim().length >= MIN_REJECTION_LENGTH
+        reason.trim().length in MIN_REJECTION_LENGTH..MAX_REJECTION_LENGTH
 
     /** Solo una reserva Confirmada o con pago rechazado permite (re)enviar comprobante. */
     fun canClientSubmit(reservationStatus: String): Boolean =
@@ -40,7 +41,7 @@ object PaymentValidator {
 
     fun isValidSubmittedPayment(payment: Payment): Boolean =
         isValidMethod(payment.method) &&
-            payment.amount > 0.0 &&
+            payment.amount.isFinite() && payment.amount > 0.0 &&
             isValidCurrency(payment.currency) &&
             payment.voucherUrl.startsWith("https://") &&
             payment.status == Payment.STATUS_PENDING

@@ -1,23 +1,14 @@
 package com.example.perutours.ui.screens.home
 
-import com.example.perutours.ui.components.TravelPhoto
-import com.example.perutours.ui.components.TravelPackageCard
-import com.example.perutours.ui.components.TravelEmptyState
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.material.icons.outlined.CloudOff
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.background
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -42,7 +34,11 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,53 +46,65 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.perutours.R
+import com.example.perutours.data.messaging.FCMTokenManager
+import com.example.perutours.data.model.FavoriteItem
+import com.example.perutours.data.model.FavoriteType
 import com.example.perutours.data.model.Recommendation
 import com.example.perutours.data.remote.DestinationDto
-import com.example.perutours.ui.components.PeruToursBrand
 import com.example.perutours.ui.components.CustomerNavigationBar
 import com.example.perutours.ui.components.CustomerSection
+import com.example.perutours.ui.components.PeruToursBrand
 import com.example.perutours.ui.components.ScreenHorizontalPadding
 import com.example.perutours.ui.components.SectionHeading
+import com.example.perutours.ui.components.TravelEmptyState
+import com.example.perutours.ui.components.TravelPackageCard
+import com.example.perutours.ui.components.TravelPhoto
+import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
+import com.example.perutours.ui.screens.favorites.FavoritesViewModel
 import com.example.perutours.ui.screens.recommendation.RecommendationUiState
 import com.example.perutours.ui.screens.recommendation.RecommendationViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.example.perutours.data.messaging.FCMTokenManager
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
-import androidx.compose.material.icons.filled.SmartToy
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("InlinedApi")
@@ -109,14 +117,21 @@ fun HomeScreen(
     navigateToTrips: () -> Unit = {},
     navigateToChat: () -> Unit = {},
     navigateToProfile: () -> Unit = {},
+    navigateToFavorites: () -> Unit = {},
     navigateToDetail: (String) -> Unit = {},
     navigateToInitial: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
     recommendationViewModel: RecommendationViewModel = koinViewModel(),
-    fcmTokenManager: FCMTokenManager = koinInject()
+    fcmTokenManager: FCMTokenManager = koinInject(),
+    favoritesViewModel: FavoritesViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val recommendationState by recommendationViewModel.uiState.collectAsStateWithLifecycle()
+    val favorites by favoritesViewModel.uiState.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(favorites.message) {
+        favorites.message?.let { snackbar.showSnackbar(it); favoritesViewModel.clearMessage() }
+    }
 
     // HU10: al volver al Home (p. ej. desde Perfil tras guardar las
     // preferencias) se reconsultan las recomendaciones para que no
@@ -131,6 +146,7 @@ fun HomeScreen(
     var showNotificationPrompt by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val heroHeight = (260.dp * LocalDensity.current.fontScale.coerceAtLeast(1f)).coerceAtMost(520.dp)
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { navigateToQuotations() }
@@ -198,6 +214,9 @@ fun HomeScreen(
             TopAppBar(
                 title = { PeruToursBrand(compact = true) },
                 actions = {
+                    IconButton(onClick = navigateToFavorites) {
+                        Icon(Icons.Outlined.FavoriteBorder, "Mis favoritos")
+                    }
                     TextButton(onClick = navigateToProfile) { Text("Mi perfil") }
                     IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión")
@@ -205,6 +224,7 @@ fun HomeScreen(
                 }
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             CustomerNavigationBar(
                 selected = CustomerSection.HOME,
@@ -232,7 +252,7 @@ fun HomeScreen(
                     }
                 }
                 item(key = "custom-trip") {
-                    Box(Modifier.fillMaxWidth().height(260.dp).clip(MaterialTheme.shapes.extraLarge)) {
+                    Box(Modifier.fillMaxWidth().height(heroHeight).clip(MaterialTheme.shapes.extraLarge)) {
                         Image(painterResource(R.drawable.welcome_colca), "Cañón del Colca, Arequipa",
                             Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
@@ -338,7 +358,9 @@ fun HomeScreen(
                             TravelPackageCard(
                                 travel = travel,
                                 onDetails = { navigateToDetail(travel.destinationId) },
-                                onRequest = { navigateToTravelRequest(travel) }
+                                onRequest = { navigateToTravelRequest(travel) },
+                                isFavorite = favorites.contains(travel.id, FavoriteType.PACKAGE),
+                                onToggleFavorite = { favoritesViewModel.toggle(FavoriteItem.travel(travel)) }
                             )
                         }
                     }

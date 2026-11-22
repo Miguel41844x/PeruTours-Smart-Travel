@@ -8,13 +8,14 @@ import com.example.perutours.data.repository.PaymentRepository
 import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.data.repository.PaymentValidator
 import com.example.perutours.data.repository.ReservationDataSource
+import com.example.perutours.domain.payment.VoucherValidator
+import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 data class PaymentUiState(
     val voucherUri: Uri? = null,
@@ -25,6 +26,9 @@ data class PaymentUiState(
     // HU07: el importe y la moneda autoritativos se leen de la reserva
     // en Firestore; el total recibido por navegación es solo informativo.
     val reservationAmount: Double? = null,
+    val reservationId: String = "",
+    val reservationQuotationId: String = "",
+    val reservationCreatedAtMillis: Long = 0L,
     val reservationCurrency: String = "PEN",
     val reservationStatus: String = "",
     val isLoadingReservation: Boolean = true,
@@ -42,7 +46,17 @@ data class PaymentUiState(
             && paymentMethod != null
             && canChangeVoucher
             && !isLoadingReservation
+            && voucherOcr != VoucherOcrState.Reading
+            && reservationAmount?.let { it.isFinite() && it > 0 } == true
+            && PaymentValidator.isValidCurrency(reservationCurrency)
+            && reservationId.isNotBlank() && reservationQuotationId.isNotBlank()
+            && voucherAssessment?.hasBlockingIssues != true
             && PaymentValidator.canClientSubmit(reservationStatus)
+
+    val voucherAssessment
+        get() = (voucherOcr as? VoucherOcrState.Read)?.let {
+            VoucherValidator.assess(it.result, reservationAmount, reservationCurrency, reservationCreatedAtMillis)
+        }
 }
 
 /**
@@ -61,6 +75,7 @@ class PaymentViewModel(
 
     private var uploadJob: Job? = null
     private var voucherOcrJob: Job? = null
+    private var reservationLoadJob: Job? = null
 
     /**
      * Carga la reserva desde Firestore para tomar el importe y la
@@ -69,16 +84,18 @@ class PaymentViewModel(
      */
     fun loadReservation(reservationId: String) {
         if (reservationId.isBlank()) {
-            _uiState.update {
-                it.copy(
+            _uiState.value = PaymentUiState(
                     isLoadingReservation = false,
                     errorMessage = "No se recibió el identificador de la reserva."
                 )
-            }
             return
         }
 
-        viewModelScope.launch {
+        reservationLoadJob?.cancel()
+        if (_uiState.value.reservationId != reservationId) {
+            _uiState.value = PaymentUiState(reservationId = reservationId)
+        }
+        reservationLoadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoadingReservation = true, errorMessage = null) }
             try {
                 val reservation =
@@ -88,6 +105,9 @@ class PaymentViewModel(
                     it.copy(
                         isLoadingReservation = false,
                         reservationAmount = reservation.totalAmount,
+                        reservationId = reservation.id,
+                        reservationQuotationId = reservation.quotationId,
+                        reservationCreatedAtMillis = reservation.createdAtMillis,
                         reservationCurrency = reservation.currency,
                         reservationStatus = reservation.status
                     )
@@ -100,6 +120,7 @@ class PaymentViewModel(
                     }
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _uiState.update {
                     it.copy(
                         isLoadingReservation = false,
@@ -130,9 +151,14 @@ class PaymentViewModel(
     }
 
     fun onPaymentMethodChange(method: String) {
+        if (!_uiState.value.canChangeVoucher) return
         if (PaymentValidator.isValidMethod(method)) {
             _uiState.update { it.copy(paymentMethod = method, errorMessage = null) }
         }
+    }
+
+    fun retryVoucherReading() {
+        _uiState.value.voucherUri?.let(::onVoucherCaptured)
     }
 
     fun submitPayment(quotationId: String, reservationId: String) {
@@ -142,6 +168,7 @@ class PaymentViewModel(
         }
 
         val state = _uiState.value
+        if (!state.canChangeVoucher) return
         val method = state.paymentMethod
         if (method == null || !PaymentValidator.isValidMethod(method)) {
             _uiState.update { it.copy(errorMessage = "Selecciona un método de pago.") }
@@ -163,6 +190,17 @@ class PaymentViewModel(
             return
         }
 
+        if (!state.canSubmit) {
+            _uiState.update { it.copy(errorMessage = state.voucherAssessment?.issues
+                ?.firstOrNull { issue -> issue.blocking }?.message
+                ?: "Espera a que termine la lectura y se cargue el importe de la reserva.") }
+            return
+        }
+        if (state.reservationId != reservationId || state.reservationQuotationId != quotationId) {
+            _uiState.update { it.copy(errorMessage = "El comprobante no corresponde a la reserva abierta.") }
+            return
+        }
+
         _uiState.update {
             it.copy(isPreparing = true, errorMessage = null, uploadState = PaymentUploadState.Idle)
         }
@@ -180,11 +218,12 @@ class PaymentViewModel(
                     paymentMethod = method
                 )
 
-                _uiState.update { it.copy(isPreparing = false) }
+                _uiState.update { it.copy(isPreparing = false, uploadState = PaymentUploadState.Enqueued) }
 
                 // 3. Seguir el progreso real de la subida
                 trackUpload(workId)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _uiState.update {
                     it.copy(
                         isPreparing = false,
@@ -199,6 +238,7 @@ class PaymentViewModel(
 
     /** Reintenta la subida tras un error definitivo, reutilizando la imagen. */
     fun retryUpload(quotationId: String, reservationId: String) {
+        if (_uiState.value.uploadState !is PaymentUploadState.Error) return
         _uiState.update { it.copy(uploadState = PaymentUploadState.Idle, errorMessage = null) }
         submitPayment(quotationId, reservationId)
     }

@@ -16,9 +16,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         TripChecklistEntity::class,
         TripIncidentEntity::class,
         AdminMetricsEntity::class,
-        ReservationEntity::class
+        ReservationEntity::class,
+        FavoriteEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +33,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun adminCacheDao(): AdminCacheDao
 
     abstract fun reservationCacheDao(): ReservationCacheDao
+
+    abstract fun favoriteDao(): FavoriteDao
 
     companion object {
         @Volatile
@@ -305,6 +308,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS favorites (
+                        userId TEXT NOT NULL, itemId TEXT NOT NULL, kind TEXT NOT NULL,
+                        destinationId TEXT NOT NULL, title TEXT NOT NULL, location TEXT NOT NULL,
+                        description TEXT NOT NULL, imageUrl TEXT NOT NULL, category TEXT NOT NULL,
+                        duration TEXT NOT NULL, priceLabel TEXT NOT NULL, savedAtMillis INTEGER NOT NULL,
+                        PRIMARY KEY(userId, itemId, kind)
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_favorites_userId ON favorites(userId)")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -319,7 +337,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_4_5,
                         MIGRATION_5_6,
                         MIGRATION_6_7,
-                        MIGRATION_7_8
+                        MIGRATION_7_8,
+                        MIGRATION_8_9
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()

@@ -7,11 +7,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,13 +24,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.perutours.data.model.Reservation
+import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
 import com.example.perutours.ui.screens.admin.components.MonthlyRevenueVicoChart
 import com.example.perutours.ui.screens.admin.components.ReservationStatusDonutChart
-import org.koin.androidx.compose.koinViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,9 +41,21 @@ fun AdminDashboardScreen(
     onManageProviders: () -> Unit,
     onManageServices: () -> Unit,
     onNavigateBack: () -> Unit = {},
+    onLogout: () -> Unit = {},
     viewModel: AdminDashboardViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showLogout by remember { mutableStateOf(false) }
+    if (showLogout) {
+        AlertDialog(onDismissRequest = { showLogout = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("Tendrás que ingresar nuevamente para administrar el catálogo.") },
+            confirmButton = {
+                TextButton(onClick = { showLogout = false; onLogout() }) { Text("Cerrar sesión") }
+            }, dismissButton = {
+                TextButton(onClick = { showLogout = false }) { Text("Cancelar") }
+            })
+    }
 
     Scaffold(
         topBar = {
@@ -63,6 +79,9 @@ fun AdminDashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showLogout = true }) {
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, "Cerrar sesión")
+                    }
                     IconButton(
                         onClick = viewModel::refresh,
                         enabled = !uiState.isLoading

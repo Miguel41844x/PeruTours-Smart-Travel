@@ -1,13 +1,13 @@
 package com.example.perutours.ui.screens.payment
 
 import android.net.Uri
-import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.model.Reservation
+import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.repository.PaymentRepository
 import com.example.perutours.data.repository.PaymentUploadState
 import com.example.perutours.data.repository.ReservationDataSource
-import com.example.perutours.domain.payment.VoucherOcrResult
 import com.example.perutours.domain.payment.VoucherDate
+import com.example.perutours.domain.payment.VoucherOcrResult
 import com.example.perutours.domain.payment.VoucherTime
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -15,6 +15,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -32,7 +33,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.util.UUID
 
 /**
  * HU07: pruebas del ViewModel de pago: selección de método, monto
@@ -40,6 +40,23 @@ import java.util.UUID
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PaymentViewModelTest {
+    @Test
+    fun futureVoucherIsBlockedBeforeEnqueuingAnyUpload() = runTest {
+        coEvery { reservationRepository.getCurrentClientReservationById("res_1") } returns reservation()
+        coEvery { voucherTextReader.read(voucherUri) } returns VoucherOcrResult(
+            amount = null, operationNumber = "00123456",
+            transactionDate = VoucherDate(2050, 1, 1), transactionTime = VoucherTime(10, 0))
+        viewModel.loadReservation("res_1")
+        advanceUntilIdle()
+        viewModel.onVoucherCaptured(voucherUri)
+        viewModel.onPaymentMethodChange("Yape")
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.canSubmit)
+        viewModel.submitPayment("res_1", "res_1")
+        coVerify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
+        assertTrue(viewModel.uiState.value.errorMessage.orEmpty().contains("futuro"))
+    }
+
     @Test
     fun retainsAReadingThatOnlyContainsDateAndTime() = runTest {
         val result = VoucherOcrResult(
@@ -197,6 +214,7 @@ class PaymentViewModelTest {
         advanceUntilIdle()
         viewModel.onVoucherCaptured(voucherUri)
         viewModel.onPaymentMethodChange("Yape")
+        advanceUntilIdle()
         viewModel.submitPayment("res_1", "res_1")
         advanceUntilIdle()
 
@@ -227,6 +245,7 @@ class PaymentViewModelTest {
         advanceUntilIdle()
         viewModel.onVoucherCaptured(voucherUri)
         viewModel.onPaymentMethodChange("Transferencia BCP")
+        advanceUntilIdle()
         viewModel.submitPayment("res_1", "res_1")
         advanceUntilIdle()
 
@@ -253,6 +272,7 @@ class PaymentViewModelTest {
         advanceUntilIdle()
         viewModel.onVoucherCaptured(voucherUri)
         viewModel.onPaymentMethodChange("Yape")
+        advanceUntilIdle()
         viewModel.submitPayment("res_1", "res_1")
         advanceUntilIdle()
 
