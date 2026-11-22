@@ -18,6 +18,32 @@ import java.math.BigDecimal
 @RunWith(AndroidJUnit4::class)
 class VoucherTextReaderTest {
     @Test
+    fun readsOperationInAnotherColumnWithoutConfusingTheSecurityCode() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val file = File.createTempFile("voucher_columns_test", ".png", context.cacheDir)
+        try {
+            val bitmap = Bitmap.createBitmap(1000, 900, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 38f
+            }
+            canvas.drawColor(Color.WHITE)
+            canvas.drawText("Comprobante de prueba", 45f, 100f, paint)
+            canvas.drawText("S/ 12.00", 45f, 220f, paint)
+            canvas.drawText("Codigo de seguridad", 45f, 400f, paint)
+            canvas.drawText("8456", 750f, 400f, paint)
+            canvas.drawText("Nro. de operacion", 45f, 650f, paint)
+            canvas.drawText("00123456", 700f, 650f, paint)
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+            val result = MlKitVoucherTextReader(context).read(Uri.fromFile(file))
+            assertEquals(VoucherAmount(BigDecimal("12.00"), "PEN"), result.amount)
+            assertEquals("00123456", result.operationNumber)
+        } finally { file.delete() }
+    }
+
+    @Test
     fun readsAnAmountAndOperationFromAnImage() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val file = File.createTempFile("voucher_ocr_test", ".png", context.cacheDir)

@@ -56,6 +56,7 @@ internal fun VoucherOcrPanel(
                         }
                     } ?: Text("Importe por verificar en la imagen.")
                     result.operationNumber?.let { Text("N.º de operación detectado: $it") }
+                        ?: Text("N.º de operación por verificar en la imagen.")
                 }
             }
             if (onRead != null &&
