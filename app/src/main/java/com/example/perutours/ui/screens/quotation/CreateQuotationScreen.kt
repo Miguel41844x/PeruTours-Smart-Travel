@@ -1,5 +1,6 @@
 package com.example.perutours.ui.screens.quotation
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -122,9 +123,9 @@ fun CreateQuotationScreen(
                     Button(
                         onClick = viewModel::saveQuotation,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = 900.dp)
-                            .height(52.dp),
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp),
                         enabled = uiState !is QuotationUiState.Loading
                     ) {
                         if (uiState is QuotationUiState.Loading) {
@@ -162,8 +163,8 @@ fun CreateQuotationScreen(
                 item {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 900.dp),
+                            .widthIn(max = 900.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.errorContainer,
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -184,8 +185,8 @@ fun CreateQuotationScreen(
                     destination = formState.destination,
                     travelerCount = formState.travelerCount,
                     modifier = Modifier
-                        .fillMaxWidth()
                         .widthIn(max = 900.dp)
+                        .fillMaxWidth()
                 )
             }
 
@@ -230,8 +231,8 @@ fun CreateQuotationScreen(
             item {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 900.dp),
+                        .widthIn(max = 900.dp)
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     SectionHeading(
@@ -268,14 +269,14 @@ fun CreateQuotationScreen(
             item {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 900.dp),
+                        .widthIn(max = 900.dp)
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     SectionHeading(
                         title = "Servicios",
-                        supportingText = "Toca un servicio para incluirlo o quitarlo.",
+                        supportingText = "Incluye las prestaciones de esta propuesta.",
                         modifier = Modifier.weight(1f)
                     )
                     Surface(
@@ -301,8 +302,8 @@ fun CreateQuotationScreen(
                 item {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 900.dp),
+                            .widthIn(max = 900.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = MaterialTheme.shapes.medium
                     ) {

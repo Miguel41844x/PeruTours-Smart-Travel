@@ -178,8 +178,8 @@ private fun AgentTripManagementContent(
         item {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 760.dp),
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AgentTripSection.entries.forEach { section ->
@@ -210,8 +210,8 @@ private fun AgentTripManagementContent(
                     }
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 760.dp),
+                            .widthIn(max = 760.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.secondaryContainer,
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -246,8 +246,8 @@ private fun AgentTripManagementContent(
                         showItineraryDialog = true
                     },
                     modifier = Modifier
-                        .fillMaxWidth()
                         .widthIn(max = 760.dp)
+                        .fillMaxWidth()
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -264,8 +264,8 @@ private fun AgentTripManagementContent(
                             "Día $day",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier
-                                .fillMaxWidth()
                                 .widthIn(max = 760.dp)
+                                .fillMaxWidth()
                                 .padding(top = 6.dp)
                         )
                     }
@@ -304,8 +304,8 @@ private fun AgentTripManagementContent(
 private fun AgentTripHeader(reservation: Reservation) {
     Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 760.dp),
+            .widthIn(max = 760.dp)
+            .fillMaxWidth(),
         color = MaterialTheme.colorScheme.primaryContainer,
         shape = MaterialTheme.shapes.large
     ) {
@@ -339,8 +339,8 @@ private fun AgentItineraryCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 760.dp),
+            .widthIn(max = 760.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
@@ -415,8 +415,8 @@ private fun AgentIncidentCard(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 760.dp),
+            .widthIn(max = 760.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
@@ -664,8 +664,8 @@ private fun AgentIncidentResponseDialog(
 private fun AgentEmptySection(message: String) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
             .widthIn(max = 760.dp)
+            .fillMaxWidth()
             .padding(vertical = 36.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)

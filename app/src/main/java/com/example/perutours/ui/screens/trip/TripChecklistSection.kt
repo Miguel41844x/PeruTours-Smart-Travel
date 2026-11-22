@@ -67,8 +67,8 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.tripChecklistItems(
         item {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 720.dp)
+                    .fillMaxWidth()
                     .padding(vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -97,8 +97,8 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.tripChecklistItems(
                         category,
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = 720.dp)
+                            .fillMaxWidth()
                             .padding(top = 6.dp)
                     )
                 }
@@ -139,8 +139,8 @@ private fun TripChecklistSummary(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
@@ -192,8 +192,8 @@ private fun TripChecklistRow(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {

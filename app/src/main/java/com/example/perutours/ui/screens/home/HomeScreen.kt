@@ -1,5 +1,15 @@
 package com.example.perutours.ui.screens.home
 
+import com.example.perutours.ui.components.TravelPhoto
+import com.example.perutours.ui.components.TravelPackageCard
+import com.example.perutours.ui.components.TravelEmptyState
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.background
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
@@ -47,7 +57,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -188,16 +198,11 @@ fun HomeScreen(
             TopAppBar(
                 title = { PeruToursBrand(compact = true) },
                 actions = {
+                    TextButton(onClick = navigateToProfile) { Text("Mi perfil") }
                     IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Cerrar sesión"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         bottomBar = {
@@ -211,343 +216,130 @@ fun HomeScreen(
             )
         },
         containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = ScreenHorizontalPadding, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 720.dp),
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(
+                modifier = Modifier.widthIn(max = 760.dp).fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = ScreenHorizontalPadding, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (uiState.photoUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = uiState.photoUrl,
-                            contentDescription = "Foto de perfil",
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .clickable(onClick = navigateToProfile),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Surface(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clickable(onClick = navigateToProfile),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = uiState.userName.take(1).ifBlank { "V" }.uppercase(),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Hola, ${uiState.userName.ifBlank { "viajero" }}",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = uiState.preferenceNames.take(2).joinToString(" · ")
-                                .ifBlank { "¿A dónde te gustaría ir?" },
+                item(key = "greeting") {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Hola, " + uiState.userName.substringBefore(" ").ifBlank { "viajero" },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("¿A dónde vamos?", style = MaterialTheme.typography.headlineLarge)
                     }
                 }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(248.dp)
-                        .clip(MaterialTheme.shapes.large)
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.peru_welcome),
-                        contentDescription = "Vista de Machu Picchu",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                item(key = "custom-trip") {
+                    Box(Modifier.fillMaxWidth().height(260.dp).clip(MaterialTheme.shapes.extraLarge)) {
+                        Image(painterResource(R.drawable.welcome_colca), "Cañón del Colca, Arequipa",
+                            Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+                            0.15f to Color.Transparent, 1f to Color(0xE610251B))))
+                        Column(Modifier.align(Alignment.BottomStart).padding(24.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("UN VIAJE A TU MEDIDA", style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.9f))
+                            Text("Empieza por el lugar.\nNosotros armamos la ruta.",
+                                style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                            Button(onClick = { navigateToTravelRequest(null) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary)) {
+                                Text("Diseñar mi viaje")
+                            }
+                        }
+                    }
+                }
+                item(key = "recommendation-heading") {
+                    SectionHeading("Pensados para ti", supportingText = "Ideas según tus preferencias",
+                        action = {
+                            IconButton(onClick = { recommendationViewModel.refresh() },
+                                enabled = recommendationState !is RecommendationUiState.Loading) {
+                                Icon(Icons.Default.Refresh, "Actualizar recomendaciones")
+                            }
+                        })
+                }
+                item(key = "recommendations") {
+                    when (val state = recommendationState) {
+                        is RecommendationUiState.Success -> LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            contentPadding = PaddingValues(vertical = 2.dp)
+                        ) {
+                            items(state.recommendations, key = { it.destinationId }) { recommendation ->
+                                RecommendationCard(recommendation) { navigateToDetail(recommendation.destinationId) }
+                            }
+                        }
+                        is RecommendationUiState.Loading -> DestinationLoadingState()
+                        is RecommendationUiState.Error -> TravelEmptyState(
+                            "No pudimos preparar tus recomendaciones", state.message,
+                            Icons.Default.AutoAwesome, actionLabel = "Reintentar",
+                            onAction = { recommendationViewModel.loadRecommendations() })
+                        is RecommendationUiState.Empty -> TravelEmptyState(
+                            "Hagamos el viaje más tuyo",
+                            "Añade tus preferencias para recibir ideas que encajen contigo.",
+                            Icons.Default.AutoAwesome, actionLabel = "Elegir preferencias",
+                            onAction = navigateToProfile)
+                    }
+                }
+                item(key = "catalog-heading") {
+                    SectionHeading("Encuentra tu próximo viaje",
+                        supportingText = "Paquetes de nuestra agencia",
+                        action = {
+                            IconButton(onClick = { viewModel.fetchDestinations() }) {
+                                Icon(Icons.Default.Refresh, "Actualizar catálogo")
+                            }
+                        })
+                }
+                item(key = "catalog-search") {
+                    OutlinedTextField(
+                        value = uiState.searchQuery, onValueChange = viewModel::searchCatalog,
+                        label = { Text("Buscar un viaje") },
+                        placeholder = { Text("Destino, paquete o actividad") },
+                        leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
-                    Surface(
-                        modifier = Modifier.matchParentSize(),
-                        color = Color.Black.copy(alpha = 0.46f)
-                    ) {}
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Tu siguiente historia empieza aquí",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "Cuéntanos tu ruta ideal y recibe una propuesta hecha para ti.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        Button(
-                            onClick = { navigateToTravelRequest(null) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text("Empezar solicitud")
-                        }
-                    }
                 }
-
-                // HU10: sección "Recomendado para ti" (IA + respaldo local)
-                SectionHeading(
-                    title = "Recomendado para ti",
-                    supportingText = "Sugerencias según tus preferencias de viaje",
-                    action = {
-                        // Regenera con IA ignorando el caché (refresh() ya
-                        // existía); se oculta durante la carga inicial.
-                        if (recommendationState !is RecommendationUiState.Loading) {
-                            IconButton(onClick = { recommendationViewModel.refresh() }) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Actualizar recomendaciones",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+                if (uiState.categories.size > 1) {
+                    item(key = "catalog-categories") {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(uiState.categories, key = { it }) { category ->
+                                FilterChip(selected = uiState.selectedCategory == category,
+                                    onClick = { viewModel.selectCategory(category) },
+                                    label = { Text(category) })
                             }
                         }
-                    }
-                )
-
-                when (val state = recommendationState) {
-                    is RecommendationUiState.Success -> {
-                        LazyRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            contentPadding = PaddingValues(vertical = 4.dp)
-                        ) {
-                            items(
-                                items = state.recommendations,
-                                key = { it.destinationId }
-                            ) { recommendation ->
-                                RecommendationCard(
-                                    recommendation = recommendation,
-                                    onClick = { navigateToDetail(recommendation.destinationId) }
-                                )
-                            }
-                        }
-                    }
-
-                    is RecommendationUiState.Loading -> {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(140.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator()
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = "Buscando ideas para ti...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    is RecommendationUiState.Error -> {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = MaterialTheme.shapes.medium
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "No pudimos preparar tus recomendaciones",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                                Text(
-                                    text = state.message,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                                TextButton(onClick = { recommendationViewModel.loadRecommendations() }) {
-                                    Text("Reintentar")
-                                }
-                            }
-                        }
-                    }
-
-                    is RecommendationUiState.Empty -> {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.medium
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = "Aún no hay sugerencias para ti",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Elige tu tipo de viaje, presupuesto y duración en tu perfil " +
-                                        "para recibir recomendaciones personalizadas.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                TextButton(onClick = navigateToProfile) {
-                                    Text("Completar mis preferencias")
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionHeading(
-                        title = "Destinos para inspirarte",
-                        supportingText = "Ideas para tu siguiente aventura"
-                    )
-                    IconButton(onClick = viewModel::fetchDestinations) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar destinos")
                     }
                 }
                 when (val state = uiState.destinationsState) {
-                    is HomeDestinationsState.Loading -> DestinationLoadingState()
-                    is HomeDestinationsState.Error -> DestinationErrorState(
-                        message = state.message,
-                        onRetry = viewModel::fetchDestinations
-                    )
-                    is HomeDestinationsState.Success -> state.destinations.forEach { destination ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    // HU catálogo: abre el detalle del destino
-                                    // con sus paquetes y lugares cercanos.
-                                    navigateToDetail(destination.destinationId)
-                                },
-                            shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                        ) {
-                            Column {
-                                AsyncImage(
-                                    model = destination.imageUrl,
-                                    contentDescription = destination.title,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(180.dp),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = destination.title,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.Star,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.secondary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            Text(destination.rating, style = MaterialTheme.typography.labelLarge)
-                                        }
-                                    }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Default.LocationOn,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(
-                                            text = "${destination.location} · ${destination.duration}",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    destination.description?.let { description ->
-                                        Text(
-                                            text = description,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = destination.price,
-                                            style = MaterialTheme.typography.titleLarge,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        TextButton(
-                                            onClick = { navigateToTravelRequest(destination) }
-                                        ) {
-                                            Text("Solicitar este viaje")
-                                        }
-                                    }
-                                }
+                    HomeDestinationsState.Loading -> item { DestinationLoadingState() }
+                    is HomeDestinationsState.Error -> item {
+                        DestinationErrorState(state.message) { viewModel.fetchDestinations() }
+                    }
+                    is HomeDestinationsState.Success -> {
+                        if (state.fromCache) item {
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Outlined.CloudOff, null, Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Catálogo guardado. Los precios se confirman al cotizar.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                        }
+                        if (uiState.visiblePackages.isEmpty()) item {
+                            TravelEmptyState("No encontramos ese viaje",
+                                "Prueba con otra ciudad o cambia los filtros.",
+                                Icons.Outlined.Search, actionLabel = "Limpiar filtros",
+                                onAction = viewModel::clearCatalogFilters)
+                        }
+                        items(uiState.visiblePackages, key = { it.id }) { travel ->
+                            TravelPackageCard(
+                                travel = travel,
+                                onDetails = { navigateToDetail(travel.destinationId) },
+                                onRequest = { navigateToTravelRequest(travel) }
+                            )
                         }
                     }
                 }
@@ -627,14 +419,10 @@ private fun RecommendationCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(160.dp)
             ) {
-                AsyncImage(
-                    model = destination?.imageUrl.orEmpty(),
-                    contentDescription = recommendation.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                TravelPhoto(destination?.imageUrl.orEmpty(), recommendation.title,
+                    Modifier.fillMaxSize())
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopStart)

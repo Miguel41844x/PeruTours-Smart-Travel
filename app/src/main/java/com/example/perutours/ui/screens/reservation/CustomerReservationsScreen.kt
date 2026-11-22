@@ -55,6 +55,7 @@ fun CustomerReservationsScreen(
     onHome: () -> Unit = {},
     onQuotations: () -> Unit = {},
     onTrips: () -> Unit = {},
+    onChat: () -> Unit = {},
     viewModel: CustomerReservationViewModel = koinViewModel()
 ) {
     val state by viewModel.reservationsState.collectAsStateWithLifecycle()
@@ -69,7 +70,8 @@ fun CustomerReservationsScreen(
                 onHome = onHome,
                 onQuotations = onQuotations,
                 onReservations = {},
-                onTrips = onTrips
+                onTrips = onTrips,
+                onChat = onChat
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -112,8 +114,8 @@ fun CustomerReservationsScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
-                                    .fillMaxWidth()
                                     .widthIn(max = 720.dp)
+                                    .fillMaxWidth()
                             )
                         }
                         items(currentState.reservations, key = Reservation::id) { reservation ->
@@ -121,8 +123,8 @@ fun CustomerReservationsScreen(
                                 reservation = reservation,
                                 onClick = { onReservationSelected(reservation.id) },
                                 modifier = Modifier
-                                    .fillMaxWidth()
                                     .widthIn(max = 720.dp)
+                                    .fillMaxWidth()
                             )
                         }
                     }

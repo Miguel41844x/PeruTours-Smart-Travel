@@ -100,8 +100,8 @@ fun AgentTripsScreen(
                 item {
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 760.dp),
+                            .widthIn(max = 760.dp)
+                            .fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text("Reservas pagadas", style = MaterialTheme.typography.headlineSmall)
@@ -134,8 +134,8 @@ private fun AgentTripCard(reservation: Reservation, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 760.dp),
+            .widthIn(max = 760.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {

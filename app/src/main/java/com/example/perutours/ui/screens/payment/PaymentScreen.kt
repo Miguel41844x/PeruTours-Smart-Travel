@@ -110,7 +110,7 @@ fun PaymentScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Registrar Comprobante de Pago") },
+                title = { Text("Comprobante de pago") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
@@ -134,7 +134,8 @@ fun PaymentScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Total a Pagar", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Total de tu reserva", style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     // El importe autoritativo viene de la reserva en Firestore;
                     // el recibido por navegación solo se muestra como respaldo.
                     Text(
@@ -154,7 +155,7 @@ fun PaymentScreen(
                         )
                     } else {
                         Text(
-                            text = "Adjunta tu comprobante físico o voucher digital para validar tu reserva.",
+                            text = "Adjunta una imagen nítida con el importe, la operación, la fecha y la hora.",
                             fontSize = 12.sp,
                             modifier = Modifier.padding(top = 4.dp)
                         )
@@ -250,7 +251,7 @@ fun PaymentScreen(
                 } else {
                     Text(
                         text = "Ningún comprobante seleccionado aún",
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                 }
@@ -281,14 +282,14 @@ fun PaymentScreen(
                     enabled = uiState.canSubmit,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .heightIn(min = 52.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
                 ) {
                     if (uiState.isPreparing) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
                     } else {
-                        Text("Confirmar y Registrar Pago", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("Enviar comprobante para revisión", style = MaterialTheme.typography.labelLarge)
                     }
                 }
 

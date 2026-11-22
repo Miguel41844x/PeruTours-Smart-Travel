@@ -1,5 +1,6 @@
 package com.example.perutours.ui.screens.signup
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -100,8 +101,8 @@ fun SignUpScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 520.dp),
+                    .widthIn(max = 520.dp)
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -252,7 +253,7 @@ fun SignUpScreen(
                     onClick = viewModel::register,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .heightIn(min = 52.dp),
                     enabled = !uiState.isLoading
                 ) {
                     if (uiState.isLoading) {

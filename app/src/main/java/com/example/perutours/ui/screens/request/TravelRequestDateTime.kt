@@ -1,5 +1,6 @@
 package com.example.perutours.ui.screens.request
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,7 +47,7 @@ internal fun DateTimeField(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
         ) {
             Icon(Icons.Default.CalendarMonth, contentDescription = null)
             Text(

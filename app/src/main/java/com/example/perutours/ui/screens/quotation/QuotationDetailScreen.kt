@@ -147,8 +147,8 @@ fun QuotationDetailScreen(
             item {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = MaterialTheme.shapes.large
                 ) {
@@ -206,8 +206,8 @@ fun QuotationDetailScreen(
                 item {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 720.dp),
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surface,
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -224,8 +224,8 @@ fun QuotationDetailScreen(
                 item {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 720.dp),
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.secondaryContainer,
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -261,8 +261,8 @@ fun QuotationDetailScreen(
                 item {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 720.dp),
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.secondaryContainer,
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -289,8 +289,8 @@ fun QuotationDetailScreen(
                 item {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 720.dp),
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth(),
                         color = if (responseIsError) {
                             MaterialTheme.colorScheme.errorContainer
                         } else {
@@ -320,8 +320,8 @@ fun QuotationDetailScreen(
                 item {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 720.dp),
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.tertiaryContainer,
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -360,16 +360,16 @@ fun QuotationDetailScreen(
                     title = "Servicios incluidos",
                     supportingText = "${quotation.services.size} elementos en la propuesta",
                     modifier = Modifier
-                        .fillMaxWidth()
                         .widthIn(max = 720.dp)
+                        .fillMaxWidth()
                 )
             }
 
             items(items = quotation.services, key = { service -> service.id }) { service ->
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
@@ -399,8 +399,8 @@ fun QuotationDetailScreen(
             item {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = MaterialTheme.shapes.medium
                 ) {
@@ -422,8 +422,8 @@ fun QuotationDetailScreen(
             item {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text("Condiciones", style = MaterialTheme.typography.titleMedium)
@@ -441,15 +441,15 @@ fun QuotationDetailScreen(
                         title = "Cambios solicitados",
                         supportingText = "Historial de mensajes sobre esta propuesta",
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = 720.dp)
+                            .fillMaxWidth()
                     )
                 }
                 items(items = observations, key = { observation -> observation.id }) { observation ->
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 720.dp),
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -500,8 +500,8 @@ private fun AgentRevisionBar(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 720.dp),
+                    .widthIn(max = 720.dp)
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (isObserved) {
@@ -553,8 +553,8 @@ private fun CustomerResponseBar(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 720.dp)
+                    .fillMaxWidth()
             ) {
                 Button(
                     onClick = onAccept,

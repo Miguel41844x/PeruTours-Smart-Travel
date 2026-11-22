@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -45,7 +46,7 @@ fun AdminDashboardScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Dashboard administrativo")
+                        Text("Administración", style = MaterialTheme.typography.titleLarge)
                         Text(
                             text = "Indicadores y analítica del negocio",
                             style = MaterialTheme.typography.bodySmall,

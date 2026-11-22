@@ -1,5 +1,6 @@
 package com.example.perutours.ui.screens.reservation
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -79,8 +80,8 @@ fun ReservationDetailScreen(
             item {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = MaterialTheme.shapes.large
                 ) {
@@ -139,8 +140,8 @@ fun ReservationDetailScreen(
             item {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     color = MaterialTheme.colorScheme.surface,
                     shape = MaterialTheme.shapes.medium
                 ) {
@@ -156,8 +157,8 @@ fun ReservationDetailScreen(
                 item {
                     Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 720.dp),
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth(),
                         color = MaterialTheme.colorScheme.secondaryContainer,
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -190,9 +191,9 @@ fun ReservationDetailScreen(
                     Button(
                         onClick = onOpenTrip,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = 720.dp)
-                            .height(52.dp)
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp)
                     ) {
                         Icon(Icons.Default.Explore, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
@@ -204,8 +205,8 @@ fun ReservationDetailScreen(
             item {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = MaterialTheme.shapes.medium
                 ) {
@@ -251,16 +252,16 @@ fun ReservationDetailScreen(
                     title = "Servicios confirmados",
                     supportingText = "${reservation.services.size} elementos incluidos",
                     modifier = Modifier
-                        .fillMaxWidth()
                         .widthIn(max = 720.dp)
+                        .fillMaxWidth()
                 )
             }
 
             items(reservation.services, key = { service -> service.id }) { service ->
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
@@ -295,8 +296,8 @@ fun ReservationDetailScreen(
             item {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text("Condiciones aceptadas", style = MaterialTheme.typography.titleMedium)
@@ -372,9 +373,9 @@ fun ReservationDetailScreen(
                     else -> Button(
                         onClick = onNavigateToPayment,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = 720.dp)
-                            .height(52.dp),
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PeruGold40)
                     ) {
@@ -415,8 +416,8 @@ private fun PaymentStatusCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         shape = RoundedCornerShape(12.dp)
     ) {

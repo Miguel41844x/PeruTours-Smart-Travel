@@ -249,8 +249,8 @@ private fun TripHeader(overview: TripOverview) {
 
     Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         color = MaterialTheme.colorScheme.primaryContainer,
         shape = MaterialTheme.shapes.large
     ) {
@@ -333,8 +333,8 @@ private fun TripSectionSelector(
 ) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         TripDetailSection.entries.forEach { section ->
@@ -358,8 +358,8 @@ private fun TripSectionSelector(
 private fun ItineraryDayHeading(day: Int, departureAtMillis: Long) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
             .widthIn(max = 720.dp)
+            .fillMaxWidth()
             .padding(top = 6.dp)
     ) {
         Text("Día $day", style = MaterialTheme.typography.titleMedium)
@@ -379,8 +379,8 @@ private fun ItineraryActivityCard(item: TripItineraryItem) {
     val context = LocalContext.current
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
@@ -495,8 +495,8 @@ private fun PendingSection(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxWidth()
             .widthIn(max = 720.dp)
+            .fillMaxWidth()
             .padding(vertical = 36.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)

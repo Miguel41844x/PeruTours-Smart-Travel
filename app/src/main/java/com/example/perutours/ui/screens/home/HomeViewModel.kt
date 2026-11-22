@@ -22,6 +22,20 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    fun searchCatalog(value: String) {
+        _uiState.update { it.copy(searchQuery = value.take(120)) }
+    }
+
+    fun selectCategory(category: String) {
+        if (category in _uiState.value.categories) {
+            _uiState.update { it.copy(selectedCategory = category) }
+        }
+    }
+
+    fun clearCatalogFilters() {
+        _uiState.update { it.copy(searchQuery = "", selectedCategory = "Todos") }
+    }
+
     init {
         // 1. Cargar datos iniciales del usuario desde FirebaseAuth y observar cambios en Firestore
         observeUserProfile()

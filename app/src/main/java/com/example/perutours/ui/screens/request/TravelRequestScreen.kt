@@ -1,5 +1,6 @@
 package com.example.perutours.ui.screens.request
 
+import androidx.compose.foundation.layout.heightIn
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -178,9 +179,9 @@ fun TravelRequestScreen(
                         onClick = viewModel::submitRequest,
                         enabled = !uiState.isSaving && !uiState.isLoadingPackage,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = 720.dp)
-                            .height(52.dp)
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp)
                     ) {
                         if (uiState.isSaving) {
                             CircularProgressIndicator(
@@ -209,12 +210,12 @@ fun TravelRequestScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 720.dp),
+                    .widthIn(max = 720.dp)
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Cuéntanos cómo quieres viajar",
+                    text = "Diseñemos tu viaje",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -286,7 +287,7 @@ fun TravelRequestScreen(
 
                 Spacer(Modifier.height(6.dp))
                 SectionHeading(
-                    title = "Ruta",
+                    title = "01  Tu ruta",
                     supportingText = "Verificaremos que ambos lugares existan antes de enviar."
                 )
 
@@ -358,7 +359,7 @@ fun TravelRequestScreen(
 
                 Spacer(Modifier.height(8.dp))
                 SectionHeading(
-                    title = "Fechas",
+                    title = "02  Fechas del viaje",
                     supportingText = "Solo puedes elegir fechas futuras."
                 )
 
@@ -394,7 +395,7 @@ fun TravelRequestScreen(
 
                 Spacer(Modifier.height(8.dp))
                 SectionHeading(
-                    title = "Viajeros y detalles",
+                    title = "03  Viajeros y detalles",
                     supportingText = "Puedes añadir información útil para preparar la propuesta."
                 )
 
@@ -449,7 +450,7 @@ fun TravelRequestScreen(
                     supportingText = { Text("${uiState.notes.length}/500") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp)
+                        .heightIn(min = 140.dp)
                 )
             }
         }

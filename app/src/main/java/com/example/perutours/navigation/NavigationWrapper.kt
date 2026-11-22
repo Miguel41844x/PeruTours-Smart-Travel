@@ -579,7 +579,8 @@ fun NavigationWrapper(
                 onReservations = {
                     navHostController.navigateCustomerSection("customer_reservations")
                 },
-                onTrips = { navHostController.navigateCustomerSection("trips") }
+                onTrips = { navHostController.navigateCustomerSection("trips") },
+                onChat = { navHostController.navigateCustomerSection("chat") }
             )
         }
 
@@ -593,7 +594,8 @@ fun NavigationWrapper(
                 onQuotations = {
                     navHostController.navigateCustomerSection("customer_quotations")
                 },
-                onTrips = { navHostController.navigateCustomerSection("trips") }
+                onTrips = { navHostController.navigateCustomerSection("trips") },
+                onChat = { navHostController.navigateCustomerSection("chat") }
             )
         }
 
@@ -606,6 +608,7 @@ fun NavigationWrapper(
                 onViewReservations = {
                     navHostController.navigateCustomerSection("customer_reservations")
                 },
+                onChat = { navHostController.navigateCustomerSection("chat") },
                 onHome = { navHostController.navigateCustomerSection("home") },
                 onQuotations = {
                     navHostController.navigateCustomerSection("customer_quotations")

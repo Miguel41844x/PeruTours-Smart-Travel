@@ -190,8 +190,8 @@ fun AgentRequestsScreen(
                                 )
                             },
                             modifier = Modifier
-                                .fillMaxWidth()
                                 .widthIn(max = 900.dp)
+                                .fillMaxWidth()
                         )
                     }
                     if (filteredRequests.size > query.visibleLimit) {

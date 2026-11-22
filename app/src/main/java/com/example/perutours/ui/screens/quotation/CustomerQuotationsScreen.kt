@@ -70,6 +70,7 @@ fun CustomerQuotationsScreen(
     onHome: () -> Unit = {},
     onReservations: () -> Unit = {},
     onTrips: () -> Unit = {},
+    onChat: () -> Unit = {},
     viewModel: CustomerQuotationViewModel = koinViewModel()
 ) {
     val state by viewModel.quotationsState.collectAsStateWithLifecycle()
@@ -85,7 +86,8 @@ fun CustomerQuotationsScreen(
                 onHome = onHome,
                 onQuotations = {},
                 onReservations = onReservations,
-                onTrips = onTrips
+                onTrips = onTrips,
+                onChat = onChat
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -134,8 +136,8 @@ fun CustomerQuotationsScreen(
                         item {
                             Column(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .widthIn(max = 720.dp),
+                                    .widthIn(max = 720.dp)
+                                    .fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Text(
@@ -182,8 +184,8 @@ fun CustomerQuotationsScreen(
                                 quotation = quotation,
                                 onClick = { onQuotationSelected(quotation.id) },
                                 modifier = Modifier
-                                    .fillMaxWidth()
                                     .widthIn(max = 720.dp)
+                                    .fillMaxWidth()
                             )
                         }
                     }

@@ -68,6 +68,7 @@ fun TripListScreen(
     onViewReservations: () -> Unit,
     onHome: () -> Unit = {},
     onQuotations: () -> Unit = {},
+    onChat: () -> Unit = {},
     viewModel: TripListViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -108,7 +109,8 @@ fun TripListScreen(
                 onHome = onHome,
                 onQuotations = onQuotations,
                 onReservations = onViewReservations,
-                onTrips = {}
+                onTrips = {},
+                onChat = onChat
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -161,8 +163,8 @@ private fun TripListContent(
         item {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 720.dp),
+                    .widthIn(max = 720.dp)
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
@@ -201,8 +203,8 @@ private fun TripListContent(
             OutlinedButton(
                 onClick = onViewReservations,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 720.dp)
+                    .fillMaxWidth()
                     .height(50.dp)
             ) {
                 Icon(Icons.Default.Luggage, contentDescription = null)
@@ -219,8 +221,8 @@ private fun TripSectionTitle(title: String) {
         text = title,
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier
-            .fillMaxWidth()
             .widthIn(max = 720.dp)
+            .fillMaxWidth()
             .padding(top = 8.dp)
     )
 }
@@ -240,8 +242,8 @@ private fun TripCard(
     Card(
         onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {

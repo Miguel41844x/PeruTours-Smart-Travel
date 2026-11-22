@@ -31,7 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.perutours.ui.components.TravelPhoto
 import com.example.perutours.data.model.TourPackage
 import com.example.perutours.data.repository.PointsOfInterestRepository
 import org.koin.androidx.compose.koinViewModel
@@ -119,13 +120,12 @@ fun DestinationDetailScreen(
                 ) {
                     item {
                         if (destination.coverImageUrl.isNotBlank()) {
-                            AsyncImage(
-                                model = destination.coverImageUrl,
-                                contentDescription = destination.name,
+                            TravelPhoto(
+                                url = destination.coverImageUrl,
+                                description = destination.name,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(220.dp),
-                                contentScale = ContentScale.Crop
+                                    .height(270.dp)
                             )
                             Spacer(Modifier.height(12.dp))
                         }

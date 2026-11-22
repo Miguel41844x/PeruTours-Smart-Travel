@@ -11,9 +11,10 @@ private val PeruToursFont = FontFamily.SansSerif
 private fun peruTextStyle(
     size: Int,
     lineHeight: Int,
-    weight: FontWeight = FontWeight.Normal
+    weight: FontWeight = FontWeight.Normal,
+    family: FontFamily = PeruToursFont
 ) = TextStyle(
-    fontFamily = PeruToursFont,
+    fontFamily = family,
     fontWeight = weight,
     fontSize = size.sp,
     lineHeight = lineHeight.sp,
@@ -21,10 +22,12 @@ private fun peruTextStyle(
 )
 
 val Typography = Typography(
-    displaySmall = peruTextStyle(36, 44, FontWeight.Bold),
-    headlineLarge = peruTextStyle(30, 38, FontWeight.Bold),
-    headlineMedium = peruTextStyle(26, 34, FontWeight.Bold),
-    headlineSmall = peruTextStyle(22, 28, FontWeight.SemiBold),
+    displayLarge = peruTextStyle(48, 56, FontWeight.Medium, FontFamily.Serif),
+    displayMedium = peruTextStyle(40, 48, FontWeight.Medium, FontFamily.Serif),
+    displaySmall = peruTextStyle(34, 42, FontWeight.Medium, FontFamily.Serif),
+    headlineLarge = peruTextStyle(30, 38, FontWeight.Medium, FontFamily.Serif),
+    headlineMedium = peruTextStyle(27, 35, FontWeight.Medium, FontFamily.Serif),
+    headlineSmall = peruTextStyle(24, 32, FontWeight.Medium, FontFamily.Serif),
     titleLarge = peruTextStyle(20, 26, FontWeight.SemiBold),
     titleMedium = peruTextStyle(16, 22, FontWeight.SemiBold),
     titleSmall = peruTextStyle(14, 20, FontWeight.SemiBold),

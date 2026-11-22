@@ -88,8 +88,8 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.tripSupportItems(
         item {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 720.dp)
+                    .fillMaxWidth()
                     .padding(vertical = 30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -114,8 +114,8 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.tripSupportItems(
                 "Historial de asistencia",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 720.dp)
+                    .fillMaxWidth()
                     .padding(top = 6.dp)
             )
         }
@@ -159,8 +159,8 @@ private fun TripSupportSummary(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
@@ -365,8 +365,8 @@ private fun TripIncidentCard(incident: TripIncident) {
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {

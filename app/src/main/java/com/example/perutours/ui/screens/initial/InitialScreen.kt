@@ -1,5 +1,14 @@
 package com.example.perutours.ui.screens.initial
 
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.compose.ui.platform.LocalAccessibilityManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -87,170 +96,78 @@ fun InitialScreen(
     navigateToSignUp: () -> Unit
 ) {
     val pagerState = rememberPagerState(pageCount = { welcomeDestinations.size })
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val touchExploration = LocalContext.current
+        .getSystemService(android.view.accessibility.AccessibilityManager::class.java)
+        ?.isTouchExplorationEnabled == true
 
-    LaunchedEffect(pagerState) {
-        while (true) {
-            delay(CAROUSEL_AUTO_SCROLL_MILLIS)
-            if (!pagerState.isScrollInProgress) {
-                pagerState.animateScrollToPage(
-                    page = (pagerState.settledPage + 1) % welcomeDestinations.size
-                )
+    LaunchedEffect(pagerState, lifecycle, touchExploration) {
+        if (!touchExploration) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(CAROUSEL_AUTO_SCROLL_MILLIS)
+                if (!pagerState.isScrollInProgress) {
+                    pagerState.animateScrollToPage((pagerState.settledPage + 1) % welcomeDestinations.size)
+                }
             }
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding(),
+            contentAlignment = Alignment.TopCenter) {
+            val photoHeight = (maxHeight * 0.47f).coerceIn(220.dp, 440.dp)
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .widthIn(max = 520.dp)
+                modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
             ) {
-                PeruToursBrand(
-                    modifier = Modifier.fillMaxWidth(),
-                    compact = true
-                )
-
-                Spacer(Modifier.height(18.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .heightIn(min = 230.dp, max = 330.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                ) {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize()
-                    ) { page ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    PeruToursBrand(compact = true)
+                    TextButton(onClick = navigateToLogin) { Text("Iniciar sesión") }
+                }
+                Spacer(Modifier.height(16.dp))
+                Box(Modifier.fillMaxWidth().height(photoHeight)
+                    .clip(MaterialTheme.shapes.extraLarge)) {
+                    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                         val destination = welcomeDestinations[page]
-                        Image(
-                            painter = painterResource(destination.imageRes),
-                            contentDescription = destination.contentDescription,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            alignment = destination.alignment
-                        )
+                        Image(painterResource(destination.imageRes), destination.contentDescription,
+                            modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+                            alignment = destination.alignment)
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colorStops = arrayOf(
-                                        0.35f to Color.Transparent,
-                                        1f to Color.Black.copy(alpha = 0.78f)
-                                    )
-                                )
-                            )
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = welcomeDestinations[pagerState.settledPage].name,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = welcomeDestinations[pagerState.settledPage].region,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.86f)
-                        )
-
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+                        0.35f to Color.Transparent, 1f to Color(0xDD10251B))))
+                    Column(Modifier.align(Alignment.BottomStart).padding(24.dp)) {
+                        Text(welcomeDestinations[pagerState.settledPage].region.uppercase(),
+                            style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.85f))
+                        Text(welcomeDestinations[pagerState.settledPage].name,
+                            style = MaterialTheme.typography.headlineSmall, color = Color.White)
                         Spacer(Modifier.height(12.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             welcomeDestinations.indices.forEach { index ->
-                                Box(
-                                    modifier = Modifier
-                                        .width(
-                                            if (index == pagerState.settledPage) 22.dp else 6.dp
-                                        )
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(
-                                            if (index == pagerState.settledPage) {
-                                                Color.White
-                                            } else {
-                                                Color.White.copy(alpha = 0.48f)
-                                            }
-                                        )
-                                )
+                                Box(Modifier.width(if (index == pagerState.settledPage) 28.dp else 8.dp)
+                                    .height(4.dp).clip(MaterialTheme.shapes.small)
+                                    .background(Color.White.copy(alpha = if (index == pagerState.settledPage) 1f else 0.45f)))
                             }
                         }
                     }
                 }
-
-                Spacer(Modifier.height(20.dp))
-
-                Text(
-                    text = "Viaja por el Perú, a tu manera",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Cuéntanos qué tienes en mente y recibe una propuesta preparada para ti.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-
-                Spacer(Modifier.height(22.dp))
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Button(
-                        onClick = navigateToSignUp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                    ) {
-                        Text("Crear cuenta", fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier
-                        )
-                    }
-
-                    OutlinedButton(
-                        onClick = navigateToLogin,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Text("Ya tengo una cuenta")
-                    }
+                Spacer(Modifier.height(24.dp))
+                Text("El Perú que\nquieres vivir.", style = MaterialTheme.typography.displaySmall)
+                Text("Elige un destino, arma tu ruta y recibe una propuesta de tu agente.",
+                    style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 22.dp))
+                Button(onClick = navigateToSignUp,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+                    Text("Empezar mi viaje")
+                    Spacer(Modifier.width(12.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                 }
+                OutlinedButton(onClick = navigateToLogin,
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp).heightIn(min = 52.dp)) {
+                    Text("Ya tengo una cuenta")
+                }
+                Spacer(Modifier.height(12.dp))
             }
         }
     }

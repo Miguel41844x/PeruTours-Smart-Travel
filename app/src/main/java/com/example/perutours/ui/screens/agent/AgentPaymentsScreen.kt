@@ -185,8 +185,8 @@ private fun PaymentListItem(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
             .widthIn(max = 720.dp)
+            .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -300,8 +300,8 @@ fun AgentPaymentDetailScreen(
                 // Comprobante capturado por el cliente.
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .widthIn(max = 720.dp)
+                        .fillMaxWidth()
                         .height(260.dp),
                     shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant
@@ -326,8 +326,8 @@ fun AgentPaymentDetailScreen(
 
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
@@ -379,8 +379,8 @@ fun AgentPaymentDetailScreen(
                         onClick = viewModel::approvePayment,
                         enabled = !uiState.isSubmitting,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = 720.dp)
+                            .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PeruValley)
@@ -398,8 +398,8 @@ fun AgentPaymentDetailScreen(
                         onClick = { showRejectDialog = true },
                         enabled = !uiState.isSubmitting,
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = 720.dp)
+                            .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -455,8 +455,8 @@ private fun PaymentResolutionCard(payment: Payment) {
     val approved = payment.status == Payment.STATUS_APPROVED
     Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 720.dp),
+            .widthIn(max = 720.dp)
+            .fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         color = if (approved) PeruValleyContainer else MaterialTheme.colorScheme.errorContainer
     ) {

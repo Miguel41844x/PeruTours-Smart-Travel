@@ -1,5 +1,6 @@
 package com.example.perutours.ui.screens.profile
 
+import androidx.compose.foundation.layout.heightIn
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -283,9 +284,9 @@ fun ProfileScreen(
                                 viewModel.saveProfile()
                             },
                             modifier = Modifier
-                                .fillMaxWidth()
                                 .widthIn(max = 720.dp)
-                                .height(52.dp),
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp),
                             enabled = hasUnsavedChanges && !uiState.isSaving && !uiState.isUploadingPhoto
                         ) {
                             if (uiState.isSaving) {
@@ -323,8 +324,8 @@ fun ProfileScreen(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 720.dp),
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
                     ProfilePhoto(
@@ -666,8 +667,8 @@ private fun CameraXCaptureDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
                 .widthIn(max = 560.dp)
+                .fillMaxWidth()
                 .padding(horizontal = 20.dp),
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surface,

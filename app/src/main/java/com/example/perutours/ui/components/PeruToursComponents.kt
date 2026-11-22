@@ -103,7 +103,7 @@ fun PeruToursTopBar(
     onBack: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {}
 ) {
-    TopAppBar(
+    TravelTopAppBar(
         title = {
             Text(
                 text = title,
@@ -122,7 +122,7 @@ fun PeruToursTopBar(
         },
         actions = { actions() },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.background,
             titleContentColor = MaterialTheme.colorScheme.onSurface
         )
     )

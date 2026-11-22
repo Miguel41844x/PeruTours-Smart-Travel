@@ -38,7 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -166,8 +166,8 @@ fun AgentHomeScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 900.dp),
+                    .widthIn(max = 900.dp)
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
