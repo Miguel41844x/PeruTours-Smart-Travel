@@ -1,5 +1,43 @@
 # Scripts de mantenimiento
 
+## Reparar relaciones y cargar ejemplos
+
+Estos comandos usan la cuenta que ya inició sesión con Firebase CLI. Instala
+las dependencias de `firestore-rules-tests` y `functions` con `npm ci` en sus
+respectivas carpetas. No requieren descargar una cuenta de servicio.
+
+Desde la raíz del proyecto:
+
+```powershell
+node scripts/repair-data.mjs
+node scripts/repair-data.mjs --apply
+node scripts/seed-demo.mjs
+node scripts/seed-demo.mjs --apply
+```
+
+Sin `--apply` solo se genera una vista previa. Antes de escribir se guarda un
+respaldo de los documentos leídos y del plan de cambios en `.artifacts/`,
+carpeta ignorada por Git. Las actualizaciones usan la versión leída del documento:
+si otro integrante lo modifica, el lote afectado se rechaza para no pisar su edición.
+Los lotes anteriores pueden haberse aplicado; vuelve a generar la vista previa.
+
+La reparación completa IDs, referencias y campos opcionales compatibles con los
+modelos actuales. Conserva importes, estados y snapshots históricos existentes.
+Las relaciones de los cuatro paquetes históricos están en `seed/catalog-links.json`;
+también corrige el paquete de Máncora que apuntaba a servicios de Piura ciudad.
+Los destinos sin contenido editorial suficiente se crean como borradores.
+
+La carga de demostración añade dos clientes, un agente y un gerente, ocho
+expedientes en distintos estados, pagos simulados y actividades de itinerario.
+Los IDs empiezan por `demo_`, los proveedores se presentan como demostración
+y el comprobante dice que no acredita un pago real. Estos pagos **sí participan
+en los gráficos**: son ejemplos académicos, no ingresos reales de una agencia.
+Las cuentas no reciben correos ni notificaciones; sus credenciales nuevas quedan
+únicamente en `.artifacts/demo-accounts.json`. No compartas ese archivo en Git.
+
+Ambos comandos se pueden repetir: la reparación solo actualiza diferencias y
+la carga de ejemplos conserva los documentos existentes y sus contraseñas.
+
 ## `import-catalog.mjs` — migración del JSON de GitHub a Firestore
 
 La app dejó de consumir `api/perutours-destinations.json` desde

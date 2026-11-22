@@ -1,0 +1,16 @@
+{
+  "legacyPackageServices": {
+    "pkg_1_dest_cusco": ["cusco_machu_picchu", "cusco_hotel", "cusco_transporte"],
+    "pkg_2_dest_ica": ["ica_nazca", "ica_huacachina", "ica_hotel", "ica_transporte"],
+    "pkg_3_dest_arequipa": ["arequipa_colca", "arequipa_city_tour", "arequipa_hotel", "arequipa_transporte"],
+    "pkg_4_dest_puno": ["puno_02", "puno_03", "puno_07", "puno_08"]
+  },
+  "mancoraPackageId": "wpl5L08GLY42dX6Irk0H",
+  "mancoraServices": [
+    {"id": "demo_mancora_hotel", "name": "Alojamiento en Máncora", "category": "Alojamiento", "unitCost": 85, "durationMinutes": 1440, "requiresScheduling": false, "requestable": false},
+    {"id": "demo_mancora_playa", "name": "Recorrido por las playas de Máncora", "category": "Tours", "unitCost": 55, "durationMinutes": 120, "requiresScheduling": true, "requestable": true},
+    {"id": "demo_mancora_surf", "name": "Clase introductoria de surf", "category": "Aventura", "unitCost": 75, "durationMinutes": 90, "requiresScheduling": true, "requestable": true},
+    {"id": "demo_mancora_gastronomia", "name": "Experiencia gastronómica marina", "category": "Experiencias", "unitCost": 60, "durationMinutes": 120, "requiresScheduling": true, "requestable": true},
+    {"id": "demo_mancora_traslado", "name": "Traslado local en Máncora", "category": "Transporte", "unitCost": 35, "durationMinutes": 60, "requiresScheduling": true, "requestable": false}
+  ]
+}

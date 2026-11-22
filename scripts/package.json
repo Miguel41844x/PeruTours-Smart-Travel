@@ -9,7 +9,9 @@
   },
   "scripts": {
     "import-catalog": "node import-catalog.mjs",
-    "import-catalog:dry": "node import-catalog.mjs --dry-run"
+    "import-catalog:dry": "node import-catalog.mjs --dry-run",
+    "repair-data": "node repair-data.mjs",
+    "seed-demo": "node seed-demo.mjs"
   },
   "dependencies": {
     "firebase-admin": "^12.6.0"
