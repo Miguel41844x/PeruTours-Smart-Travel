@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.perutours.data.model.SalesAnalytics
 import com.example.perutours.data.repository.SalesDashboardDataSource
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,23 +30,21 @@ class SalesDashboardViewModel(
 
     fun refresh() {
         if (_uiState.value.isLoading) return
-
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            runCatching { repository.fetchSalesAnalytics() }
-                .onSuccess { analytics ->
-                    _uiState.update {
-                        it.copy(isLoading = false, analytics = analytics)
-                    }
+            try {
+                val analytics = repository.fetchSalesAnalytics()
+                ensureActive()
+                _uiState.update { it.copy(analytics = analytics) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(errorMessage = "No pudimos actualizar las estadísticas. Revisa tu conexión.")
                 }
-                .onFailure {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "No pudimos actualizar las estadísticas. Revisa tu conexión."
-                        )
-                    }
-                }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 }

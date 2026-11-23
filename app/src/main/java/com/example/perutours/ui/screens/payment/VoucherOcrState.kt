@@ -9,16 +9,17 @@ import kotlinx.coroutines.withTimeoutOrNull
 sealed interface VoucherOcrState {
     data object Idle : VoucherOcrState
     data object Reading : VoucherOcrState
+    data object NoData : VoucherOcrState
     data object Unavailable : VoucherOcrState
     data class Read(val result: VoucherOcrResult) : VoucherOcrState
 }
 
 internal suspend fun VoucherTextReader.readForReview(uri: Uri): VoucherOcrState = try {
     val result = withTimeoutOrNull(15_000) { read(uri) }
-    if (result == null || !result.hasData) {
-        VoucherOcrState.Unavailable
-    } else {
-        VoucherOcrState.Read(result)
+    when {
+        result == null -> VoucherOcrState.Unavailable
+        !result.hasData -> VoucherOcrState.NoData
+        else -> VoucherOcrState.Read(result)
     }
 } catch (cancelled: CancellationException) {
     throw cancelled

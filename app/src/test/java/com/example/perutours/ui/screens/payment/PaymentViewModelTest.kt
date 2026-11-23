@@ -101,7 +101,7 @@ class PaymentViewModelTest {
         paymentRepository = mockk(relaxed = true)
         reservationRepository = mockk(relaxed = true)
         voucherTextReader = mockk()
-        coEvery { voucherTextReader.read(any()) } returns VoucherOcrResult(null, null)
+        coEvery { voucherTextReader.read(any()) } returns VoucherOcrResult(null, "731546")
         viewModel = PaymentViewModel(paymentRepository, reservationRepository, voucherTextReader)
     }
 
@@ -152,7 +152,79 @@ class PaymentViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.canSubmit)
+        assertEquals(VoucherOcrState.Read(VoucherOcrResult(null, "731546")), viewModel.uiState.value.voucherOcr)
+    }
+
+    @Test
+    fun imageWithoutPaymentDataCannotBeSavedOrEnqueued() = runTest {
+        coEvery { reservationRepository.getCurrentClientReservationById("res_1") } returns reservation()
+        coEvery { voucherTextReader.read(voucherUri) } returns VoucherOcrResult(null, null)
+
+        viewModel.loadReservation("res_1")
+        viewModel.onVoucherCaptured(voucherUri)
+        viewModel.onPaymentMethodChange("Yape")
+        advanceUntilIdle()
+
+        assertEquals(VoucherOcrState.NoData, viewModel.uiState.value.voucherOcr)
+        assertFalse(viewModel.uiState.value.canSubmit)
+        viewModel.submitPayment("res_1", "res_1")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.errorMessage.orEmpty().contains("No se reconocieron datos de pago"))
+        coVerify(exactly = 0) { paymentRepository.saveVoucherLocally(any()) }
+        coVerify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
+
+        val replacement = mockk<Uri>()
+        coEvery { voucherTextReader.read(replacement) } returns VoucherOcrResult(null, "731546")
+        viewModel.onVoucherCaptured(replacement)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.errorMessage)
+        assertTrue(viewModel.uiState.value.canSubmit)
+    }
+
+    @Test
+    fun readerFailureRequiresRetryBeforeEnqueuing() = runTest {
+        coEvery { reservationRepository.getCurrentClientReservationById("res_1") } returns reservation()
+        coEvery { voucherTextReader.read(voucherUri) } throws IllegalStateException("Lectura fallida")
+
+        viewModel.loadReservation("res_1")
+        viewModel.onVoucherCaptured(voucherUri)
+        viewModel.onPaymentMethodChange("Yape")
+        advanceUntilIdle()
+
         assertEquals(VoucherOcrState.Unavailable, viewModel.uiState.value.voucherOcr)
+        assertFalse(viewModel.uiState.value.canSubmit)
+        viewModel.submitPayment("res_1", "res_1")
+
+        assertTrue(viewModel.uiState.value.errorMessage.orEmpty().contains("Reintenta la lectura"))
+        coVerify(exactly = 0) { paymentRepository.saveVoucherLocally(any()) }
+        coVerify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun readingAndTimeoutBothKeepSubmissionDisabledUntilRetrySucceeds() = runTest {
+        coEvery { reservationRepository.getCurrentClientReservationById("res_1") } returns reservation()
+        coEvery { voucherTextReader.read(voucherUri) } coAnswers { awaitCancellation() }
+
+        viewModel.loadReservation("res_1")
+        viewModel.onVoucherCaptured(voucherUri)
+        viewModel.onPaymentMethodChange("Yape")
+        runCurrent()
+        assertEquals(VoucherOcrState.Reading, viewModel.uiState.value.voucherOcr)
+        assertFalse(viewModel.uiState.value.canSubmit)
+        advanceUntilIdle()
+
+        assertEquals(VoucherOcrState.Unavailable, viewModel.uiState.value.voucherOcr)
+        viewModel.submitPayment("res_1", "res_1")
+        coVerify(exactly = 0) { paymentRepository.enqueuePaymentUpload(any(), any(), any(), any()) }
+
+        coEvery { voucherTextReader.read(voucherUri) } returns VoucherOcrResult(null, "731546")
+        viewModel.retryVoucherReading()
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.errorMessage)
+        assertTrue(viewModel.uiState.value.canSubmit)
     }
 
     @Test

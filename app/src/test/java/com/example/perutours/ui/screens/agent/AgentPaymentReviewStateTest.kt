@@ -46,6 +46,15 @@ class AgentPaymentReviewStateTest {
         assertFalse(state.copy(voucherOcr = VoucherOcrState.Reading, bankReceiptConfirmed = true).canApprove)
     }
 
+    @Test fun imageWithoutPaymentDataCannotBeApprovedEvenWithBankConfirmation() {
+        assertFalse(state.copy(voucherOcr = VoucherOcrState.NoData,
+            bankReceiptConfirmed = true).canApprove)
+        assertFalse(state.copy(voucherOcr = VoucherOcrState.Read(VoucherOcrResult(null, null)),
+            bankReceiptConfirmed = true).canApprove)
+        assertTrue(state.copy(voucherOcr = VoucherOcrState.Read(reading.copy(
+            operationNumber = null, transactionTime = null)), bankReceiptConfirmed = true).canApprove)
+    }
+
     @Test fun aSupersededAttemptOrUnrelatedReservationCannotBeApproved() {
         assertFalse(state.copy(bankReceiptConfirmed = true,
             reservation = booking.copy(paymentId = "newer-attempt")).canApprove)

@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ReservationEntity::class,
         FavoriteEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -323,6 +323,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Se renueva únicamente la caché del panel; los datos del usuario se conservan.
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS admin_metrics_cache")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS admin_metrics_cache (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        metricsJson TEXT NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -338,7 +352,8 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_5_6,
                         MIGRATION_6_7,
                         MIGRATION_7_8,
-                        MIGRATION_8_9
+                        MIGRATION_8_9,
+                        MIGRATION_9_10
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()

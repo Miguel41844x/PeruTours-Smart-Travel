@@ -239,7 +239,6 @@ fun NavigationWrapper(
             val fcmTokenManager: FCMTokenManager = koinInject()
             val coroutineScope = rememberCoroutineScope()
             AgentHomeScreen(
-                auth = auth,
                 onViewRequests = {
                     navHostController.navigate("agent_requests")
                 },

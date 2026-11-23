@@ -23,7 +23,9 @@ import com.github.mikephil.charting.formatter.ValueFormatter
 @Composable
 fun QuotationStatusBarChart(
     metrics: List<QuotationStatusMetric>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    seriesLabel: String = "Cotizaciones",
+    emptyMessage: String = "Aún no hay cotizaciones para comparar."
 ) {
     if (metrics.isEmpty()) {
         Box(
@@ -33,7 +35,7 @@ fun QuotationStatusBarChart(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Aún no hay cotizaciones para comparar.",
+                text = emptyMessage,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -67,7 +69,7 @@ fun QuotationStatusBarChart(
                 setScaleEnabled(false)
                 setPinchZoom(false)
                 setDrawValueAboveBar(true)
-                setNoDataText("Aún no hay cotizaciones para comparar.")
+                setNoDataText(emptyMessage)
                 extraBottomOffset = 8f
             }
         },
@@ -75,7 +77,7 @@ fun QuotationStatusBarChart(
             val entries = metrics.mapIndexed { index, metric ->
                 BarEntry(index.toFloat(), metric.count.toFloat())
             }
-            val dataSet = BarDataSet(entries, "Cotizaciones").apply {
+            val dataSet = BarDataSet(entries, seriesLabel).apply {
                 colors = barColors
                 valueTextColor = axisColor
                 valueTextSize = 11f

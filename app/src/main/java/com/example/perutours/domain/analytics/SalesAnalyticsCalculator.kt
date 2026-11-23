@@ -13,7 +13,8 @@ import java.util.TimeZone
 data class ApprovedSaleRecord(
     val amount: Double,
     val currency: String,
-    val approvedAtMillis: Long
+    val approvedAtMillis: Long,
+    val estimatedCost: Double? = null
 )
 
 class SalesAnalyticsCalculator(
@@ -28,10 +29,18 @@ class SalesAnalyticsCalculator(
         val revenueByCurrency = approvedSales.groupBy { it.currency.trim().uppercase(Locale.ROOT) }
             .toSortedMap()
             .map { (currency, sales) ->
+                val costed = sales.filter { it.estimatedCost?.let { cost -> cost.isFinite() && cost >= 0 } == true }
                 CurrencyRevenue(
                     currency = currency,
                     totalAmount = sales.sumOf { it.amount },
-                    monthlyRevenue = monthlyRevenue(sales, nowMillis)
+                    monthlyRevenue = monthlyRevenue(sales, nowMillis),
+                    approvedSales = sales.size,
+                    costedSales = costed.size,
+                    costedRevenue = costed.sumOf { it.amount },
+                    estimatedSupplierCost = costed.sumOf { it.estimatedCost!! },
+                    monthlyEstimatedProfit = monthlyRevenue(costed.map {
+                        it.copy(amount = it.amount - it.estimatedCost!!)
+                    }, nowMillis)
                 )
             }
         val quotationMetrics = quotationStatuses

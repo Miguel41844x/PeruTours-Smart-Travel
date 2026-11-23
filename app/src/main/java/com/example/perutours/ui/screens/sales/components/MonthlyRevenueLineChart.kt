@@ -26,7 +26,8 @@ import java.util.Locale
 fun MonthlyRevenueLineChart(
     metrics: List<MonthlyRevenueMetric>,
     currency: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    estimatedProfit: List<MonthlyRevenueMetric> = emptyList()
 ) {
     if (metrics.none { it.amount > 0.0 }) {
         Box(
@@ -47,6 +48,7 @@ fun MonthlyRevenueLineChart(
     val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
     val gridColor = MaterialTheme.colorScheme.outlineVariant.toArgb()
+    val profitColor = MaterialTheme.colorScheme.secondary.toArgb()
 
     AndroidView(
         modifier = modifier
@@ -55,7 +57,7 @@ fun MonthlyRevenueLineChart(
         factory = { context ->
             LineChart(context).apply {
                 description.isEnabled = false
-                legend.isEnabled = false
+                legend.isEnabled = true
                 axisRight.isEnabled = false
                 axisLeft.axisMinimum = 0f
                 xAxis.position = XAxis.XAxisPosition.BOTTOM
@@ -71,12 +73,12 @@ fun MonthlyRevenueLineChart(
             val entries = metrics.mapIndexed { index, metric ->
                 Entry(index.toFloat(), metric.amount.toFloat())
             }
-            val dataSet = LineDataSet(entries, "Ingresos").apply {
+            val dataSet = LineDataSet(entries, "Cobros").apply {
                 color = primaryColor
                 circleColors = listOf(primaryColor)
                 lineWidth = 3f
                 circleRadius = 4f
-                mode = LineDataSet.Mode.CUBIC_BEZIER
+                mode = LineDataSet.Mode.LINEAR
                 setDrawValues(false)
                 setDrawFilled(true)
                 fillColor = primaryColor
@@ -88,7 +90,22 @@ fun MonthlyRevenueLineChart(
             chart.axisLeft.valueFormatter = CurrencyAxisFormatter(currency)
             chart.xAxis.textColor = axisColor
             chart.xAxis.valueFormatter = IndexAxisValueFormatter(metrics.map { it.label })
-            chart.data = LineData(dataSet)
+            val data = LineData(dataSet)
+            if (estimatedProfit.isNotEmpty()) {
+                data.addDataSet(LineDataSet(estimatedProfit.mapIndexed { index, value ->
+                    Entry(index.toFloat(), value.amount.toFloat())
+                }, "Margen estimado").apply {
+                    color = profitColor
+                    circleColors = listOf(profitColor)
+                    lineWidth = 2.5f
+                    circleRadius = 3f
+                    mode = LineDataSet.Mode.LINEAR
+                    setDrawValues(false)
+                })
+            }
+            chart.axisLeft.axisMinimum = minOf(0f, estimatedProfit.minOfOrNull { it.amount.toFloat() } ?: 0f)
+            chart.legend.textColor = axisColor
+            chart.data = data
             chart.animateX(500)
             chart.invalidate()
         }

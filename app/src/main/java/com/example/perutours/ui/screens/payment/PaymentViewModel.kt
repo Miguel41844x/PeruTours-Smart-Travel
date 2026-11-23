@@ -46,7 +46,7 @@ data class PaymentUiState(
             && paymentMethod != null
             && canChangeVoucher
             && !isLoadingReservation
-            && voucherOcr != VoucherOcrState.Reading
+            && voucherOcr is VoucherOcrState.Read && voucherOcr.result.hasData
             && reservationAmount?.let { it.isFinite() && it > 0 } == true
             && PaymentValidator.isValidCurrency(reservationCurrency)
             && reservationId.isNotBlank() && reservationQuotationId.isNotBlank()
@@ -191,9 +191,20 @@ class PaymentViewModel(
         }
 
         if (!state.canSubmit) {
-            _uiState.update { it.copy(errorMessage = state.voucherAssessment?.issues
-                ?.firstOrNull { issue -> issue.blocking }?.message
-                ?: "Espera a que termine la lectura y se cargue el importe de la reserva.") }
+            val message = when (val reading = state.voucherOcr) {
+                VoucherOcrState.NoData ->
+                    "No se reconocieron datos de pago. Adjunta una foto clara del comprobante y vuelve a intentarlo."
+                VoucherOcrState.Unavailable ->
+                    "No pudimos analizar el comprobante. Reintenta la lectura o selecciona otra imagen antes de enviarlo."
+                is VoucherOcrState.Read -> if (!reading.result.hasData) {
+                    "No se reconocieron datos de pago. Adjunta una foto clara del comprobante y vuelve a intentarlo."
+                } else {
+                    state.voucherAssessment?.issues?.firstOrNull { it.blocking }?.message
+                        ?: "Espera a que se cargue el importe de la reserva."
+                }
+                else -> "Espera a que termine la lectura y se cargue el importe de la reserva."
+            }
+            _uiState.update { it.copy(errorMessage = message) }
             return
         }
         if (state.reservationId != reservationId || state.reservationQuotationId != quotationId) {

@@ -5,6 +5,8 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import com.example.perutours.data.model.AdminMetrics
+import com.google.gson.Gson
 
 @Dao
 interface AdminCacheDao {
@@ -17,51 +19,16 @@ interface AdminCacheDao {
 
 @Entity(tableName = "admin_metrics_cache")
 data class AdminMetricsEntity(
-    @PrimaryKey
-    val id: String = "primary_metrics",
-    val totalRevenue: Double = 0.0,
-    val totalReservations: Int = 0,
-    val activeCustomers: Int = 0,
-    val statusSummaryEncoded: String = "",
-    val monthlyRevenueEncoded: String = "",
-    val updatedAtMillis: Long = 0L
+    @PrimaryKey val id: String = "catalog_overview",
+    val metricsJson: String,
+    val updatedAtMillis: Long
 ) {
-    fun getStatusSummaryMap(): Map<String, Int> {
-        if (statusSummaryEncoded.isBlank()) return emptyMap()
-        return statusSummaryEncoded.split(";").mapNotNull { entry ->
-            val parts = entry.split("=")
-            if (parts.size == 2) parts[0] to (parts[1].toIntOrNull() ?: 0) else null
-        }.toMap()
-    }
-
-    fun getMonthlyRevenueMap(): Map<String, Double> {
-        if (monthlyRevenueEncoded.isBlank()) return emptyMap()
-        return monthlyRevenueEncoded.split(";").mapNotNull { entry ->
-            val parts = entry.split("=")
-            if (parts.size == 2) parts[0] to (parts[1].toDoubleOrNull() ?: 0.0) else null
-        }.toMap()
-    }
+    fun toMetrics(): AdminMetrics = Gson().fromJson(metricsJson, AdminMetrics::class.java)
+        .copy(isCached = true, updatedAtMillis = updatedAtMillis)
 
     companion object {
-        fun fromMaps(
-            totalRevenue: Double,
-            totalReservations: Int,
-            activeCustomers: Int,
-            statusSummary: Map<String, Int>,
-            monthlyRevenue: Map<String, Double>,
-            updatedAtMillis: Long
-        ): AdminMetricsEntity {
-            val statusEncoded = statusSummary.entries.joinToString(";") { "${it.key}=${it.value}" }
-            val monthlyEncoded = monthlyRevenue.entries.joinToString(";") { "${it.key}=${it.value}" }
-            return AdminMetricsEntity(
-                id = "primary_metrics",
-                totalRevenue = totalRevenue,
-                totalReservations = totalReservations,
-                activeCustomers = activeCustomers,
-                statusSummaryEncoded = statusEncoded,
-                monthlyRevenueEncoded = monthlyEncoded,
-                updatedAtMillis = updatedAtMillis
-            )
-        }
+        fun fromMetrics(metrics: AdminMetrics) = AdminMetricsEntity(
+            metricsJson = Gson().toJson(metrics), updatedAtMillis = metrics.updatedAtMillis
+        )
     }
 }

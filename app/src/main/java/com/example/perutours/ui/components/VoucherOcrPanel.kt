@@ -75,8 +75,12 @@ internal fun VoucherOcrPanel(
             when (state) {
                 VoucherOcrState.Idle -> Unit
                 VoucherOcrState.Reading -> Text("Leyendo la imagen…")
+                VoucherOcrState.NoData -> Text(
+                    "No se reconoció importe, operación, fecha ni hora. La imagen no contiene datos de pago legibles.",
+                    color = MaterialTheme.colorScheme.error
+                )
                 VoucherOcrState.Unavailable -> Text(
-                    "No pudimos leer los datos del comprobante. Se necesitará una revisión manual de la imagen."
+                    "No pudimos completar la lectura. Reintenta el análisis de la imagen."
                 )
                 is VoucherOcrState.Read -> {
                     val result = state.result
@@ -120,7 +124,8 @@ internal fun VoucherOcrPanel(
                     review?.hasBlockingIssues == true
                 )
             if (onRead != null &&
-                (state == VoucherOcrState.Idle || state == VoucherOcrState.Unavailable || partialReading)
+                (state == VoucherOcrState.Idle || state == VoucherOcrState.NoData ||
+                    state == VoucherOcrState.Unavailable || partialReading)
             ) {
                 TextButton(onClick = onRead) {
                     Text(if (state == VoucherOcrState.Idle) "Leer comprobante" else "Reintentar lectura")

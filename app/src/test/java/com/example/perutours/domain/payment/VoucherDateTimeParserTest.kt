@@ -42,6 +42,18 @@ class VoucherDateTimeParserTest {
     }
 
     @Test
+    fun readsOcrWhitespaceAroundPrintedClockSeparators() {
+        listOf("13:04: 32", "13 : 04 : 32", "13:\t04:32").forEach { time ->
+            assertEquals(time, VoucherTime(13, 4, 32),
+                VoucherDateTimeParser.parse("Hora: $time").time)
+        }
+        assertEquals(VoucherTime(19, 4), VoucherDateTimeParser.parse("Hora: 07: 04 p. m.").time)
+        listOf("24 : 00", "13: 60", "13:04 : 99", "13:04 : 3").forEach { time ->
+            assertNull(time, VoucherDateTimeParser.parse("Hora: $time").time)
+        }
+    }
+
+    @Test
     fun recoversOcrConfusionsInsideAnExplicitDateField() {
         val reading = VoucherDateTimeParser.parse("Fecha de proceso: 27/O8/2021 12 11 PM")
         assertEquals(VoucherDate(2021, 8, 27), reading.date)

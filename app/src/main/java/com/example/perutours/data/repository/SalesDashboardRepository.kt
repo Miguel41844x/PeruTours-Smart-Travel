@@ -27,11 +27,13 @@ class SalesDashboardRepository(
             firestore.collection(COLLECTION_REQUESTS).get().await()
         }
 
-        val quotationStatuses = quotationsDeferred.await().documents.map { document ->
+        val quotationDocuments = quotationsDeferred.await().documents
+        val quotationsById = quotationDocuments.associateBy { it.id }
+        val quotationStatuses = quotationDocuments.map { document ->
             document.getString("status").orEmpty()
         }
         val approvedSales = paymentsDeferred.await().documents
-            .mapNotNull { it.toApprovedSaleOrNull() }
+            .mapNotNull { it.toApprovedSaleOrNull(quotationsById[it.getString("quotationId")]) }
         val requestedDestinations = requestsDeferred.await().documents.mapNotNull { document ->
             document.getString("destination")?.takeIf { it.isNotBlank() }
         }

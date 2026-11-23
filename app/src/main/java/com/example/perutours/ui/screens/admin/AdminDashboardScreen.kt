@@ -4,33 +4,23 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.perutours.data.model.Reservation
-import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
-import com.example.perutours.ui.screens.admin.components.MonthlyRevenueVicoChart
-import com.example.perutours.ui.screens.admin.components.ReservationStatusDonutChart
-import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.example.perutours.data.model.*
+import com.example.perutours.ui.components.*
+import com.example.perutours.ui.screens.admin.components.CatalogCoverageChart
+import com.example.perutours.ui.screens.admin.components.CatalogPublicationChart
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,535 +35,155 @@ fun AdminDashboardScreen(
     viewModel: AdminDashboardViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val metrics = uiState.metrics
     var showLogout by remember { mutableStateOf(false) }
+    var showReservations by rememberSaveable { mutableStateOf(false) }
+    val openArea: (CatalogArea) -> Unit = { area ->
+        when (area) {
+            CatalogArea.PROVIDERS -> onManageProviders()
+            CatalogArea.SERVICES -> onManageServices()
+            CatalogArea.DESTINATIONS -> onManageDestinations()
+            CatalogArea.PACKAGES -> onManagePackages()
+        }
+    }
     if (showLogout) {
-        AlertDialog(onDismissRequest = { showLogout = false },
-            title = { Text("Cerrar sesión") },
+        AlertDialog(onDismissRequest = { showLogout = false }, title = { Text("Cerrar sesión") },
             text = { Text("Tendrás que ingresar nuevamente para administrar el catálogo.") },
-            confirmButton = {
-                TextButton(onClick = { showLogout = false; onLogout() }) { Text("Cerrar sesión") }
-            }, dismissButton = {
-                TextButton(onClick = { showLogout = false }) { Text("Cancelar") }
-            })
+            confirmButton = { TextButton(onClick = { showLogout = false; onLogout() }) { Text("Cerrar sesión") } },
+            dismissButton = { TextButton(onClick = { showLogout = false }) { Text("Cancelar") } })
     }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Administración", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            text = "Indicadores y analítica del negocio",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showLogout = true }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, "Cerrar sesión")
-                    }
-                    IconButton(
-                        onClick = viewModel::refresh,
-                        enabled = !uiState.isLoading
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar datos")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        if (uiState.isLoading && uiState.metrics.totalReservations == 0) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+    Scaffold(topBar = {
+        TravelTopAppBar(title = { Text("Administración") }, navigationIcon = {
+            IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
+        }, actions = {
+            IconButton(onClick = viewModel::refresh, enabled = !uiState.isLoading) {
+                Icon(Icons.Default.Refresh, "Actualizar catálogo")
             }
-            return@Scaffold
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            uiState.errorMessage?.let { message ->
+            IconButton(onClick = { showLogout = true }) { Icon(Icons.AutoMirrored.Filled.ExitToApp, "Cerrar sesión") }
+        })
+    }, containerColor = MaterialTheme.colorScheme.background) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(Modifier.widthIn(max = 1040.dp).fillMaxSize(),
+                contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Button(onClick = viewModel::refresh) { Text("Reintentar") }
-                        }
-                    }
+                    DashboardIntro("CONTROL DEL CATÁLOGO", "Gestiona la oferta turística",
+                        "Proveedores, servicios y publicaciones en un solo lugar.", Icons.Default.Inventory2, metrics.updatedAtMillis)
                 }
-            }
-
-            if (uiState.metrics.isCached) {
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.CloudOff, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
-                            Text(
-                                text = "Sin conexión. Mostrando la última información guardada, actualizada el ${uiState.formattedUpdatedAt}.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
-                    }
+                if (uiState.isLoadingMetrics) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                uiState.errorMessage?.let { message -> item { DashboardNotice(message, viewModel::refresh, isError = true) } }
+                if (metrics.isCached) item {
+                    DashboardNotice("Sin conexión. Mostrando el catálogo guardado el ${uiState.formattedUpdatedAt}.")
                 }
-            }
-
-            // --- Section: KPI Summary Cards ---
-            item {
-                Text(
-                    text = "Indicadores clave (KPIs)",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Wide Revenue Card
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(18.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = "Ingresos totales (Pagados)",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Text(
-                                    text = formatCurrency(uiState.metrics.totalRevenue),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Default.Payments,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-                    }
-
-                    // Two Smaller Cards for Reservations and Active Customers
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        KpiCard(
-                            title = "Total reservas",
-                            value = uiState.metrics.totalReservations.toString(),
-                            icon = Icons.Default.Bookmark,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        KpiCard(
-                            title = "Clientes activos",
-                            value = uiState.metrics.activeCustomers.toString(),
-                            icon = Icons.Default.Group,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-            // --- Section: Numerical Summary by Status ---
-            item {
-                Text(
-                    text = "Resumen de resultados por estado",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        if (uiState.metrics.statusSummary.isEmpty()) {
-                            Text("No hay reservas registradas aún.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            val total = uiState.metrics.totalReservations.coerceAtLeast(1)
-                            uiState.metrics.statusSummary.forEach { (status, count) ->
-                                val progress = count.toFloat() / total.toFloat()
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                 Row(
-                                     modifier = Modifier.fillMaxWidth(),
-                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                     verticalAlignment = Alignment.CenterVertically
-                                 ) {
-                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                         Surface(
-                                             shape = RoundedCornerShape(4.dp),
-                                             color = getStatusColor(status)
-                                         ) {
-                                             Box(modifier = Modifier.size(10.dp))
-                                         }
-                                         Text(status, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                                     }
-                                     Text("$count (${(progress * 100).toInt()}%)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                 }
-                                    LinearProgressIndicator(
-                                        progress = { progress },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(6.dp),
-                                        color = getStatusColor(status),
-                                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // --- Section: Charts ---
-            item {
-                Text(
-                    text = "Comportamiento e ingresos",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text("Ingresos por mes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        MonthlyRevenueVicoChart(monthlyRevenue = uiState.metrics.monthlyRevenue)
-                    }
-                }
-            }
-
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text("Distribución de reservas por estado ", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        ReservationStatusDonutChart(statusData = uiState.metrics.statusSummary)
-                    }
-                }
-            }
-
-            // --- Section: Paginated Reservations List with Horizontal Filter Chips ---
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Listado de reservas",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${uiState.reservations.size} visibles",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item {
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(AdminDashboardConstants.AVAILABLE_FILTERS) { filter ->
-                        FilterChip(
-                            selected = uiState.selectedFilterStatus == filter,
-                            onClick = { viewModel.setFilterStatus(filter) },
-                            label = { Text(filter) }
-                        )
-                    }
-                }
-            }
-
-            if (uiState.reservations.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text("No se encontraron reservas con este filtro.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            OutlinedButton(onClick = { viewModel.setFilterStatus("Todos") }) {
-                                Text("Limpiar filtro")
-                            }
-                        }
-                    }
-                }
-            } else {
-                items(uiState.reservations, key = { it.id }) { reservation ->
-                    ReservationItemCard(reservation = reservation)
-                }
-
-                if (!uiState.endReached) {
+                if (metrics.hasData) {
                     item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (uiState.isLoadingMore) {
-                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                            } else {
-                                OutlinedButton(onClick = viewModel::loadMoreReservations) {
-                                    Text("Cargar más reservas")
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                DashboardMetric("Proveedores activos", if (metrics.hasData) "${metrics.activeProviders}" else "—",
+                                    "de ${metrics.totalProviders} registrados", Icons.Default.Business, Modifier.weight(1f).fillMaxHeight(), onManageProviders)
+                                DashboardMetric("Servicios disponibles", if (metrics.hasData) "${metrics.availableServices}" else "—",
+                                    "de ${metrics.totalServices} en catálogo", Icons.Default.RoomService, Modifier.weight(1f).fillMaxHeight(), onManageServices)
+                            }
+                            Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                DashboardMetric("Destinos publicados", if (metrics.hasData) "${metrics.publishedDestinations}" else "—",
+                                    "de ${metrics.totalDestinations} destinos", Icons.Default.Place, Modifier.weight(1f).fillMaxHeight(), onManageDestinations)
+                                DashboardMetric("Paquetes publicados", if (metrics.hasData) "${metrics.publishedPackages}" else "—",
+                                    "de ${metrics.totalPackages} paquetes", Icons.Default.Luggage, Modifier.weight(1f).fillMaxHeight(), onManagePackages)
+                            }
+                        }
+                    }
+                    if (metrics.hasData) item {
+                        DashboardSection("Pendientes del catálogo", "Prioriza los datos que necesitan atención antes de vender.") {
+                            if (metrics.alerts.isEmpty()) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.tertiary)
+                                    Text("No se detectaron pendientes en el catálogo actual.", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            } else metrics.alerts.forEach { alert ->
+                                DashboardAction(alert.title, "Abrir la sección para revisar los registros.", Icons.AutoMirrored.Filled.FactCheck,
+                                    onClick = { openArea(alert.area) }, count = alert.count)
+                            }
+                        }
+                    }
+                    item {
+                        DashboardSection("Cobertura de servicios", "Servicios con tarifa, proveedor activo y destino publicado. Hasta seis destinos.") {
+                            CatalogCoverageChart(metrics.servicesByDestination)
+                        }
+                    }
+                    item {
+                        DashboardSection("Publicación de paquetes", "Una vista de los paquetes que están en venta, en preparación o archivados.") {
+                            CatalogPublicationChart(metrics.packagesByStatus)
+                        }
+                    }
+                    item {
+                        DashboardSection("Perfiles registrados", "${metrics.totalUsers} perfiles en la plataforma, agrupados por su rol.") {
+                            if (metrics.usersByRole.isEmpty()) {
+                                Text("Aún no hay perfiles para mostrar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else UserRole.entries.forEach { role ->
+                                val count = metrics.usersByRole[role.name] ?: 0
+                                if (count > 0) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(if (role == UserRole.UNKNOWN) "Sin rol reconocido" else role.label,
+                                        style = MaterialTheme.typography.bodyMedium)
+                                    Text(count.toString(), fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
                     }
                 }
-            }
-
-            // --- Section: Catalog Management Shortcuts (Bottom) ---
-            item {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Gestión del catálogo",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CatalogShortcutCard(
-                        title = "Destinos",
-                        icon = Icons.Default.Place,
-                        modifier = Modifier.weight(1f),
-                        onClick = onManageDestinations
-                    )
-                    CatalogShortcutCard(
-                        title = "Paquetes",
-                        icon = Icons.Default.Inventory2,
-                        modifier = Modifier.weight(1f),
-                        onClick = onManagePackages
-                    )
-                    CatalogShortcutCard(
-                        title = "Proveedores",
-                        icon = Icons.Default.SupportAgent,
-                        modifier = Modifier.weight(1f),
-                        onClick = onManageProviders
-                    )
+                item {
+                    DashboardSection("Gestionar la oferta", "Mantén los datos que utilizan los agentes al cotizar.") {
+                        DashboardAction("Proveedores", "Hoteles, transportistas, guías y contactos.", Icons.Default.Business, onManageProviders)
+                        DashboardAction("Servicios", "Tarifas, disponibilidad y relación con cada destino.", Icons.Default.RoomService, onManageServices)
+                        DashboardAction("Destinos", "Información turística y publicaciones.", Icons.Default.Place, onManageDestinations)
+                        DashboardAction("Paquetes", "Servicios incluidos y condiciones de venta.", Icons.Default.Luggage, onManagePackages)
+                    }
                 }
-                CatalogShortcutCard(
-                    title = "Servicios y actividades",
-                    icon = Icons.Default.MiscellaneousServices,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onManageServices
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CatalogShortcutCard(
-    title: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = modifier,
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        }
-    }
-}
-
-@Composable
-private fun KpiCard(
-    title: String,
-    value: String,
-    icon: ImageVector,
-    containerColor: Color,
-    contentColor: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.height(96.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = MaterialTheme.shapes.medium
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(title, style = MaterialTheme.typography.labelSmall, color = contentColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, color = contentColor)
-        }
-    }
-}
-
-@Composable
-private fun ReservationItemCard(reservation: Reservation) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.small
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = reservation.destination.ifBlank { "Destino general" },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Badge(
-                    containerColor = getStatusColor(reservation.status)
-                ) {
-                    Text(reservation.status, color = MaterialTheme.colorScheme.onError)
+                item {
+                    OutlinedButton(onClick = { showReservations = !showReservations }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (showReservations) "Ocultar consulta de reservas" else "Consultar reservas")
+                    }
                 }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = formatCurrency(reservation.totalAmount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = formatDate(reservation.createdAtMillis),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (showReservations) {
+                    item {
+                        Text("Consulta de reservas", style = MaterialTheme.typography.titleLarge)
+                        Text("Supervisa expedientes sin modificar sus estados.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(AdminDashboardConstants.AVAILABLE_FILTERS) { filter ->
+                                FilterChip(selected = uiState.selectedFilterStatus == filter,
+                                    onClick = { viewModel.setFilterStatus(filter) }, label = { Text(filter) })
+                            }
+                        }
+                    }
+                    if (uiState.isLoadingReservations) {
+                        item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    } else if (uiState.reservations.isEmpty()) {
+                        item { Text("No hay reservas con este filtro.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    } else {
+                        items(uiState.reservations, key = { it.id }) { reservation -> ReservationSummary(reservation) }
+                        if (!uiState.endReached) item {
+                            OutlinedButton(onClick = viewModel::loadMoreReservations, enabled = !uiState.isLoadingMore,
+                                modifier = Modifier.fillMaxWidth()) {
+                                Text(if (uiState.isLoadingMore) "Cargando…" else "Cargar más reservas")
+                            }
+                        }
+                    }
+                }
+                item { Spacer(Modifier.height(12.dp)) }
             }
         }
     }
 }
 
 @Composable
-private fun getStatusColor(status: String): Color {
-    return when (status) {
-        "Pagado" -> MaterialTheme.colorScheme.tertiary
-        "Pago enviado" -> MaterialTheme.colorScheme.secondary
-        "Confirmada" -> MaterialTheme.colorScheme.primary
-        "Pago rechazado" -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.outline
+private fun ReservationSummary(reservation: Reservation) {
+    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(reservation.destination, style = MaterialTheme.typography.titleMedium)
+            Text(reservation.workflowStatus.label, color = MaterialTheme.colorScheme.primary)
+            Text("${reservation.travelerCount} viajeros · ${dashboardDate(reservation.departureAtMillis, "d MMM yyyy")}",
+                style = MaterialTheme.typography.bodyMedium)
+            Text(dashboardMoney(reservation.totalAmount, reservation.currency), style = MaterialTheme.typography.labelLarge)
+        }
     }
-}
-
-private fun formatCurrency(amount: Double): String {
-    val peruLocale = Locale.Builder().setLanguage("es").setRegion("PE").build()
-    val formatter = NumberFormat.getNumberInstance(peruLocale).apply {
-        minimumFractionDigits = 2
-        maximumFractionDigits = 2
-    }
-    return "S/ " + formatter.format(amount)
-}
-
-private fun formatDate(timestamp: Long): String {
-    if (timestamp <= 0L) return ""
-    val peruLocale = Locale.Builder().setLanguage("es").setRegion("PE").build()
-    return SimpleDateFormat("dd MMM yyyy", peruLocale).format(Date(timestamp))
 }

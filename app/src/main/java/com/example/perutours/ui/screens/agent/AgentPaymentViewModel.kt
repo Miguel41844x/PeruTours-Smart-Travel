@@ -64,7 +64,11 @@ data class AgentPaymentDetailUiState(
     val canApprove: Boolean
         get() = !isLoading && !isSubmitting && !isResolved && matchesReservation &&
             bankReceiptConfirmed && voucherAssessment?.hasBlockingIssues != true &&
-            voucherOcr != VoucherOcrState.Idle && voucherOcr != VoucherOcrState.Reading
+            when (val reading = voucherOcr) {
+                is VoucherOcrState.Read -> reading.result.hasData
+                VoucherOcrState.Unavailable -> true
+                else -> false
+            }
 }
 
 /**

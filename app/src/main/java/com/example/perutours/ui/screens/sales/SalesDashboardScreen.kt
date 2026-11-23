@@ -1,281 +1,145 @@
 package com.example.perutours.ui.screens.sales
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.RequestQuote
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.perutours.data.model.CurrencyRevenue
-import com.example.perutours.data.model.SalesAnalytics
+import com.example.perutours.ui.components.*
 import com.example.perutours.ui.screens.sales.components.DestinationDemandBarChart
 import com.example.perutours.ui.screens.sales.components.DestinationRanking
 import com.example.perutours.ui.screens.sales.components.MonthlyRevenueLineChart
-import com.example.perutours.ui.screens.sales.components.QuotationStatusBarChart
 import org.koin.androidx.compose.koinViewModel
-import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SalesDashboardScreen(
-    onLogout: () -> Unit,
-    viewModel: SalesDashboardViewModel = koinViewModel()
-) {
+fun SalesDashboardScreen(onLogout: () -> Unit, viewModel: SalesDashboardViewModel = koinViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Ventas y cotizaciones")
-                        Text(
-                            text = "Panel gerencial",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = viewModel::refresh,
-                        enabled = !uiState.isLoading
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar estadísticas")
-                    }
-                    IconButton(onClick = onLogout) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Cerrar sesión"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        DashboardContent(
-            uiState = uiState,
-            onRetry = viewModel::refresh,
-            modifier = Modifier.padding(paddingValues)
-        )
-    }
-}
-
-@Composable
-private fun DashboardContent(
-    uiState: SalesDashboardUiState,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
     var selectedCurrency by rememberSaveable { mutableStateOf("PEN") }
-    val currencies = uiState.analytics.revenueByCurrency
+    var showLogout by remember { mutableStateOf(false) }
+    val analytics = uiState.analytics
+    val currencies = analytics.revenueByCurrency
     val revenue = currencies.firstOrNull { it.currency == selectedCurrency }
-        ?: currencies.firstOrNull()
-        ?: CurrencyRevenue()
+        ?: currencies.firstOrNull() ?: CurrencyRevenue()
+    if (showLogout) AlertDialog(onDismissRequest = { showLogout = false }, title = { Text("Cerrar sesión") },
+        text = { Text("Tendrás que ingresar nuevamente para consultar los resultados.") },
+        confirmButton = { TextButton(onClick = { showLogout = false; onLogout() }) { Text("Cerrar sesión") } },
+        dismissButton = { TextButton(onClick = { showLogout = false }) { Text("Cancelar") } })
 
-    if (uiState.isLoading && !uiState.analytics.hasData) {
-        Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        return
-    }
-
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
-        if (uiState.isLoading) {
-            item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
-        }
-
-        uiState.errorMessage?.let { message ->
-            item {
-                ErrorPanel(message = message, onRetry = onRetry)
-            }
-        }
-
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "Resumen comercial",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Actualizado ${formatUpdatedAt(uiState.analytics.updatedAtMillis)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        if (currencies.size > 1) {
-            item {
-                Column {
-                    Text("Moneda de ingresos", style = MaterialTheme.typography.labelLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        currencies.forEach { item ->
-                            FilterChip(
-                                selected = revenue.currency == item.currency,
-                                onClick = { selectedCurrency = item.currency },
-                                label = { Text(item.currency) }
-                            )
+    Scaffold(topBar = {
+        TravelTopAppBar(title = { Text("Resultados del negocio") }, actions = {
+            IconButton(onClick = viewModel::refresh, enabled = !uiState.isLoading) { Icon(Icons.Default.Refresh, "Actualizar estadísticas") }
+            IconButton(onClick = { showLogout = true }) { Icon(Icons.AutoMirrored.Filled.ExitToApp, "Cerrar sesión") }
+        })
+    }, containerColor = MaterialTheme.colorScheme.background) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(Modifier.widthIn(max = 1040.dp).fillMaxSize(), contentPadding = PaddingValues(18.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                item {
+                    DashboardIntro("PANEL GERENCIAL", "Resultados económicos",
+                        "Cobros, costos cotizados y oportunidades comerciales para tomar decisiones.",
+                        Icons.AutoMirrored.Filled.TrendingUp, analytics.updatedAtMillis)
+                }
+                if (uiState.isLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                uiState.errorMessage?.let { message -> item { DashboardNotice(message, viewModel::refresh, isError = true) } }
+                if (analytics.updatedAtMillis > 0L) {
+                    if (currencies.size > 1) item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Moneda de análisis", style = MaterialTheme.typography.labelLarge)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                currencies.forEach { currency ->
+                                    FilterChip(selected = revenue.currency == currency.currency,
+                                        onClick = { selectedCurrency = currency.currency }, label = { Text(currency.currency) })
+                                }
+                            }
                         }
                     }
-                }
-            }
-        }
-
-        item { SalesSummary(analytics = uiState.analytics, revenue = revenue) }
-
-        item {
-            DashboardSection(
-                title = "Cotizaciones por estado",
-                supportingText = "Distribución actual de las propuestas enviadas a clientes."
-            ) {
-                QuotationStatusBarChart(metrics = uiState.analytics.quotationStatuses)
-            }
-        }
-
-        item {
-            DashboardSection(
-                title = "Ingresos aprobados",
-                supportingText = "Pagos confirmados en ${revenue.currency} durante los últimos seis meses."
-            ) {
-                MonthlyRevenueLineChart(
-                    metrics = revenue.monthlyRevenue,
-                    currency = revenue.currency
-                )
-            }
-        }
-
-        item {
-            DashboardSection(
-                title = "Destinos más solicitados",
-                supportingText = "Ranking construido con las solicitudes de viaje registradas."
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    DestinationDemandBarChart(destinations = uiState.analytics.topDestinations)
-                    DestinationRanking(destinations = uiState.analytics.topDestinations)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SalesSummary(analytics: SalesAnalytics, revenue: CurrencyRevenue) {
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val wideLayout = maxWidth >= 720.dp
-        SummaryCards(analytics = analytics, revenue = revenue, singleRow = wideLayout)
-    }
-}
-
-@Composable
-private fun SummaryCards(analytics: SalesAnalytics, revenue: CurrencyRevenue, singleRow: Boolean) {
-    val metrics = listOf(
-        SummaryMetric(
-            label = "Cotizaciones",
-            value = analytics.totalQuotations.toString(),
-            icon = Icons.Default.RequestQuote,
-            accent = MaterialTheme.colorScheme.primary
-        ),
-        SummaryMetric(
-            label = "Ventas aprobadas",
-            value = analytics.approvedSales.toString(),
-            icon = Icons.Default.CheckCircle,
-            accent = MaterialTheme.colorScheme.tertiary
-        ),
-        SummaryMetric(
-            label = "Ingresos",
-            value = formatCurrency(revenue.totalAmount, revenue.currency),
-            icon = Icons.Default.Payments,
-            accent = MaterialTheme.colorScheme.secondary
-        ),
-        SummaryMetric(
-            label = "Conversión",
-            value = "${analytics.conversionRate.toInt()}%",
-            icon = Icons.AutoMirrored.Filled.TrendingUp,
-            accent = MaterialTheme.colorScheme.primary
-        )
-    )
-
-    if (singleRow) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            metrics.forEach { metric ->
-                MetricCard(
-                    label = metric.label,
-                    value = metric.value,
-                    icon = metric.icon,
-                    accent = metric.accent,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            metrics.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    pair.forEach { metric ->
-                        MetricCard(
-                            label = metric.label,
-                            value = metric.value,
-                            icon = metric.icon,
-                            accent = metric.accent,
-                            modifier = Modifier.weight(1f)
-                        )
+                    item {
+                        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.tertiaryContainer) {
+                            Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Cobros aprobados", style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                Text(if (uiState.isLoading && !analytics.hasData) "—" else dashboardMoney(revenue.totalAmount, revenue.currency),
+                                    modifier = Modifier.testTag("approved-revenue-value"),
+                                    style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                Text("Acumulado histórico · ${revenue.approvedSales} ventas en ${revenue.currency}",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            }
+                        }
                     }
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                DashboardMetric("Margen bruto estimado",
+                                    if (revenue.costedSales > 0) dashboardMoney(revenue.estimatedGrossProfit, revenue.currency) else "—",
+                                    "Sobre ${revenue.costedSales} ${if (revenue.costedSales == 1) "venta" else "ventas"} con costos", Icons.Default.AccountBalanceWallet, Modifier.weight(1f).fillMaxHeight())
+                                DashboardMetric("Margen sobre ventas",
+                                    revenue.estimatedMarginPercent?.let { String.format(Locale.ROOT, "%.1f%%", it) } ?: "—",
+                                    "Solo ventas con costo válido", Icons.Default.Percent, Modifier.weight(1f).fillMaxHeight())
+                            }
+                            Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                DashboardMetric("Ticket promedio",
+                                    dashboardMoney(if (revenue.approvedSales > 0) revenue.totalAmount / revenue.approvedSales else 0.0, revenue.currency),
+                                    "Por venta aprobada", Icons.Default.Payments, Modifier.weight(1f).fillMaxHeight())
+                                DashboardMetric("Ventas aprobadas", revenue.approvedSales.toString(),
+                                    "Pagos confirmados en ${revenue.currency}", Icons.Default.CheckCircle, Modifier.weight(1f).fillMaxHeight())
+                            }
+                        }
+                    }
+                    item {
+                        DashboardSection("Ingresos aprobados", "Pagos confirmados en ${revenue.currency} durante los últimos seis meses.") {
+                            MonthlyRevenueLineChart(revenue.monthlyRevenue, revenue.currency,
+                                estimatedProfit = if (revenue.costedSales > 0) revenue.monthlyEstimatedProfit else emptyList())
+                        }
+                    }
+                    item {
+                        DashboardSection("Costos y margen estimado", "Comparación de ventas aprobadas con el costo de sus cotizaciones.") {
+                            if (revenue.costedSales == 0) {
+                                Text("Aún no hay ventas con costos válidos para calcular el margen.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                FinancialRow("Cobros con costo disponible", dashboardMoney(revenue.costedRevenue, revenue.currency))
+                                FinancialRow("Costo presupuestado de proveedores", dashboardMoney(revenue.estimatedSupplierCost, revenue.currency))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                FinancialRow("Margen bruto estimado", dashboardMoney(revenue.estimatedGrossProfit, revenue.currency))
+                            }
+                            if (revenue.approvedSales > revenue.costedSales) Text(
+                                "${revenue.approvedSales - revenue.costedSales} ${if (revenue.approvedSales - revenue.costedSales == 1) "venta sin costo válido se excluye" else "ventas sin costo válido se excluyen"} del cálculo del margen.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("El margen es una estimación sobre costos cotizados. No incluye gastos operativos ni representa utilidad neta.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    item {
+                        DashboardSection("Eficacia comercial", "Conversión histórica de cotizaciones a ventas con pago aprobado, en todas las monedas.") {
+                            Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                DashboardMetric("Cotizaciones emitidas", analytics.totalQuotations.toString(),
+                                    "Histórico de propuestas", Icons.Default.RequestQuote, Modifier.weight(1f).fillMaxHeight())
+                                DashboardMetric("Conversión a venta", "${analytics.conversionRate.toInt()}%",
+                                    "${analytics.approvedSales} ventas aprobadas", Icons.Default.Assessment, Modifier.weight(1f).fillMaxHeight())
+                            }
+                        }
+                    }
+                    item {
+                        DashboardSection("Destinos más solicitados", "Demanda registrada para orientar la oferta y las próximas campañas.") {
+                            DestinationDemandBarChart(analytics.topDestinations)
+                            DestinationRanking(analytics.topDestinations)
+                        }
+                    }
+                    item { Spacer(Modifier.height(12.dp)) }
                 }
             }
         }
@@ -283,131 +147,9 @@ private fun SummaryCards(analytics: SalesAnalytics, revenue: CurrencyRevenue, si
 }
 
 @Composable
-private fun MetricCard(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    accent: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.height(116.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+private fun FinancialRow(label: String, value: String) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
     }
 }
-
-@Composable
-private fun DashboardSection(
-    title: String,
-    supportingText: String,
-    content: @Composable () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = supportingText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            content()
-        }
-    }
-}
-
-@Composable
-private fun ErrorPanel(message: String, onRetry: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f)
-            )
-            Button(onClick = onRetry) { Text("Reintentar") }
-        }
-    }
-}
-
-private fun formatCurrency(amount: Double, currency: String): String {
-    val formatter = NumberFormat.getNumberInstance(PERU_LOCALE).apply {
-        minimumFractionDigits = 2
-        maximumFractionDigits = 2
-    }
-    val prefix = if (currency.equals("PEN", ignoreCase = true)) "S/ " else "$currency "
-    return prefix + formatter.format(amount)
-}
-
-private fun formatUpdatedAt(timestamp: Long): String {
-    if (timestamp <= 0L) return "pendiente"
-    return SimpleDateFormat("dd MMM, HH:mm", PERU_LOCALE).format(Date(timestamp))
-}
-
-private val PERU_LOCALE: Locale = Locale.Builder()
-    .setLanguage("es")
-    .setRegion("PE")
-    .build()
-
-private data class SummaryMetric(
-    val label: String,
-    val value: String,
-    val icon: ImageVector,
-    val accent: Color
-)

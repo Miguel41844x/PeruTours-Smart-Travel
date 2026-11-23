@@ -43,6 +43,18 @@ class VoucherAssessmentTest {
         assertTrue(assess(valid.copy(amount = VoucherAmount(BigDecimal("120.00"), "USD"))).hasBlockingIssues)
     }
 
+    @Test fun sameDayReceiptBeforeAcceptanceTimeIsBlocked() {
+        val receipt = valid.copy(transactionDate = VoucherDate(2026, 11, 21), transactionTime = VoucherTime(8, 0))
+        assertTrue(assess(receipt).hasBlockingIssues)
+        assertFalse(assess(receipt.copy(transactionTime = VoucherTime(10, 1))).hasBlockingIssues)
+    }
+
+    @Test fun sameDayWithoutReadableTimeNeedsReviewRatherThanInventingAnHour() {
+        val receipt = valid.copy(transactionDate = VoucherDate(2026, 11, 21), transactionTime = null)
+        assertEquals(VoucherAssessmentStatus.NEEDS_REVIEW, assess(receipt).status)
+        assertFalse(assess(receipt).hasBlockingIssues)
+    }
+
     @Test fun unreadableFieldsArePendingRatherThanDeclaredCorrectOrForged() {
         val assessment = assess(valid.copy(transactionTime = null, operationNumber = null))
         assertEquals(VoucherAssessmentStatus.NEEDS_REVIEW, assessment.status)

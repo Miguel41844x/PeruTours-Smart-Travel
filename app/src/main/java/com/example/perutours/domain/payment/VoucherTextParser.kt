@@ -9,28 +9,34 @@ import kotlin.math.min
 
 internal object VoucherTextParser {
     private val accents = Regex("\\p{M}+")
+    private const val CURRENCY_TOKEN = "(?:S\\s*/\\s*[.,]?|PEN|USD|US\\s*\\$)"
     private val money = Regex(
-        """(?<![A-Z0-9])(S\s*/\.?|PEN|USD|US\s*\$)\s*:?\s*(\d+(?:[., ]\d+)*)(?![A-Z0-9.,])"""
+        """(?<![A-Z0-9])($CURRENCY_TOKEN)\s*:?\s*(?:\*\s*)*(\d+(?:(?:[.,][ \t]*| )\d+)*)(?![A-Z0-9.,*])"""
     )
+    private val spacingAfterDecimal = Regex("""(?<=\d)([.,])[ \t]+(?=\d{2}(?!\d))""")
     private val amountLabel = Regex(
-        """^(?:MONTO|IMPORTE|TOTAL)(?:\s*:|\s*$|\s+(?:PAGADO|TRANSFERIDO|ENVIADO|RECIBIDO|ABONADO|DE LA (?:OPERACION|TRANSFERENCIA))\b)"""
+        """^(?:MONTO|IMPORTE|TOTAL)(?:\s*:|\s*$|\s+(?:PAGADO|TRANSFERIDO|ENVIADO|RECIBIDO|ABONADO|DEPOSITADO|DEL DEPOSITO|DE LA (?:OPERACION|TRANSFERENCIA))\b)"""
     )
-    private val unrelatedAmount = Regex("""^(?:COMISION(?:ES)?|SALDO|ITF)\b""")
+    private val unrelatedAmount = Regex("""^(?:COMISION(?:ES)?|SALDO|ITF|IMPORTE EN (?:MONEDAS|BILLETES))\b""")
     private val operationLabel = Regex(
-        """\b(?:N[°º.]{0,2}\s*|(?:NRO\.?|NUMERO|CODIGO)\s+)(?:DE\s+)?OPERACION\b"""
+        // 0P- es una confusión del rótulo OP-, no del identificador del pago.
+        """\b(?:(?:N[°º.]{0,2}\s*|(?:NRO\.?|NUMERO|CODIGO)\s+)(?:DE\s+)?OPERACION\b|(?:OP|0P)\s*[-:.])"""
     )
     private val operationCode = Regex("""[A-Z0-9-]{4,24}""")
+    private val operationFollowingField = Regex(
+        """^(?:(?:\d{1,2}[/.-]\d{1,2}[/.-]\d{4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})(?:\s|$)|(?:FECHA|HORA|OFICINA)\s*:)"""
+    )
     private val plainNumber = Regex("""\d+(?:[.,]\d{2})?""")
     private val groupedWithComma = Regex("""\d{1,3}(?:,\d{3})+(?:\.\d{2})?""")
     private val groupedWithDot = Regex("""\d{1,3}(?:\.\d{3})+(?:,\d{2})?""")
     private val groupedWithSpace = Regex("""\d{1,3}(?: \d{3})+(?:[.,]\d{2})?""")
-    private val currencyOnly = Regex("""^(?:S\s*/\.?|PEN|USD|US\s*\$)\s*:?\s*$""")
-    private val currencyAtEnd = Regex("""(?:S\s*/\.?|PEN|USD|US\s*\$)\s*:?\s*$""")
+    private val currencyOnly = Regex("""^$CURRENCY_TOKEN\s*:?\s*(?:\*\s*)*$""")
+    private val currencyAtEnd = Regex("""($CURRENCY_TOKEN)\s*:?\s*(?:\*\s*)*$""")
     private val calendarDate = Regex("""(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}-\d{1,2}-\d{4})""")
     private val currencyLabel = Regex("""^MONEDA(?:\s*:|\s*$)""")
     private val dollarSymbolConfusion = Regex("""(?<![A-Z0-9])US\s*S(?=\s*:?\s*\d)""")
     private val nonAmountLabel = Regex(
-        """^(?:MONEDA|CUENTA|FECHA|HORA|DESTINO|TIPO DE OPERACION|CODIGO DE SEGURIDAD|NRO\.?\s+DE CELULAR)\b"""
+        """^(?:MONEDA|CUENTA|CODIGO DE CUENTA|CCI|FECHA|HORA|DESTINO|TIPO DE OPERACION|CODIGO DE SEGURIDAD|NRO\.?\s+DE CELULAR)\b"""
     )
 
     fun parse(text: String, positionedLines: List<VoucherTextLine> = emptyList()): VoucherOcrResult {
@@ -53,29 +59,37 @@ internal object VoucherTextParser {
             .map(::normalize)
             .filter(String::isNotBlank)
             .toList()
-        val amounts = mutableSetOf<VoucherAmount>()
+        val amountsByLine = lines.mapIndexed { index, line ->
+            val previous = lines.getOrNull(index - 1)
+            val followsOtherAmountLabel = previous != null && unrelatedAmount.containsMatchIn(previous) &&
+                previous.none(Char::isDigit)
+            val kind = amountLabelKind(line) ?: if (followsOtherAmountLabel) AmountLabel.OTHER else null
+            if (kind == AmountLabel.OTHER) emptyList() else readPaymentAmounts(line)
+        }
+        val amounts = amountsByLine.flatten().toSet()
         val labeledAmounts = mutableSetOf<VoucherAmount>()
         val operations = mutableSetOf<String>()
 
         lines.forEachIndexed { index, line ->
-            val lineAmounts = readPaymentAmounts(line)
-            amounts += lineAmounts
             if (amountLabel.containsMatchIn(line)) {
-                labeledAmounts += lineAmounts.ifEmpty {
-                    readPaymentAmounts(lines.getOrNull(index + 1).orEmpty())
+                labeledAmounts += amountsByLine[index].ifEmpty {
+                    amountsByLine.getOrNull(index + 1).orEmpty()
                 }
             }
 
-            operationLabel.find(line)?.let { label ->
+            operationLabel.findAll(line).forEach { label ->
                 val afterLabel = line.substring(label.range.last + 1).trimStart(' ', ':', '#')
-                val candidate = afterLabel.ifBlank { lines.getOrNull(index + 1).orEmpty() }
-                readOperation(candidate)?.let(operations::add)
+                val operation = if (afterLabel.isBlank()) {
+                    readOperation(lines.getOrNull(index + 1).orEmpty())
+                } else readInlineOperation(afterLabel)
+                operation?.let(operations::add)
             }
         }
 
         val dateTime = VoucherDateTimeParser.parse(text)
         return VoucherOcrResult(
-            amount = labeledAmounts.ifEmpty { amounts }.singleOrNull(),
+            amount = (if (lines.any { amountLabel.containsMatchIn(it) }) labeledAmounts else amounts)
+                .singleOrNull(),
             operationNumber = operations.singleOrNull(),
             transactionDate = dateTime.date,
             transactionTime = dateTime.time
@@ -83,10 +97,12 @@ internal object VoucherTextParser {
     }
 
     private fun parseLayout(lines: List<VoucherTextLine>): VoucherOcrResult {
-        val operations = lines.mapNotNull { label ->
-            val match = operationLabel.find(label.text) ?: return@mapNotNull null
-            val inline = label.text.substring(match.range.last + 1)
-            readOperation(inline) ?: nearestValues(label, lines, ::readOperation).singleOrNull()
+        val operations = lines.flatMap { label ->
+            operationLabel.findAll(label.text).mapNotNull { match ->
+                val inline = label.text.substring(match.range.last + 1).trim(' ', ':', '#')
+                if (inline.isBlank()) nearestValues(label, lines, ::readOperation).singleOrNull()
+                else readInlineOperation(inline)
+            }.toList()
         }.toSet()
         val currency = readCurrencyField(lines)
         val amounts = lines.flatMap { line ->
@@ -100,7 +116,9 @@ internal object VoucherTextParser {
         val remaining = classified.filter { it.second != AmountLabel.OTHER }.map { it.first.amount }.toSet()
         val dateTime = VoucherDateTimeParser.parse("", lines)
         return VoucherOcrResult(
-            amount = labeled.ifEmpty { remaining }.singleOrNull(),
+            // Si el total tiene rótulo pero no se leyó, otro importe no lo sustituye.
+            amount = (if (lines.any { amountLabel.containsMatchIn(it.text) }) labeled else remaining)
+                .singleOrNull(),
             operationNumber = operations.singleOrNull(),
             transactionDate = dateTime.date,
             transactionTime = dateTime.time
@@ -140,6 +158,18 @@ internal object VoucherTextParser {
         }
     }
 
+    private fun readInlineOperation(text: String): String? {
+        // Los tickets comparten fila con oficina y fecha. El rótulo identifica
+        // el código siguiente; no se busca un número arbitrario en toda la fila.
+        val value = text.trimStart(' ', ':', '#')
+        val token = value.takeWhile { !it.isWhitespace() }
+        val following = value.substring(token.length).trim()
+        if (following.isNotEmpty() && !operationFollowingField.containsMatchIn(following) &&
+            operationLabel.find(following)?.range?.first != 0
+        ) return null
+        return readOperation(token)
+    }
+
     /**
      * Una columna puede ser reconocida completa antes que la otra. El orden
      * textual no vincula los datos; se usa la misma fila o un valor cercano
@@ -166,7 +196,7 @@ internal object VoucherTextParser {
         if (!currencyOnly.matches(currency.text) && !amountLabel.containsMatchIn(currency.text)) {
             return emptyList()
         }
-        val prefix = currencyAtEnd.find(currency.text)?.value ?: return emptyList()
+        val prefix = currencyAtEnd.find(currency.text)?.groupValues?.get(1) ?: return emptyList()
         val candidates = lines.filter { it !== currency }.mapNotNull { number ->
             val position = placement(currency, number) ?: return@mapNotNull null
             val horizontalGap = number.left - currency.right
@@ -175,7 +205,7 @@ internal object VoucherTextParser {
             }
             val value = readPaymentAmounts(prefix + " " + number.text).singleOrNull()
                 ?: return@mapNotNull null
-            if (parseAmount(number.text) == null) return@mapNotNull null
+            if (parseAmount(number.text.trimStart(' ', '*')) == null) return@mapNotNull null
             Triple(position, value, number)
         }
         val best = candidates.minOfOrNull { it.first } ?: return emptyList()
@@ -184,13 +214,7 @@ internal object VoucherTextParser {
 
     private fun closestAmountLabel(value: VoucherTextLine, lines: List<VoucherTextLine>): AmountLabel? {
         val matches = lines.mapNotNull { label ->
-            val kind = when {
-                amountLabel.containsMatchIn(label.text) -> AmountLabel.PAYMENT
-                unrelatedAmount.containsMatchIn(label.text) ||
-                    operationLabel.containsMatchIn(label.text) ||
-                    nonAmountLabel.containsMatchIn(label.text) -> AmountLabel.OTHER
-                else -> return@mapNotNull null
-            }
+            val kind = amountLabelKind(label.text) ?: return@mapNotNull null
             val position = if (label === value) INLINE else placement(label, value)
             position ?: return@mapNotNull null
             val distance = if (position == SAME_ROW) {
@@ -201,6 +225,13 @@ internal object VoucherTextParser {
             LabelAt(kind, position, distance)
         }
         return matches.minWithOrNull(compareBy(LabelAt::placement, LabelAt::distance))?.kind
+    }
+
+    private fun amountLabelKind(text: String): AmountLabel? = when {
+        unrelatedAmount.containsMatchIn(text) || operationLabel.containsMatchIn(text) ||
+            nonAmountLabel.containsMatchIn(text) -> AmountLabel.OTHER
+        amountLabel.containsMatchIn(text) -> AmountLabel.PAYMENT
+        else -> null
     }
 
     private fun placement(label: VoucherTextLine, value: VoucherTextLine): Int? {
@@ -231,11 +262,13 @@ internal object VoucherTextParser {
     }
 
     private fun parseAmount(value: String): BigDecimal? {
+        // Se conserva un separador ya leído; no se unen cifras sin él.
+        val unspaced = spacingAfterDecimal.replace(value) { it.groupValues[1] }
         val canonical = when {
-            plainNumber.matches(value) -> value.replace(',', '.')
-            groupedWithComma.matches(value) -> value.replace(",", "")
-            groupedWithDot.matches(value) -> value.replace(".", "").replace(',', '.')
-            groupedWithSpace.matches(value) -> value.replace(" ", "").replace(',', '.')
+            plainNumber.matches(unspaced) -> unspaced.replace(',', '.')
+            groupedWithComma.matches(unspaced) -> unspaced.replace(",", "")
+            groupedWithDot.matches(unspaced) -> unspaced.replace(".", "").replace(',', '.')
+            groupedWithSpace.matches(unspaced) -> unspaced.replace(" ", "").replace(',', '.')
             else -> return null
         }
         return canonical.toBigDecimalOrNull()

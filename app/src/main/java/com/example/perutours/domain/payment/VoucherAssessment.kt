@@ -68,7 +68,10 @@ object VoucherValidator {
                 if (future) issue(if (submittedAtMillis > 0 && submittedAtMillis < nowMillis)
                     "La fecha u hora del comprobante es posterior a su envío."
                     else "La fecha u hora del comprobante está en el futuro.", true)
-                if (reservationCreatedAtMillis > 0 && dateMillis < startOfDay(reservationCreatedAtMillis)) {
+                val beforeReservation = if (time != null && validTime) {
+                    calendarMillis(date, time)?.let { it + clockToleranceMillis < reservationCreatedAtMillis } == true
+                } else dateMillis < startOfDay(reservationCreatedAtMillis)
+                if (reservationCreatedAtMillis > 0 && beforeReservation) {
                     issue("El comprobante es anterior a la creación de esta reserva.", true)
                 }
             }

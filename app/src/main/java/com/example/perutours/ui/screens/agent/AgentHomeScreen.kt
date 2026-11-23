@@ -1,368 +1,126 @@
 package com.example.perutours.ui.screens.agent
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material.icons.filled.RequestQuote
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import com.example.perutours.ui.components.TravelTopAppBar as TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.koin.androidx.compose.koinViewModel
-import coil.compose.AsyncImage
-import com.example.perutours.ui.components.ScreenHorizontalPadding
-import com.example.perutours.ui.components.SectionHeading
-import com.example.perutours.ui.screens.sales.components.QuotationStatusBarChart
-import com.google.firebase.auth.FirebaseAuth
-
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.example.perutours.data.model.TravelRequestStatus
+import com.example.perutours.ui.components.*
+import com.example.perutours.ui.screens.sales.components.QuotationStatusBarChart
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgentHomeScreen(
-    auth: FirebaseAuth,
     onViewRequests: () -> Unit,
     onLogout: () -> Unit = {},
     onViewPayments: () -> Unit = {},
     onManageTrips: () -> Unit = {},
     viewModel: AgentHomeViewModel = koinViewModel()
 ) {
-    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showLogout by remember { mutableStateOf(false) }
+    RequestAgentNotifications()
+    if (showLogout) AlertDialog(onDismissRequest = { showLogout = false },
+        title = { Text("Cerrar sesión") }, text = { Text("Tendrás que ingresar nuevamente para atender tus expedientes.") },
+        confirmButton = { TextButton(onClick = { showLogout = false; onLogout() }) { Text("Cerrar sesión") } },
+        dismissButton = { TextButton(onClick = { showLogout = false }) { Text("Cancelar") } })
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { }
-    )
-
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    Scaffold(topBar = {
+        TravelTopAppBar(title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                AgentAvatar(uiState.agentName, uiState.photoUrl)
+                Text("Mi espacio de trabajo", style = MaterialTheme.typography.titleMedium)
             }
-        }
-    }
-
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Cerrar sesión") },
-            text = { Text("Tendrás que ingresar nuevamente para gestionar las solicitudes.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showLogoutDialog = false
-                        onLogout()
-                    }
-                ) { Text("Cerrar sesión", color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
-            }
-        )
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AgentAvatar(name = uiState.agentName, photoUrl = uiState.photoUrl)
-                        Spacer(Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = uiState.agentName,
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "Agente de viajes",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+        }, actions = {
+            IconButton(onClick = viewModel::refresh, enabled = !uiState.isRefreshing) { Icon(Icons.Default.Refresh, "Actualizar mi cartera") }
+            IconButton(onClick = { showLogout = true }) { Icon(Icons.AutoMirrored.Filled.ExitToApp, "Cerrar sesión") }
+        })
+    }, containerColor = MaterialTheme.colorScheme.background) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(Modifier.widthIn(max = 1040.dp).fillMaxSize(), contentPadding = PaddingValues(18.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                item {
+                    DashboardIntro("ATENCIÓN AL VIAJERO", "Hola, ${uiState.agentName.substringBefore(' ')}",
+                        "Organiza tus solicitudes, revisa comprobantes y prepara las próximas salidas.",
+                        Icons.Default.SupportAgent, uiState.updatedAtMillis)
+                }
+                if (uiState.isRefreshing) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                uiState.errorMessage?.let { message -> item { DashboardNotice(message, viewModel::refresh, isError = true) } }
+                item {
+                    val loading = uiState.isLoadingCounts || uiState.updatedAtMillis <= 0
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            DashboardMetric("Por cotizar", if (loading) "—" else "${uiState.pendingCount}",
+                                "Solicitudes disponibles", Icons.Default.RequestQuote, Modifier.weight(1f).fillMaxHeight(), onViewRequests)
+                            DashboardMetric("Cambios solicitados", if (loading) "—" else "${uiState.changesRequested}",
+                                "Propuestas por revisar", Icons.Default.RateReview, Modifier.weight(1f).fillMaxHeight(), onViewRequests)
+                        }
+                        Row(modifier = Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            DashboardMetric("Comprobantes", if (loading) "—" else "${uiState.pendingPayments}",
+                                "Pendientes de revisión", Icons.Default.AccountBalanceWallet, Modifier.weight(1f).fillMaxHeight(), onViewPayments)
+                            DashboardMetric("Próximas salidas", if (loading) "—" else "${uiState.upcomingTrips.size}",
+                                "Viajes pagados asignados", Icons.Default.FlightTakeoff, Modifier.weight(1f).fillMaxHeight(), onManageTrips)
                         }
                     }
-                },
-                actions = {
-                    IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Cerrar sesión"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = ScreenHorizontalPadding, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Column(
-                modifier = Modifier
-                    .widthIn(max = 900.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Mi cartera de viajes",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Solicitudes disponibles y expedientes asignados a tu cuenta.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MetricCard(
-                        label = "Pendientes",
-                        value = if (uiState.isLoadingCounts) "—" else uiState.pendingCount.toString(),
-                        icon = { Icon(Icons.Default.HourglassEmpty, contentDescription = null) },
-                        emphasized = true,
-                        onClick = onViewRequests,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricCard(
-                        label = "Cotizadas",
-                        value = if (uiState.isLoadingCounts) "—" else uiState.quotedCount.toString(),
-                        icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) },
-                        emphasized = false,
-                        onClick = onViewRequests,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                uiState.errorMessage?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error)
-                }
-                TextButton(onClick = viewModel::refresh, enabled = !uiState.isRefreshing) {
-                    Text(if (uiState.isRefreshing) "Actualizando…" else "Actualizar mi cartera")
-                }
-                SectionHeading(
-                    title = "Estado de solicitudes",
-                    supportingText = "Distribución de los expedientes que puedes atender."
-                )
-                QuotationStatusBarChart(metrics = uiState.statuses)
-                OutlinedButton(onClick = onViewPayments, modifier = Modifier.fillMaxWidth()) {
-                    Text("Comprobantes por revisar (${uiState.pendingPayments})")
-                }
-
-                SectionHeading(
-                    title = "Solicitudes de viaje",
-                    supportingText = if (uiState.pendingCount > 0) {
-                        "${uiState.pendingCount} ${if (uiState.pendingCount == 1) "solicitud necesita" else "solicitudes necesitan"} una cotización."
-                    } else {
-                        "No hay solicitudes pendientes por ahora."
-                    }
-                )
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = MaterialTheme.shapes.large,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = MaterialTheme.shapes.medium,
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Icon(
-                                    Icons.Default.RequestQuote,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(12.dp).size(24.dp)
-                                )
+                if (uiState.updatedAtMillis > 0L) {
+                    item {
+                        DashboardSection("Solicitudes por atender", "Primero las propuestas con cambios y luego las solicitudes más antiguas.") {
+                            if (uiState.actionRequests.isEmpty()) {
+                                Text(if (uiState.isLoadingCounts) "Consultando solicitudes…" else "No tienes solicitudes pendientes de atención.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else uiState.actionRequests.forEach { request ->
+                                val observed = request.workflowStatus == TravelRequestStatus.CHANGES_REQUESTED
+                                DashboardAction(request.destination,
+                                    "${request.workflowStatus.label} · ${request.travelerCount} ${if (request.travelerCount == 1) "viajero" else "viajeros"} · ${dashboardDate(request.departureAtMillis, "d MMM")}",
+                                    if (observed) Icons.Default.RateReview else Icons.Default.RequestQuote, onViewRequests)
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Bandeja de solicitudes", style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "Revisa rutas, fechas y datos del viajero antes de cotizar.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Button(
-                            onClick = onViewRequests,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp)
-                        ) {
-                            Text("Abrir solicitudes")
-                            Spacer(Modifier.width(8.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                            OutlinedButton(onClick = onViewRequests, modifier = Modifier.fillMaxWidth()) { Text("Abrir bandeja de solicitudes") }
                         }
                     }
-                }
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = MaterialTheme.shapes.large,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = MaterialTheme.shapes.medium,
-                                color = MaterialTheme.colorScheme.secondaryContainer
-                            ) {
-                                Icon(
-                                    Icons.Default.Map,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(12.dp).size(24.dp)
-                                )
+                    item {
+                        DashboardSection("Próximos viajes", "Salidas confirmadas que necesitan itinerario y seguimiento.") {
+                            if (uiState.upcomingTrips.isEmpty()) {
+                                Text(if (uiState.isLoadingCounts) "Consultando viajes…" else "No hay próximas salidas pagadas asignadas a tu cuenta.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else uiState.upcomingTrips.take(3).forEach { trip ->
+                                DashboardAction(trip.destination,
+                                    "${dashboardDate(trip.departureAtMillis, "d MMM, HH:mm")} · ${trip.travelerCount} ${if (trip.travelerCount == 1) "viajero" else "viajeros"}",
+                                    Icons.Default.FlightTakeoff, onManageTrips)
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Seguimiento de viajes", style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "Programa itinerarios y responde incidencias de reservas pagadas.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        OutlinedButton(
-                            onClick = onManageTrips,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp)
-                        ) {
-                            Text("Gestionar viajes")
-                            Spacer(Modifier.width(8.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                            OutlinedButton(onClick = onManageTrips, modifier = Modifier.fillMaxWidth()) { Text("Gestionar mis viajes") }
                         }
                     }
-                }
-
-                // HU07: acceso al panel de revisión de comprobantes.
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = MaterialTheme.shapes.large,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = MaterialTheme.shapes.medium,
-                                color = MaterialTheme.colorScheme.tertiaryContainer
-                            ) {
-                                Icon(
-                                    Icons.Default.AccountBalanceWallet,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    modifier = Modifier.padding(12.dp).size(24.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Pagos por revisar", style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "Aprueba o rechaza los comprobantes enviados por tus clientes.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        OutlinedButton(
-                            onClick = onViewPayments,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp)
-                        ) {
-                            Text("Abrir comprobantes")
-                            Spacer(Modifier.width(8.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    item {
+                        DashboardAction("Revisar comprobantes", "Comprueba los datos del voucher y confirma el abono.",
+                            Icons.Default.AccountBalanceWallet, onViewPayments, count = uiState.pendingPayments)
+                    }
+                    item {
+                        DashboardSection("Distribución de mi cartera", "Solicitudes disponibles y expedientes asignados a tu cuenta.") {
+                            QuotationStatusBarChart(uiState.statuses, seriesLabel = "Solicitudes",
+                                emptyMessage = "Aún no hay solicitudes para comparar.")
                         }
                     }
+                    item { Spacer(Modifier.height(12.dp)) }
                 }
             }
         }
@@ -371,65 +129,23 @@ fun AgentHomeScreen(
 
 @Composable
 private fun AgentAvatar(name: String, photoUrl: String) {
-    if (photoUrl.isNotEmpty()) {
-        AsyncImage(
-            model = photoUrl,
-            contentDescription = "Foto del agente",
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
-    } else {
-        Surface(
-            modifier = Modifier.size(40.dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    name.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
+    if (photoUrl.isNotBlank()) {
+        AsyncImage(photoUrl, "Foto del agente", Modifier.size(36.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+    } else Surface(Modifier.size(36.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(name.take(1).uppercase(), color = MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }
 
 @Composable
-private fun MetricCard(
-    label: String,
-    value: String,
-    icon: @Composable () -> Unit,
-    emphasized: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (emphasized) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.tertiaryContainer
-            }
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(
-                modifier = Modifier.size(24.dp),
-                contentAlignment = Alignment.Center
-            ) { icon() }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+private fun RequestAgentNotifications() {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 }

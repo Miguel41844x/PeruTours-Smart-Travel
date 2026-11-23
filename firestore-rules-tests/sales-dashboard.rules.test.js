@@ -12,6 +12,7 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MANAGER_UID = 'gerente_1';
 const CLIENT_UID = 'cliente_dashboard_1';
+const ADMIN_UID = 'admin_dashboard_1';
 
 let testEnv;
 
@@ -35,6 +36,11 @@ beforeEach(async () => {
     const db = context.firestore();
     await setDoc(doc(db, 'users', MANAGER_UID), { role: 'gerente' });
     await setDoc(doc(db, 'users', CLIENT_UID), { role: 'cliente' });
+    await setDoc(doc(db, 'users', ADMIN_UID), { role: 'administrador' });
+    await setDoc(doc(db, 'providers', 'provider_1'), { active: false });
+    await setDoc(doc(db, 'catalog_services', 'service_1'), { active: false });
+    await setDoc(doc(db, 'destinations', 'destination_1'), { status: 'BORRADOR' });
+    await setDoc(doc(db, 'packages', 'package_1'), { status: 'BORRADOR' });
     await setDoc(doc(db, 'cotizaciones', 'quote_1'), {
       clientId: 'otro_cliente', agentId: 'agente_1', status: 'Cotizado'
     });
@@ -48,6 +54,20 @@ beforeEach(async () => {
 });
 
 describe('Lectura gerencial para HU09', () => {
+  it('permite al administrador consultar catálogo completo y perfiles para sus indicadores', async () => {
+    const db = dbAs(ADMIN_UID);
+    for (const name of ['providers', 'catalog_services', 'destinations', 'packages', 'users']) {
+      await assertSucceeds(getDocs(collection(db, name)));
+    }
+  });
+
+  it('impide que el cliente consulte perfiles globales o borradores del catálogo', async () => {
+    const db = dbAs(CLIENT_UID);
+    for (const name of ['users', 'destinations', 'packages']) {
+      await assertFails(getDocs(collection(db, name)));
+    }
+  });
+
   it('permite al gerente consultar las colecciones del dashboard', async () => {
     const db = dbAs(MANAGER_UID);
 

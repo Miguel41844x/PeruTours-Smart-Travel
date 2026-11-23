@@ -10,7 +10,10 @@ import com.example.perutours.data.ocr.MlKitVoucherTextReader
 import com.example.perutours.data.ocr.VoucherTextReader
 import com.example.perutours.data.remote.geoapify.GeoapifyClient
 import com.example.perutours.data.repository.AdminDashboardRepository
+import com.example.perutours.data.repository.AdminDashboardDataSource
+import com.example.perutours.domain.analytics.AdminCatalogCalculator
 import com.example.perutours.data.repository.AgentDashboardRepository
+import com.example.perutours.data.repository.AgentDashboardDataSource
 import com.example.perutours.data.repository.AgentTripDataSource
 import com.example.perutours.data.repository.AgentTripRepository
 import com.example.perutours.data.repository.AuthRepository
@@ -136,11 +139,13 @@ val appModule = module {
         )
     }
 
-    single {
+    single { AdminCatalogCalculator() }
+    single<AdminDashboardDataSource> {
         AdminDashboardRepository(
             firestore = get(),
             adminCacheDao = get(),
-            reservationCacheDao = get()
+            reservationCacheDao = get(),
+            calculator = get()
         )
     }
 
@@ -387,7 +392,7 @@ val appModule = module {
         )
     }
 
-    single { AgentDashboardRepository(get(), get(), get(), get()) }
+    single<AgentDashboardDataSource> { AgentDashboardRepository(get(), get(), get(), get(), get()) }
     viewModel { AgentHomeViewModel(repository = get()) }
 
     viewModel {

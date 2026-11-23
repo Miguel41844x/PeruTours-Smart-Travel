@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -19,6 +20,42 @@ import java.math.BigDecimal
 
 @RunWith(AndroidJUnit4::class)
 class VoucherTextReaderTest {
+    @Test
+    fun readsPrintedReceiptWithMaskedAmountAndAbbreviatedOperation() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val file = File.createTempFile("physical_voucher_ocr_test", ".jpg", context.cacheDir)
+        try {
+            val bitmap = Bitmap.createBitmap(1600, 1000, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawColor(Color.rgb(248, 245, 235))
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 46f
+                typeface = Typeface.MONOSPACE
+            }
+            listOf(
+                "COMPROBANTE DE PRUEBA",
+                "DEPOSITO CUENTA AHORROS",
+                "OF. 191063 OP-00123456 21/11/2026",
+                "Hora: 13:04:32",
+                "IMPORTE DEPOSITADO: S/. ****620.00",
+                "Importe en monedas: S/. ****20.00",
+                "Comision: S/. ****3.00"
+            ).forEachIndexed { index, text ->
+                canvas.drawText(text, 45f, 100f + index * 120f, paint)
+            }
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+            bitmap.recycle()
+
+            val result = MlKitVoucherTextReader(context).read(Uri.fromFile(file))
+
+            assertEquals(VoucherAmount(BigDecimal("620.00"), "PEN"), result.amount)
+            assertEquals("00123456", result.operationNumber)
+            assertEquals(VoucherDate(2026, 11, 21), result.transactionDate)
+            assertEquals(VoucherTime(13, 4, 32), result.transactionTime)
+        } finally { file.delete() }
+    }
+
     @Test
     fun readsOperationInAnotherColumnWithoutConfusingTheSecurityCode() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext

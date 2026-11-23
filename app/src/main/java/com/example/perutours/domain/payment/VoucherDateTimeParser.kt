@@ -21,7 +21,7 @@ internal object VoucherDateTimeParser {
         """(?<![A-Z0-9])(\d{1,2})\s*(?:DE\s+)?([A-Z]+)\.?\s*(?:DE\s+)?(\d{4})(?!\d)"""
     )
     private val clock = Regex(
-        """(?:(?<![A-Z0-9])|(?<=\dT))(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([AP])\s*\.?\s*M\.?)?(?![\d:])"""
+        """(?:(?<![A-Z0-9])|(?<=\dT))(\d{1,2})[ \t]*:[ \t]*(\d{2})(?:[ \t]*:[ \t]*(\d{2}))?(?:\s*([AP])\s*\.?\s*M\.?)?(?!\d|[ \t]*:)"""
     )
     private val meridiemOnly = Regex("""^([AP])\s*\.?\s*M\.?$""")
     private val spacedClock = Regex(

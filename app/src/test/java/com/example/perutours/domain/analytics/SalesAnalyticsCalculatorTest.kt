@@ -78,6 +78,36 @@ class SalesAnalyticsCalculatorTest {
         )
     }
 
+    @Test
+    fun estimatesProfitOnlyForSalesWithKnownCostsAndKeepsCurrenciesSeparate() {
+        val now = date(2026, Calendar.NOVEMBER, 23)
+        val result = calculator.calculate(emptyList(), listOf(
+            ApprovedSaleRecord(1000.0, "PEN", now, estimatedCost = 800.0),
+            ApprovedSaleRecord(500.0, "PEN", now),
+            ApprovedSaleRecord(200.0, "USD", now, estimatedCost = 150.0)
+        ), emptyList(), now)
+        val pen = result.revenueByCurrency.first { it.currency == "PEN" }
+        assertEquals(1500.0, pen.totalAmount, 0.0)
+        assertEquals(1, pen.costedSales)
+        assertEquals(800.0, pen.estimatedSupplierCost, 0.0)
+        assertEquals(200.0, pen.estimatedGrossProfit, 0.0)
+        assertEquals(20.0, pen.estimatedMarginPercent!!, 0.0)
+        assertEquals(200.0, pen.monthlyEstimatedProfit.last().amount, 0.0)
+        assertEquals(50.0, result.revenueByCurrency.first { it.currency == "USD" }.estimatedGrossProfit, 0.0)
+    }
+
+    @Test
+    fun preservesEstimatedLossesAndDoesNotTreatMissingCostsAsZero() {
+        val now = date(2026, Calendar.NOVEMBER, 23)
+        val result = calculator.calculate(emptyList(), listOf(
+            ApprovedSaleRecord(100.0, "PEN", now, estimatedCost = 120.0),
+            ApprovedSaleRecord(500.0, "PEN", now, estimatedCost = Double.NaN)
+        ), emptyList(), now).revenueByCurrency.single()
+        assertEquals(1, result.costedSales)
+        assertEquals(-20.0, result.estimatedGrossProfit, 0.0)
+        assertEquals(-20.0, result.monthlyEstimatedProfit.last().amount, 0.0)
+    }
+
     private fun date(year: Int, month: Int, day: Int): Long =
         Calendar.getInstance(timeZone).apply {
             clear()
